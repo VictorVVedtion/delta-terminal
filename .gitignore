@@ -1,0 +1,105 @@
+# 依赖项
+node_modules/
+.pnp
+.pnp.js
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+poetry.lock
+Pipfile.lock
+
+# 构建输出
+dist/
+build/
+.next/
+out/
+*.egg-info/
+.eggs/
+
+# 缓存与临时文件
+.cache/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+.DS_Store
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+.pytest_cache/
+htmlcov/
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# 操作系统
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 敏感数据
+*.pem
+*.key
+secrets/
+credentials/
+
+# 数据库
+*.db
+*.sqlite
+*.sqlite3
+
+# 二进制文件
+*.bin
+*.exe
+*.dll
+*.dylib
+
+# 媒体文件
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.avi
+*.mov
+*.pdf
+
+# 压缩文件
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Git
+.git/
+.github/
+
+# 监控与日志
+prometheus/
+grafana/

@@ -1,0 +1,53 @@
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+
+  // 实验性功能
+  experimental: {
+    // 使用 Turbopack 开发服务器
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+
+  // TypeScript 配置
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+
+  // ESLint 配置
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+
+  // 环境变量
+  env: {
+    NEXT_PUBLIC_APP_NAME: 'Delta Terminal',
+    NEXT_PUBLIC_APP_VERSION: '0.1.0',
+  },
+
+  // 图片优化
+  images: {
+    remotePatterns: [],
+  },
+
+  // 输出配置
+  output: 'standalone',
+
+  // 页面扩展
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+
+  // 压缩
+  compress: true,
+
+  // 电源模式 (使用 'low' 可节省资源)
+  poweredByHeader: false,
+};
+
+export default nextConfig;

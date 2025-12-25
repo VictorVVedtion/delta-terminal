@@ -1,0 +1,44 @@
+# Prometheus 配置文件
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'delta-terminal'
+    service: 'market-data-collector'
+
+# 抓取配置
+scrape_configs:
+  # Market Data Collector 服务
+  - job_name: 'market-data-collector'
+    static_configs:
+      - targets: ['market-data-collector:9003']
+        labels:
+          service: 'market-data-collector'
+          env: 'production'
+
+  # Redis 监控（需要 redis_exporter）
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          env: 'production'
+
+  # PostgreSQL 监控（需要 postgres_exporter）
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          env: 'production'
+
+# 告警规则
+rule_files:
+  - '/etc/prometheus/alerts/*.yml'
+
+# Alertmanager 配置（可选）
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']

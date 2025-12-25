@@ -1,0 +1,296 @@
+// Prisma Schema for Strategy Service
+// 策略服务数据模型
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 策略状态枚举
+enum StrategyStatus {
+  DRAFT       // 草稿
+  ACTIVE      // 运行中
+  PAUSED      // 已暂停
+  STOPPED     // 已停止
+  ARCHIVED    // 已归档
+  ERROR       // 错误状态
+}
+
+// 策略类型
+enum StrategyType {
+  SPOT        // 现货策略
+  FUTURES     // 期货策略
+  GRID        // 网格策略
+  DCA         // 定投策略
+  ARBITRAGE   // 套利策略
+  CUSTOM      // 自定义策略
+}
+
+// 执行状态
+enum ExecutionStatus {
+  PENDING     // 等待执行
+  RUNNING     // 执行中
+  SUCCESS     // 成功
+  FAILED      // 失败
+  CANCELLED   // 已取消
+}
+
+// 风险等级
+enum RiskLevel {
+  LOW         // 低风险
+  MEDIUM      // 中风险
+  HIGH        // 高风险
+  EXTREME     // 极高风险
+}
+
+// 策略主表
+model Strategy {
+  id          String         @id @default(uuid())
+  userId      String         // 用户ID
+  name        String         // 策略名称
+  description String?        // 策略描述
+  type        StrategyType   // 策略类型
+  status      StrategyStatus @default(DRAFT)
+  riskLevel   RiskLevel      @default(MEDIUM)
+
+  // 策略配置（JSON）
+  config      Json           // 策略参数配置
+  indicators  Json?          // 指标配置
+  conditions  Json?          // 触发条件
+  actions     Json?          // 执行动作
+
+  // 交易对与交易所
+  exchange    String         // 交易所ID
+  symbol      String         // 交易对 (如 BTC/USDT)
+
+  // 资金管理
+  initialCapital  Decimal    @db.Decimal(20, 8) // 初始资金
+  currentCapital  Decimal    @db.Decimal(20, 8) // 当前资金
+  maxDrawdown     Decimal?   @db.Decimal(5, 2)  // 最大回撤比例
+
+  // 执行设置
+  autoStart       Boolean    @default(false)    // 自动启动
+  maxOrders       Int        @default(10)       // 最大订单数
+  orderInterval   Int        @default(60)       // 订单间隔(秒)
+
+  // 版本管理
+  version         Int        @default(1)        // 策略版本
+  parentId        String?    // 父策略ID (用于版本控制)
+  parent          Strategy?  @relation("StrategyVersions", fields: [parentId], references: [id], onDelete: SetNull)
+  versions        Strategy[] @relation("StrategyVersions")
+
+  // 模板关联
+  templateId      String?
+  template        StrategyTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  // 分享设置
+  isPublic        Boolean    @default(false)    // 是否公开
+  shareCode       String?    @unique            // 分享码
+  sharedBy        String?    // 分享者ID
+  forkCount       Int        @default(0)        // 被复制次数
+  likes           Int        @default(0)        // 点赞数
+
+  // 性能统计
+  totalTrades     Int        @default(0)        // 总交易次数
+  winRate         Decimal?   @db.Decimal(5, 2)  // 胜率
+  totalProfit     Decimal    @default(0) @db.Decimal(20, 8) // 总盈亏
+  profitRate      Decimal    @default(0) @db.Decimal(10, 4) // 收益率
+
+  // 时间戳
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  startedAt       DateTime?  // 启动时间
+  stoppedAt       DateTime?  // 停止时间
+
+  // 关联关系
+  executions      StrategyExecution[]
+  logs            StrategyLog[]
+  alerts          StrategyAlert[]
+  backtest        BacktestResult[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([exchange, symbol])
+  @@index([isPublic])
+  @@index([createdAt])
+  @@map("strategies")
+}
+
+// 策略模板
+model StrategyTemplate {
+  id              String       @id @default(uuid())
+  name            String       // 模板名称
+  description     String?      // 模板描述
+  category        String       // 分类
+  type            StrategyType // 策略类型
+  riskLevel       RiskLevel    @default(MEDIUM)
+
+  // 模板配置
+  config          Json         // 默认配置
+  indicators      Json?        // 默认指标
+  conditions      Json?        // 默认条件
+  actions         Json?        // 默认动作
+
+  // 模板元数据
+  author          String       // 作者ID
+  isOfficial      Boolean      @default(false) // 官方模板
+  isPublic        Boolean      @default(true)  // 公开可用
+  tags            String[]     // 标签
+
+  // 使用统计
+  usageCount      Int          @default(0)     // 使用次数
+  rating          Decimal?     @db.Decimal(3, 2) // 评分
+  ratingCount     Int          @default(0)     // 评分次数
+
+  // 预期性能指标
+  expectedReturn  Decimal?     @db.Decimal(10, 4) // 预期收益率
+  expectedWinRate Decimal?     @db.Decimal(5, 2)  // 预期胜率
+  minCapital      Decimal?     @db.Decimal(20, 8) // 最低资金要求
+
+  // 时间戳
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // 关联策略
+  strategies      Strategy[]
+
+  @@index([category])
+  @@index([type])
+  @@index([isPublic])
+  @@index([author])
+  @@map("strategy_templates")
+}
+
+// 策略执行记录
+model StrategyExecution {
+  id              String          @id @default(uuid())
+  strategyId      String
+  strategy        Strategy        @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  // 执行信息
+  status          ExecutionStatus @default(PENDING)
+  executionType   String          // 执行类型 (BUY, SELL, CLOSE)
+
+  // 交易信息
+  exchange        String          // 交易所
+  symbol          String          // 交易对
+  side            String          // 买卖方向 (BUY/SELL)
+  type            String          // 订单类型 (MARKET/LIMIT)
+  price           Decimal?        @db.Decimal(20, 8) // 价格
+  amount          Decimal         @db.Decimal(20, 8) // 数量
+  total           Decimal         @db.Decimal(20, 8) // 总额
+
+  // 订单信息
+  orderId         String?         // 交易所订单ID
+  filled          Decimal         @default(0) @db.Decimal(20, 8) // 成交数量
+  avgPrice        Decimal?        @db.Decimal(20, 8) // 成交均价
+  fee             Decimal         @default(0) @db.Decimal(20, 8) // 手续费
+  feeCurrency     String?         // 手续费币种
+
+  // 执行结果
+  profit          Decimal?        @db.Decimal(20, 8) // 盈亏
+  profitRate      Decimal?        @db.Decimal(10, 4) // 盈亏率
+
+  // 信号信息
+  signalData      Json?           // 触发信号数据
+  indicators      Json?           // 执行时的指标值
+
+  // 错误信息
+  errorMessage    String?         // 错误消息
+  errorCode       String?         // 错误代码
+
+  // 时间戳
+  createdAt       DateTime        @default(now())
+  executedAt      DateTime?       // 实际执行时间
+  completedAt     DateTime?       // 完成时间
+
+  @@index([strategyId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([exchange, symbol])
+  @@map("strategy_executions")
+}
+
+// 策略日志
+model StrategyLog {
+  id          String   @id @default(uuid())
+  strategyId  String
+  strategy    Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  level       String   // 日志级别 (INFO, WARN, ERROR)
+  message     String   // 日志消息
+  data        Json?    // 附加数据
+
+  createdAt   DateTime @default(now())
+
+  @@index([strategyId])
+  @@index([level])
+  @@index([createdAt])
+  @@map("strategy_logs")
+}
+
+// 策略告警
+model StrategyAlert {
+  id          String   @id @default(uuid())
+  strategyId  String
+  strategy    Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  type        String   // 告警类型 (RISK, ERROR, PERFORMANCE)
+  severity    String   // 严重程度 (LOW, MEDIUM, HIGH, CRITICAL)
+  title       String   // 告警标题
+  message     String   // 告警消息
+  data        Json?    // 告警数据
+
+  isRead      Boolean  @default(false)
+  isResolved  Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+
+  @@index([strategyId])
+  @@index([isRead])
+  @@index([isResolved])
+  @@index([createdAt])
+  @@map("strategy_alerts")
+}
+
+// 回测结果
+model BacktestResult {
+  id              String   @id @default(uuid())
+  strategyId      String
+  strategy        Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  // 回测参数
+  startDate       DateTime // 开始日期
+  endDate         DateTime // 结束日期
+  initialCapital  Decimal  @db.Decimal(20, 8) // 初始资金
+
+  // 回测结果
+  finalCapital    Decimal  @db.Decimal(20, 8) // 最终资金
+  totalReturn     Decimal  @db.Decimal(10, 4) // 总收益率
+  annualReturn    Decimal  @db.Decimal(10, 4) // 年化收益率
+  maxDrawdown     Decimal  @db.Decimal(5, 2)  // 最大回撤
+  sharpeRatio     Decimal? @db.Decimal(10, 4) // 夏普比率
+
+  // 交易统计
+  totalTrades     Int      // 总交易次数
+  winningTrades   Int      // 盈利交易
+  losingTrades    Int      // 亏损交易
+  winRate         Decimal  @db.Decimal(5, 2)  // 胜率
+
+  // 详细数据
+  trades          Json     // 交易记录
+  equity          Json     // 权益曲线
+  metrics         Json     // 其他指标
+
+  createdAt       DateTime @default(now())
+
+  @@index([strategyId])
+  @@index([createdAt])
+  @@map("backtest_results")
+}

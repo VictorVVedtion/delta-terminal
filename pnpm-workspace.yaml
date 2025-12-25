@@ -1,0 +1,18 @@
+packages:
+  # 前端应用
+  - 'frontend/*'
+
+  # 后端服务
+  - 'backend/*'
+
+  # AI引擎
+  - 'ai-engine/*'
+
+  # 交易引擎
+  - 'trading-engine/*'
+
+  # 数据管道
+  - 'data-pipeline/*'
+
+  # 共享模块
+  - 'shared/*'

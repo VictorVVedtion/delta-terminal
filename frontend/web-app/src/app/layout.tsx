@@ -1,0 +1,65 @@
+import type { Metadata } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+
+import './globals.css';
+import { Web3Provider } from '@/providers/Web3Provider';
+import { AuthProvider } from '@/components/providers/AuthProvider';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { WebSocketProvider } from '@/components/providers/WebSocketProvider';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Delta Terminal - AI交易终端',
+    template: '%s | Delta Terminal',
+  },
+  description: '无代码AI自动交易平台 - AI驱动的智能交易终端',
+  keywords: ['交易', 'AI', '自动化', '加密货币', '策略'],
+  authors: [{ name: 'Delta Terminal Team' }],
+  icons: {
+    icon: '/favicon.ico',
+  },
+};
+
+// Inline script to prevent theme flash
+const themeScript = `
+  (function() {
+    try {
+      var stored = localStorage.getItem('ui-storage');
+      if (stored) {
+        var parsed = JSON.parse(stored);
+        var theme = parsed.state && parsed.state.theme ? parsed.state.theme : 'dark';
+        document.documentElement.classList.add(theme);
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    } catch (e) {
+      document.documentElement.classList.add('dark');
+    }
+  })();
+`;
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="zh-CN" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <Web3Provider>
+          <AuthProvider>
+            <ThemeProvider>
+              <WebSocketProvider>
+                {children}
+              </WebSocketProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </Web3Provider>
+      </body>
+    </html>
+  );
+}

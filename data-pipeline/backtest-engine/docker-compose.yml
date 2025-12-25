@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backtest-engine:
+    build: .
+    container_name: delta-backtest-engine
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    environment:
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - REDIS_HOST=redis
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/delta_backtest
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: delta-backtest-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: delta-backtest-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: delta_backtest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  postgres_data:

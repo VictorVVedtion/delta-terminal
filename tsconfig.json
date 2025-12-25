@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    // 类型检查
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+
+    // 模块解析
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+
+    // JavaScript 支持
+    "allowJs": true,
+    "checkJs": false,
+
+    // 输出
+    "noEmit": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // 互操作性
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // 语言特性
+    "target": "ES2022",
+    "lib": ["ES2022"],
+
+    // 跳过库检查以提升性能
+    "skipLibCheck": true,
+
+    // 路径映射 (各子项目可覆盖)
+    "baseUrl": ".",
+    "paths": {
+      "@delta/common-types": ["./shared/common-types/src"],
+      "@delta/utils": ["./shared/utils/src"],
+      "@delta/config": ["./shared/config/src"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".next",
+    ".turbo",
+    "coverage"
+  ]
+}

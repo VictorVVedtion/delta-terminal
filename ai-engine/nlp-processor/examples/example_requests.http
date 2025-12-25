@@ -1,0 +1,187 @@
+### NLP Processor API 示例请求
+### 使用 REST Client 或 HTTPie 执行
+
+@baseUrl = http://localhost:8001
+@apiVersion = v1
+
+### 健康检查
+GET {{baseUrl}}/health
+
+### 根路径
+GET {{baseUrl}}/
+
+###############################################################################
+# 聊天 API
+###############################################################################
+
+### 1. 创建策略对话
+POST {{baseUrl}}/api/{{apiVersion}}/chat/message
+Content-Type: application/json
+
+{
+  "message": "帮我创建一个 BTC/USDT 的网格策略，价格区间在 40000-50000 之间",
+  "user_id": "user123"
+}
+
+### 2. 市场分析对话
+POST {{baseUrl}}/api/{{apiVersion}}/chat/message
+Content-Type: application/json
+
+{
+  "message": "分析一下当前 BTC 的行情趋势",
+  "user_id": "user123",
+  "conversation_id": "conv456"
+}
+
+### 3. 策略查询对话
+POST {{baseUrl}}/api/{{apiVersion}}/chat/message
+Content-Type: application/json
+
+{
+  "message": "我有哪些正在运行的策略？",
+  "user_id": "user123"
+}
+
+### 4. 获取对话历史
+GET {{baseUrl}}/api/{{apiVersion}}/chat/conversation/conv456
+
+### 5. 清空对话历史
+POST {{baseUrl}}/api/{{apiVersion}}/chat/conversation/conv456/clear
+
+### 6. 删除对话
+DELETE {{baseUrl}}/api/{{apiVersion}}/chat/conversation/conv456
+
+###############################################################################
+# 策略解析 API
+###############################################################################
+
+### 7. 解析简单的 RSI 策略
+POST {{baseUrl}}/api/{{apiVersion}}/parse/strategy
+Content-Type: application/json
+
+{
+  "description": "当 BTC/USDT 的 RSI 低于 30 时买入，高于 70 时卖出，使用 1 小时周期，止损 3%，止盈 5%",
+  "user_id": "user123"
+}
+
+### 8. 解析复杂的 MACD 策略
+POST {{baseUrl}}/api/{{apiVersion}}/parse/strategy
+Content-Type: application/json
+
+{
+  "description": "在 4 小时周期的 ETH/USDT 上，当 MACD 金叉且价格突破 20 日均线时买入，止损设在最近支撑位下方 2%，目标利润 10%",
+  "user_id": "user123"
+}
+
+### 9. 解析网格策略
+POST {{baseUrl}}/api/{{apiVersion}}/parse/strategy
+Content-Type: application/json
+
+{
+  "description": "创建一个 BNB/USDT 网格策略，价格区间 300-400，分 10 个网格，每次交易 1% 仓位",
+  "user_id": "user123"
+}
+
+### 10. 解析定投策略
+POST {{baseUrl}}/api/{{apiVersion}}/parse/strategy
+Content-Type: application/json
+
+{
+  "description": "每天定时买入 100 USDT 的 BTC，不设止损，长期持有",
+  "user_id": "user123"
+}
+
+### 11. 验证策略配置
+POST {{baseUrl}}/api/{{apiVersion}}/parse/validate-strategy
+Content-Type: application/json
+
+{
+  "name": "测试策略",
+  "strategy_type": "swing",
+  "symbol": "BTC/USDT",
+  "timeframe": "1h",
+  "entry_conditions": [
+    {
+      "indicator": "RSI",
+      "operator": "<",
+      "value": 30,
+      "params": {
+        "period": 14
+      }
+    }
+  ],
+  "entry_action": {
+    "action_type": "buy",
+    "order_type": "market",
+    "amount_percent": 10
+  }
+}
+
+### 12. 获取策略优化建议
+POST {{baseUrl}}/api/{{apiVersion}}/parse/optimize-strategy
+Content-Type: application/json
+
+{
+  "name": "BTC RSI 策略",
+  "strategy_type": "swing",
+  "symbol": "BTC/USDT",
+  "timeframe": "1h",
+  "entry_conditions": [
+    {
+      "indicator": "RSI",
+      "operator": "<",
+      "value": 30
+    }
+  ],
+  "entry_action": {
+    "action_type": "buy",
+    "order_type": "market",
+    "amount_percent": 10
+  }
+}
+
+### 13. 提取参数
+POST {{baseUrl}}/api/{{apiVersion}}/parse/extract-parameters
+Content-Type: application/json
+
+{
+  "user_input": "我想在 BTC/USDT 上使用 RSI 指标，周期设为 14，超买阈值 70，超卖阈值 30",
+  "parameter_schema": {
+    "symbol": "string",
+    "indicator": "string",
+    "period": "number",
+    "overbought": "number",
+    "oversold": "number"
+  }
+}
+
+###############################################################################
+# 测试用例
+###############################################################################
+
+### 测试 1: 复杂的多条件策略
+POST {{baseUrl}}/api/{{apiVersion}}/parse/strategy
+Content-Type: application/json
+
+{
+  "description": "在 SOL/USDT 上，当 RSI 低于 35 且 MACD 出现金叉且成交量大于平均值 1.5 倍时买入，使用 15 分钟周期，止损 2%，止盈 6%，最大仓位 20%",
+  "user_id": "user123"
+}
+
+### 测试 2: 带风险管理的策略
+POST {{baseUrl}}/api/{{apiVersion}}/parse/strategy
+Content-Type: application/json
+
+{
+  "description": "创建一个 ADA/USDT 的波段策略，日线级别，当价格突破布林带上轨时卖出，突破下轨时买入，每次交易不超过总资金的 15%，设置 5% 止损和 12% 止盈，每日最大亏损限制为总资金的 3%",
+  "user_id": "user123"
+}
+
+### 测试 3: 自然语言意图识别
+POST {{baseUrl}}/api/{{apiVersion}}/chat/message
+Content-Type: application/json
+
+{
+  "message": "我想了解一下现在 BTC 的价格走势如何，适合做多还是做空？",
+  "user_id": "user123"
+}

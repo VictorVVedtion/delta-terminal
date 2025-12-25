@@ -1,0 +1,397 @@
+{
+  "projectName": "Delta Terminal AI交易终端",
+  "description": "无代码AI自动交易平台",
+  "lastUpdated": "2025-12-24T01:52:02.000Z",
+  "scanVersion": "1.0.0",
+  "rootPath": "/Users/victor/delta terminal",
+  "scanMetadata": {
+    "timestamp": "2025-12-24T01:52:02.000Z",
+    "strategy": "initial-setup",
+    "totalFiles": 0,
+    "scannedFiles": 0,
+    "coveragePercent": 0,
+    "truncated": false,
+    "emptyProject": true
+  },
+  "ignoreRules": {
+    "source": "default",
+    "patterns": [
+      "node_modules/**",
+      ".git/**",
+      ".github/**",
+      "dist/**",
+      "build/**",
+      ".next/**",
+      "__pycache__/**",
+      "*.lock",
+      "*.log",
+      "*.bin",
+      "*.pdf",
+      "*.png",
+      "*.jpg",
+      "*.jpeg",
+      "*.gif",
+      "*.mp4",
+      "*.zip",
+      "*.tar",
+      "*.gz",
+      ".claude/**"
+    ]
+  },
+  "modules": [
+    {
+      "name": "frontend-web-app",
+      "path": "frontend/web-app",
+      "type": "frontend",
+      "language": "typescript",
+      "framework": "next.js",
+      "status": "planned",
+      "responsibility": "主Web应用界面",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "frontend-mobile-app",
+      "path": "frontend/mobile-app",
+      "type": "frontend",
+      "language": "typescript",
+      "framework": "react-native",
+      "status": "planned",
+      "responsibility": "移动端应用",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "backend-api-gateway",
+      "path": "backend/api-gateway",
+      "type": "backend",
+      "language": "typescript",
+      "framework": "express/fastify",
+      "status": "planned",
+      "responsibility": "API网关与路由",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "backend-auth-service",
+      "path": "backend/auth-service",
+      "type": "backend",
+      "language": "typescript",
+      "framework": "node.js",
+      "status": "planned",
+      "responsibility": "用户认证与授权",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "backend-user-service",
+      "path": "backend/user-service",
+      "type": "backend",
+      "language": "typescript",
+      "framework": "node.js",
+      "status": "planned",
+      "responsibility": "用户管理服务",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "backend-strategy-service",
+      "path": "backend/strategy-service",
+      "type": "backend",
+      "language": "typescript",
+      "framework": "node.js",
+      "status": "planned",
+      "responsibility": "策略管理服务",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "ai-engine-nlp-processor",
+      "path": "ai-engine/nlp-processor",
+      "type": "ai-service",
+      "language": "python",
+      "framework": "langchain",
+      "status": "planned",
+      "responsibility": "自然语言处理",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "ai-engine-strategy-generator",
+      "path": "ai-engine/strategy-generator",
+      "type": "ai-service",
+      "language": "python",
+      "framework": "langchain",
+      "status": "planned",
+      "responsibility": "AI策略生成器",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "ai-engine-signal-analyzer",
+      "path": "ai-engine/signal-analyzer",
+      "type": "ai-service",
+      "language": "python",
+      "framework": "ml",
+      "status": "planned",
+      "responsibility": "交易信号分析",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "trading-engine-order-executor",
+      "path": "trading-engine/order-executor",
+      "type": "trading-service",
+      "language": "typescript",
+      "framework": "ccxt",
+      "status": "planned",
+      "responsibility": "订单执行引擎",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "trading-engine-risk-manager",
+      "path": "trading-engine/risk-manager",
+      "type": "trading-service",
+      "language": "python",
+      "framework": "real-time",
+      "status": "planned",
+      "responsibility": "风险管理系统",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "trading-engine-exchange-connector",
+      "path": "trading-engine/exchange-connector",
+      "type": "trading-service",
+      "language": "typescript",
+      "framework": "websocket",
+      "status": "planned",
+      "responsibility": "交易所连接器",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "data-pipeline-market-data-collector",
+      "path": "data-pipeline/market-data-collector",
+      "type": "data-service",
+      "language": "python",
+      "framework": "websocket",
+      "status": "planned",
+      "responsibility": "市场数据采集",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "data-pipeline-backtest-engine",
+      "path": "data-pipeline/backtest-engine",
+      "type": "data-service",
+      "language": "python",
+      "framework": "pandas",
+      "status": "planned",
+      "responsibility": "回测引擎",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "data-pipeline-analytics-service",
+      "path": "data-pipeline/analytics-service",
+      "type": "data-service",
+      "language": "python",
+      "framework": "timescaledb",
+      "status": "planned",
+      "responsibility": "数据分析服务",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "shared-common-types",
+      "path": "shared/common-types",
+      "type": "library",
+      "language": "typescript",
+      "framework": "zod",
+      "status": "planned",
+      "responsibility": "通用类型定义",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "shared-utils",
+      "path": "shared/utils",
+      "type": "library",
+      "language": "typescript",
+      "framework": "utilities",
+      "status": "planned",
+      "responsibility": "工具函数库",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    },
+    {
+      "name": "shared-config",
+      "path": "shared/config",
+      "type": "library",
+      "language": "yaml",
+      "framework": "dotenv",
+      "status": "planned",
+      "responsibility": "配置管理",
+      "entryPoints": [],
+      "interfaces": [],
+      "tests": [],
+      "coverage": {
+        "scanned": false,
+        "hasTests": false,
+        "hasConfig": false,
+        "gaps": ["需要创建模块"]
+      }
+    }
+  ],
+  "techStack": {
+    "frontend": ["Next.js 14+", "TypeScript", "TailwindCSS", "Shadcn/ui"],
+    "backend": ["Node.js", "TypeScript", "Express/Fastify"],
+    "ai": ["Python", "LangChain", "Claude API", "Pinecone/Weaviate"],
+    "trading": ["CCXT", "WebSocket"],
+    "database": ["PostgreSQL", "Redis", "TimescaleDB"],
+    "messaging": ["RabbitMQ/Kafka"],
+    "monitoring": ["Prometheus", "Grafana"],
+    "infrastructure": ["Docker", "Kubernetes"]
+  },
+  "nextSteps": [
+    "初始化 monorepo 结构 (pnpm workspace 或 Turborepo)",
+    "设置代码规范配置 (ESLint, Prettier, TypeScript)",
+    "创建优先级模块：backend/api-gateway, backend/auth-service",
+    "设置 CI/CD 管道",
+    "为每个模块生成详细的 CLAUDE.md 文档"
+  ],
+  "coverage": {
+    "totalModules": 18,
+    "scannedModules": 0,
+    "modulesWithTests": 0,
+    "modulesWithDocs": 0,
+    "overallCoveragePercent": 0,
+    "gaps": [
+      "项目为空，所有模块待创建",
+      "需要初始化 Git 仓库",
+      "需要设置 monorepo 工具",
+      "需要配置开发环境"
+    ]
+  }
+}

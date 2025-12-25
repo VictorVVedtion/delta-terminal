@@ -1,0 +1,172 @@
+/**
+ * RiverBit Design System - CSS Variables
+ * Based on: Delta Terminal Design System (Figma)
+ * Version: 1.0.0
+ * Last Updated: 2025-12-25
+ *
+ * This file defines the design tokens for Delta Terminal.
+ * All components should reference these variables for consistency.
+ */
+
+:root {
+  /* ========== BRAND COLORS ========== */
+  --rb-cyan: #0EECBC;
+  --rb-cyan-light: #22C3A0;
+  --rb-cyan-dim: rgba(14, 236, 188, 0.15);
+  --rb-cyan-hover: rgba(14, 236, 188, 0.25);
+
+  /* ========== SEMANTIC COLORS ========== */
+  --rb-green: #61DD3C;
+  --rb-green-dim: rgba(97, 221, 60, 0.15);
+  --rb-yellow: #E8BD30;
+  --rb-yellow-dim: rgba(232, 189, 48, 0.15);
+  --rb-red: #DD3C41;
+  --rb-red-dim: rgba(221, 60, 65, 0.15);
+
+  /* ========== GRAYSCALE (D-Scale) ========== */
+  --rb-black: #000000;
+  --rb-white: #FFFFFF;
+  --rb-d950: #070E12;  /* Darkest - Layer Tier 0 */
+  --rb-d930: #0D1417;
+  --rb-d900: #151B1E;  /* Primary Background */
+  --rb-d800: #1F292E;  /* Card Background / Border */
+  --rb-d700: #354046;  /* Border Light */
+  --rb-d600: #5C6970;
+  --rb-d500: #75838A;  /* Text Secondary */
+  --rb-d400: #89949A;
+  --rb-d300: #ABB5BA;
+  --rb-d200: #C5CFD3;
+  --rb-d100: #E2E7E9;
+  --rb-d70: #EBEEF0;   /* Text Main */
+  --rb-d30: #F7F8F8;   /* Lightest */
+
+  /* ========== SEMANTIC ALIASES ========== */
+  --layer-tier-0: var(--rb-d950);
+  --layer-tier-1: var(--rb-d930);
+  --layer-tier-2: var(--rb-d900);
+  --layer-card: var(--rb-d800);
+  --border-default: var(--rb-d800);
+  --border-light: var(--rb-d700);
+  --text-main: var(--rb-d70);
+  --text-secondary: var(--rb-d500);
+  --text-placeholder: var(--rb-d700);
+
+  /* ========== TYPOGRAPHY ========== */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  /* Font Sizes */
+  --text-h1: 32px;
+  --text-h2: 28px;
+  --text-h3: 24px;
+  --text-h4: 20px;
+  --text-h5: 18px;
+  --text-h6: 16px;
+  --text-h7: 14px;
+  --text-h8: 12px;
+  --text-subtitle: 18px;
+  --text-main-size: 16px;
+  --text-description: 14px;
+  --text-smaller: 12px;
+
+  /* Line Heights */
+  --lh-h1: 48px;
+  --lh-h2: 40px;
+  --lh-h3: 32px;
+  --lh-h4: 32px;
+  --lh-h5: 28px;
+  --lh-h6: 24px;
+  --lh-h7: 20px;
+  --lh-h8: 16px;
+
+  /* ========== SPACING ========== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 48px;
+
+  /* ========== RADIUS ========== */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* ========== SHADOWS ========== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-glow-cyan: 0 0 20px rgba(14, 236, 188, 0.3);
+
+  /* ========== TRANSITIONS ========== */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+}
+
+/* ========== SHADCN/UI THEME MAPPING ========== */
+:root {
+  /* Map RiverBit tokens to shadcn/ui CSS variables */
+  --background: 0 0% 3%;           /* rb-d950 */
+  --foreground: 210 7% 93%;        /* rb-d70 */
+
+  --card: 200 12% 9%;              /* rb-d800 */
+  --card-foreground: 210 7% 93%;   /* rb-d70 */
+
+  --popover: 200 12% 9%;           /* rb-d800 */
+  --popover-foreground: 210 7% 93%;
+
+  --primary: 163 92% 51%;          /* rb-cyan */
+  --primary-foreground: 200 14% 10%; /* rb-d900 */
+
+  --secondary: 200 10% 16%;        /* rb-d700 */
+  --secondary-foreground: 210 7% 93%;
+
+  --muted: 200 10% 12%;            /* rb-d800 */
+  --muted-foreground: 200 8% 50%;  /* rb-d500 */
+
+  --accent: 163 92% 51%;           /* rb-cyan */
+  --accent-foreground: 200 14% 10%;
+
+  --destructive: 358 78% 55%;      /* rb-red */
+  --destructive-foreground: 210 7% 93%;
+
+  --border: 200 12% 15%;           /* rb-d800 */
+  --input: 200 12% 8%;             /* rb-d930 */
+  --ring: 163 92% 51%;             /* rb-cyan */
+
+  --radius: 0.5rem;
+}
+
+/* Success and Warning (additions to shadcn) */
+:root {
+  --success: 107 70% 55%;          /* rb-green */
+  --success-foreground: 200 14% 10%;
+  --warning: 44 82% 55%;           /* rb-yellow */
+  --warning-foreground: 200 14% 10%;
+}
+
+/* ========== CHART COLORS (Shadcn) ========== */
+:root {
+  --chart-1: 163 92% 51%;          /* rb-cyan */
+  --chart-2: 107 70% 55%;          /* rb-green */
+  --chart-3: 44 82% 55%;           /* rb-yellow */
+  --chart-4: 358 78% 55%;          /* rb-red */
+  --chart-5: 200 8% 50%;           /* rb-d500 */
+}
+
+/* ========== SIDEBAR COLORS ========== */
+:root {
+  --sidebar-background: var(--rb-d930);
+  --sidebar-foreground: var(--rb-d70);
+  --sidebar-primary: var(--rb-cyan);
+  --sidebar-primary-foreground: var(--rb-d900);
+  --sidebar-accent: var(--rb-cyan-dim);
+  --sidebar-accent-foreground: var(--rb-cyan);
+  --sidebar-border: var(--rb-d800);
+  --sidebar-ring: var(--rb-cyan);
+}

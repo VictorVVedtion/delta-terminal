@@ -1,0 +1,166 @@
+// Prisma Schema for User Service
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户模型
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String   // bcrypt 哈希
+  
+  // 个人信息
+  firstName String?
+  lastName  String?
+  avatar    String?
+  timezone  String   @default("UTC")
+  language  String   @default("zh-CN")
+  
+  // 账户状态
+  isActive      Boolean  @default(true)
+  isVerified    Boolean  @default(false)
+  emailVerified Boolean  @default(false)
+  
+  // 角色权限
+  role          UserRole @default(USER)
+  
+  // 时间戳
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  // 关联
+  profile      UserProfile?
+  settings     UserSettings?
+  apiKeys      ApiKey[]
+  sessions     UserSession[]
+  
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+// 用户资料
+model UserProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 个人资料
+  bio          String?
+  phoneNumber  String?
+  country      String?
+  city         String?
+  
+  // 交易相关
+  riskTolerance String?  @default("medium") // low, medium, high
+  experience    String?  @default("beginner") // beginner, intermediate, advanced, expert
+  
+  // 社交媒体
+  twitter      String?
+  telegram     String?
+  discord      String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("user_profiles")
+}
+
+// 用户设置
+model UserSettings {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 通知设置
+  emailNotifications    Boolean @default(true)
+  tradeNotifications    Boolean @default(true)
+  marketAlerts          Boolean @default(true)
+  systemNotifications   Boolean @default(true)
+  
+  // 交易设置
+  defaultExchange       String?
+  defaultTradingPair    String?
+  defaultOrderType      String? @default("limit") // market, limit, stop
+  
+  // 安全设置
+  twoFactorEnabled      Boolean @default(false)
+  twoFactorSecret       String?
+  
+  // UI 设置
+  theme                 String  @default("dark") // light, dark
+  currency              String  @default("USD")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("user_settings")
+}
+
+// 交易所 API 密钥
+model ApiKey {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 交易所信息
+  exchange    String // binance, okx, bybit, etc.
+  name        String // 用户自定义名称
+  
+  // 加密的 API 密钥
+  apiKey      String // 加密存储
+  apiSecret   String // 加密存储
+  passphrase  String? // 某些交易所需要，加密存储
+  
+  // 密钥权限
+  permissions Json? // 权限列表，如 ["spot_trade", "futures_trade", "read_only"]
+  
+  // 状态
+  isActive    Boolean @default(true)
+  lastUsedAt  DateTime?
+  
+  // 元数据
+  metadata    Json? // 额外配置信息
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([exchange])
+  @@map("api_keys")
+}
+
+// 用户会话
+model UserSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+  @@map("user_sessions")
+}
+
+// 枚举类型
+enum UserRole {
+  USER
+  PREMIUM
+  ADMIN
+  SUPER_ADMIN
+}

@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'order-executor'
+    static_configs:
+      - targets: ['order-executor:9003']
+        labels:
+          service: 'order-executor'
+          environment: 'production'
