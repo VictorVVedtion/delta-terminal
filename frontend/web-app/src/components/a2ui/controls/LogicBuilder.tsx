@@ -39,14 +39,52 @@ export interface LogicBuilderProps {
 // Constants
 // =============================================================================
 
-const INDICATORS = [
-  { value: 'price', label: '价格' },
-  { value: 'rsi', label: 'RSI' },
-  { value: 'macd', label: 'MACD' },
-  { value: 'ma', label: '均线' },
-  { value: 'volume', label: '成交量' },
-  { value: 'atr', label: 'ATR' },
-  { value: 'bollinger', label: '布林带' },
+// Indicator definitions with categories and configuration hints
+interface IndicatorDef {
+  value: string
+  label: string
+  category: 'price' | 'momentum' | 'trend' | 'volatility' | 'volume'
+  hasParams?: boolean
+  paramHint?: string
+}
+
+const INDICATORS: IndicatorDef[] = [
+  // 价格类
+  { value: 'price', label: '价格', category: 'price' },
+  { value: 'price_change', label: '价格变动%', category: 'price' },
+  { value: 'high', label: '最高价', category: 'price' },
+  { value: 'low', label: '最低价', category: 'price' },
+  // 动量类
+  { value: 'rsi', label: 'RSI', category: 'momentum', hasParams: true, paramHint: '周期' },
+  { value: 'stoch_k', label: '随机指标 %K', category: 'momentum', hasParams: true },
+  { value: 'stoch_d', label: '随机指标 %D', category: 'momentum', hasParams: true },
+  { value: 'cci', label: 'CCI', category: 'momentum', hasParams: true },
+  { value: 'williams_r', label: 'Williams %R', category: 'momentum', hasParams: true },
+  // 趋势类
+  { value: 'ma', label: '均线 (MA)', category: 'trend', hasParams: true, paramHint: '周期' },
+  { value: 'ema', label: 'EMA', category: 'trend', hasParams: true, paramHint: '周期' },
+  { value: 'macd', label: 'MACD', category: 'trend' },
+  { value: 'macd_signal', label: 'MACD 信号线', category: 'trend' },
+  { value: 'macd_hist', label: 'MACD 柱状图', category: 'trend' },
+  { value: 'adx', label: 'ADX', category: 'trend', hasParams: true },
+  // 波动率类
+  { value: 'atr', label: 'ATR', category: 'volatility', hasParams: true },
+  { value: 'bollinger_upper', label: '布林上轨', category: 'volatility', hasParams: true },
+  { value: 'bollinger_middle', label: '布林中轨', category: 'volatility', hasParams: true },
+  { value: 'bollinger_lower', label: '布林下轨', category: 'volatility', hasParams: true },
+  { value: 'volatility', label: '波动率', category: 'volatility' },
+  // 成交量类
+  { value: 'volume', label: '成交量', category: 'volume' },
+  { value: 'volume_ma', label: '成交量均线', category: 'volume', hasParams: true },
+  { value: 'obv', label: 'OBV', category: 'volume' },
+]
+
+const INDICATOR_CATEGORIES = [
+  { key: 'price', label: '价格', color: 'text-blue-500' },
+  { key: 'momentum', label: '动量', color: 'text-purple-500' },
+  { key: 'trend', label: '趋势', color: 'text-green-500' },
+  { key: 'volatility', label: '波动率', color: 'text-orange-500' },
+  { key: 'volume', label: '成交量', color: 'text-cyan-500' },
 ]
 
 const OPERATORS: { value: ComparisonOperator; label: string; symbol: string }[] = [
@@ -87,6 +125,11 @@ function ConditionCard({
   hasError = false,
   hasWarning = false,
 }: ConditionCardProps) {
+  // Get indicator definition to check if it needs parameters
+  const selectedIndicator = INDICATORS.find((ind) => ind.value === condition.indicator)
+  const needsParams = selectedIndicator?.hasParams
+  const paramHint = selectedIndicator?.paramHint || '周期'
+  const currentPeriod = condition.indicator_params?.period || 14
 
   return (
     <div className="relative">
@@ -115,7 +158,7 @@ function ConditionCard({
           <GripVertical className="w-4 h-4" />
         </button>
 
-        {/* Indicator Select */}
+        {/* Indicator Select with Categories */}
         <select
           value={condition.indicator}
           onChange={(e) => onUpdate(condition.id, { indicator: e.target.value })}
@@ -128,12 +171,44 @@ function ConditionCard({
           )}
         >
           <option value="">选择指标</option>
-          {INDICATORS.map((ind) => (
-            <option key={ind.value} value={ind.value}>
-              {ind.label}
-            </option>
+          {INDICATOR_CATEGORIES.map((cat) => (
+            <optgroup key={cat.key} label={cat.label}>
+              {INDICATORS.filter((ind) => ind.category === cat.key).map((ind) => (
+                <option key={ind.value} value={ind.value}>
+                  {ind.label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
+
+        {/* Indicator Period Input (for indicators that need params) */}
+        {needsParams && (
+          <input
+            type="number"
+            value={currentPeriod}
+            onChange={(e) => {
+              const val = e.target.value
+              onUpdate(condition.id, {
+                indicator_params: {
+                  ...condition.indicator_params,
+                  period: val === '' ? 14 : parseInt(val, 10),
+                },
+              })
+            }}
+            disabled={disabled}
+            placeholder={paramHint}
+            title={paramHint}
+            min={1}
+            max={200}
+            className={cn(
+              'w-16 h-9 px-2 rounded-md border bg-background text-sm text-center',
+              'focus:outline-none focus:ring-2 focus:ring-ring',
+              'transition-colors',
+              disabled && 'cursor-not-allowed opacity-50',
+            )}
+          />
+        )}
 
         {/* Operator Select */}
         <select
@@ -364,9 +439,12 @@ export function LogicBuilder({
             {value.map((cond, idx) => {
               const indicator = INDICATORS.find((i) => i.value === cond.indicator)
               const operator = OPERATORS.find((o) => o.value === cond.operator)
+              const periodStr = cond.indicator_params?.period
+                ? `(${cond.indicator_params.period})`
+                : ''
               return (
                 <span key={cond.id}>
-                  {indicator?.label || cond.indicator || '?'}{' '}
+                  {indicator?.label || cond.indicator || '?'}{periodStr}{' '}
                   {operator?.symbol || cond.operator} {cond.value}
                   {idx < value.length - 1 && (
                     <span className="mx-1 font-semibold text-[hsl(var(--rb-cyan))]">

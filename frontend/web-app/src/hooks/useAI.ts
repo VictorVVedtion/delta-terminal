@@ -323,13 +323,16 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
         let fullContent = ''
         let inputTokens = 0
         let outputTokens = 0
+        let buffer = '' // 用于处理跨 chunk 的数据
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const text = decoder.decode(value)
-          const lines = text.split('\n')
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          // 保留最后一个可能不完整的行
+          buffer = lines.pop() || ''
 
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue
@@ -375,6 +378,26 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
 
                 case 'error':
                   throw new Error(chunk.data.error)
+              }
+            } catch {
+              // 忽略解析错误
+            }
+          }
+        }
+
+        // 处理剩余的 buffer 内容
+        if (buffer.trim() && buffer.startsWith('data: ')) {
+          const data = buffer.slice(6).trim()
+          if (data && data !== '[DONE]') {
+            try {
+              const chunk: AIStreamChunk = JSON.parse(data)
+              if (chunk.type === 'content' && chunk.data.content) {
+                fullContent += chunk.data.content
+                setStreamContent(fullContent)
+                appendStreamingContent(chunk.data.content)
+              } else if (chunk.type === 'usage' && chunk.data.usage) {
+                inputTokens = chunk.data.usage.inputTokens
+                outputTokens = chunk.data.usage.outputTokens
               }
             } catch {
               // 忽略解析错误

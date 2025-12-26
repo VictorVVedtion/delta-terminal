@@ -208,16 +208,14 @@ export function Header() {
         </div>
       </div>
 
-      {/* Paper Trading 滑动面板 */}
-      {activeAccount && (
-        <PaperTradingPanel
-          isOpen={showPTPanel}
-          onClose={() => setShowPTPanel(false)}
-          strategyId={activeAccount.agentId}
-          strategyName="Paper Trading"
-          symbol="BTC/USDT"
-        />
-      )}
+      {/* Paper Trading 滑动面板 - 始终渲染，Panel内部处理账户创建 */}
+      <PaperTradingPanel
+        isOpen={showPTPanel}
+        onClose={() => setShowPTPanel(false)}
+        strategyId={activeAccount?.agentId || 'manual-trading'}
+        strategyName="Paper Trading"
+        symbol="BTC/USDT"
+      />
     </header>
   )
 }

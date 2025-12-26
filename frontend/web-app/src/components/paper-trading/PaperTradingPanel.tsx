@@ -7,11 +7,12 @@
 
 'use client'
 
-import React, { useEffect } from 'react'
-import { X, TrendingUp, TrendingDown, Activity, DollarSign, Award } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { X, TrendingUp, TrendingDown, Activity, DollarSign, Award, Play, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { usePaperTrading } from '@/hooks/usePaperTrading'
 import { useSingleAssetPrice } from '@/hooks/useHyperliquidPrice'
@@ -50,7 +51,12 @@ export function PaperTradingPanel({
     stats,
     updatePrice,
     getPositionBySymbol,
+    initAccount,
   } = usePaperTrading({ agentId: strategyId })
+
+  // 创建账户的本地状态
+  const [initialCapital, setInitialCapital] = useState(10000)
+  const [isCreating, setIsCreating] = useState(false)
 
   // 实时价格订阅 (假设 symbol 为 "BTC/USDT", 提取 "BTC")
   const assetSymbol = symbol.split('/')[0] || 'BTC'
@@ -76,6 +82,16 @@ export function PaperTradingPanel({
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
+
+  // 创建账户
+  const handleCreateAccount = () => {
+    setIsCreating(true)
+    try {
+      initAccount(strategyId, initialCapital)
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   // 获取持仓
   const position = getPositionBySymbol(symbol)
@@ -131,7 +147,66 @@ export function PaperTradingPanel({
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-4 space-y-4">
-            {!account || !stats ? (
+            {!account ? (
+              /* 无账户 - 创建账户入口 */
+              <Card className="border-dashed border-2 border-[hsl(var(--rb-yellow))]/30">
+                <CardHeader className="text-center pb-2">
+                  <div className="mx-auto p-3 rounded-full bg-[hsl(var(--rb-yellow))]/10 w-fit mb-2">
+                    <Target className="h-8 w-8 text-[hsl(var(--rb-yellow))]" />
+                  </div>
+                  <CardTitle className="text-lg">开始 Paper Trading</CardTitle>
+                  <CardDescription>
+                    使用虚拟资金进行模拟交易，零风险测试策略
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* 初始资金设置 */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      初始虚拟资金 (USDT)
+                    </label>
+                    <Input
+                      type="number"
+                      value={initialCapital}
+                      onChange={(e) => setInitialCapital(Number(e.target.value))}
+                      min={100}
+                      max={1000000}
+                      className="text-center text-lg font-mono"
+                    />
+                    <div className="flex justify-center gap-2">
+                      {[1000, 10000, 50000, 100000].map((amount) => (
+                        <Button
+                          key={amount}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setInitialCapital(amount)}
+                          className={cn(
+                            'text-xs',
+                            initialCapital === amount && 'border-[hsl(var(--rb-yellow))] bg-[hsl(var(--rb-yellow))]/10'
+                          )}
+                        >
+                          ${amount.toLocaleString()}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 创建按钮 */}
+                  <Button
+                    onClick={handleCreateAccount}
+                    disabled={isCreating || initialCapital < 100}
+                    className="w-full gap-2 bg-[hsl(var(--rb-yellow))] hover:bg-[hsl(var(--rb-yellow))]/90 text-black font-semibold"
+                  >
+                    <Play className="h-4 w-4" />
+                    创建虚拟账户
+                  </Button>
+
+                  <p className="text-xs text-center text-muted-foreground">
+                    Paper Trading 不会产生真实盈亏
+                  </p>
+                </CardContent>
+              </Card>
+            ) : !stats ? (
               <div className="text-center text-muted-foreground py-8">
                 加载中...
               </div>
