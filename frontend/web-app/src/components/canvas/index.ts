@@ -10,6 +10,7 @@ export { CanvasPanel, default as CanvasPanelDefault } from './CanvasPanel'
 export { MonitorCanvas, default as MonitorCanvasDefault } from './MonitorCanvas'
 export { BacktestCanvas, default as BacktestCanvasDefault } from './BacktestCanvas'
 export { DeployCanvas, default as DeployCanvasDefault } from './DeployCanvas'
+export { RiskSettings, default as RiskSettingsDefault } from './RiskSettings'
 
 // Re-export types
 export type {
@@ -45,3 +46,19 @@ export type {
   BacktestSummary,
   PaperPerformance,
 } from './DeployCanvas'
+
+// Re-export RiskSettings types
+export type { RiskSettingsProps } from './RiskSettings'
+
+// Re-export risk types from types/risk
+export type {
+  RiskSettings as RiskSettingsType,
+  StopLossConfig,
+  TakeProfitConfig,
+  PositionLimitConfig,
+  RiskLevel,
+  RiskValidationResult,
+  ValidationMessage,
+} from '@/types/risk'
+
+export { DEFAULT_RISK_SETTINGS } from '@/types/risk'

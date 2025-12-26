@@ -15,6 +15,12 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ParamSlider } from '@/components/a2ui/controls/ParamSlider'
 import { cn } from '@/lib/utils'
+import { RiskSettings } from './RiskSettings'
+import {
+  RiskSettings as RiskSettingsType,
+  DEFAULT_RISK_SETTINGS,
+} from '@/types/risk'
+import { useRiskValidation } from '@/hooks/useRiskValidation'
 
 // =============================================================================
 // Types
@@ -38,6 +44,8 @@ export interface DeployConfig {
   mode: 'paper' | 'live'
   capital: number
   confirmationToken?: string // Live mode requires
+  /** Story 4.3: Risk management settings */
+  riskSettings: RiskSettingsType
 }
 
 interface DeployCanvasProps {
@@ -84,6 +92,14 @@ export function DeployCanvas({
   // State
   const [capital, setCapital] = React.useState(mode === 'paper' ? 10000 : 5000)
   const [confirmed, setConfirmed] = React.useState(false)
+  const [riskSettings, setRiskSettings] = React.useState<RiskSettingsType>(DEFAULT_RISK_SETTINGS)
+
+  // Risk validation
+  const riskValidation = useRiskValidation({
+    settings: riskSettings,
+    mode,
+    totalCapital: capital,
+  })
 
   // Reset confirmation when mode changes
   React.useEffect(() => {
@@ -114,17 +130,22 @@ export function DeployCanvas({
   const handleDeploy = React.useCallback(async () => {
     if (mode === 'live' && !confirmed) return
     if (mode === 'live' && !canDeployLive) return
+    if (!riskValidation.valid) return
 
     const config: DeployConfig = {
       mode,
       capital,
+      riskSettings,
       ...(mode === 'live' ? { confirmationToken: `confirm_${Date.now()}` } : {}),
     }
     await onDeploy(config)
-  }, [mode, capital, confirmed, canDeployLive, onDeploy])
+  }, [mode, capital, riskSettings, confirmed, canDeployLive, riskValidation.valid, onDeploy])
 
   // Deploy button disabled state
-  const isDeployDisabled = isLoading || (mode === 'live' && (!confirmed || !canDeployLive))
+  const isDeployDisabled =
+    isLoading ||
+    !riskValidation.valid ||
+    (mode === 'live' && (!confirmed || !canDeployLive))
 
   return (
     <>
@@ -201,12 +222,26 @@ export function DeployCanvas({
               />
             )}
 
+            {/* Story 4.3: Risk Settings Section */}
+            <RiskSettingsSection
+              riskSettings={riskSettings}
+              onRiskSettingsChange={setRiskSettings}
+              capital={capital}
+              disabled={isLoading}
+            />
+
+            {/* Story 4.3: Validation Messages */}
+            <ValidationMessagesSection
+              errors={riskValidation.errors}
+              warnings={riskValidation.warnings}
+            />
+
             {/* Live mode confirmation */}
             {mode === 'live' && (
               <LiveConfirmationSection
                 confirmed={confirmed}
                 onConfirmedChange={setConfirmed}
-                canDeploy={canDeployLive}
+                canDeploy={canDeployLive && riskValidation.valid}
               />
             )}
           </div>
@@ -531,6 +566,98 @@ function PrerequisiteItem({
         <span className="text-xs text-muted-foreground ml-auto">{detail}</span>
       )}
     </div>
+  )
+}
+
+/**
+ * RiskSettingsSection - Risk management configuration
+ * Story 4.3: 风险设置集成
+ */
+function RiskSettingsSection({
+  riskSettings,
+  onRiskSettingsChange,
+  capital,
+  disabled,
+}: {
+  riskSettings: RiskSettingsType
+  onRiskSettingsChange: (settings: RiskSettingsType) => void
+  capital: number
+  disabled: boolean
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <Shield className="h-4 w-4" />
+        风险管理
+      </h3>
+      <div className="p-3 rounded-lg border bg-card/50">
+        <RiskSettings
+          value={riskSettings}
+          onChange={onRiskSettingsChange}
+          currentPrice={40000} // TODO: 接入实时价格
+          totalCapital={capital}
+          disabled={disabled}
+        />
+      </div>
+    </section>
+  )
+}
+
+/**
+ * ValidationMessagesSection - Show validation errors and warnings
+ * Story 4.3: 验证消息展示
+ */
+function ValidationMessagesSection({
+  errors,
+  warnings,
+}: {
+  errors: { field: string; message: string; code: string }[]
+  warnings: { field: string; message: string; code: string }[]
+}) {
+  if (errors.length === 0 && warnings.length === 0) {
+    return null
+  }
+
+  return (
+    <section className="space-y-2">
+      {/* Errors */}
+      {errors.length > 0 && (
+        <div className="p-3 rounded-lg bg-[hsl(var(--rb-red))]/10 border border-[hsl(var(--rb-red))]/30">
+          <div className="flex items-start gap-2">
+            <X className="h-4 w-4 text-[hsl(var(--rb-red))] flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-[hsl(var(--rb-red))]">
+                配置错误
+              </p>
+              <ul className="text-xs text-[hsl(var(--rb-red))]/80 space-y-0.5">
+                {errors.map((e) => (
+                  <li key={e.code}>• {e.message}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div className="p-3 rounded-lg bg-[hsl(var(--rb-yellow))]/10 border border-[hsl(var(--rb-yellow))]/30">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--rb-yellow))] flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-[hsl(var(--rb-yellow))]">
+                风险提示
+              </p>
+              <ul className="text-xs text-[hsl(var(--rb-yellow))]/80 space-y-0.5">
+                {warnings.map((w) => (
+                  <li key={w.code}>• {w.message}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
