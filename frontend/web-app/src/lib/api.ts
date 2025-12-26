@@ -4,6 +4,15 @@
  */
 
 import { UserRole } from '@/store/auth'
+import type {
+  DeploymentResult,
+  DeploymentStatus,
+  BacktestSummary,
+  PaperPerformance,
+  PaperDeployConfig,
+  LiveDeployConfig,
+} from '@/types/deployment'
+import { DeploymentError } from '@/types/deployment'
 
 // API 基础 URL - 开发时指向认证服务
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -379,6 +388,114 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     })
+  }
+
+  // ========== 部署相关 (Story 1.2) ==========
+
+  /**
+   * 部署策略到 Paper 模式
+   * @param strategyId 策略 ID
+   * @param config Paper 部署配置
+   */
+  async deployPaper(
+    strategyId: string,
+    config: PaperDeployConfig
+  ): Promise<DeploymentResult> {
+    try {
+      return await this.request<DeploymentResult>('/strategies/deploy/paper', {
+        method: 'POST',
+        body: JSON.stringify({ strategyId, ...config }),
+      })
+    } catch (error) {
+      throw this.handleDeploymentError(error, 'paper')
+    }
+  }
+
+  /**
+   * 部署策略到 Live 模式
+   * @param strategyId 策略 ID
+   * @param config Live 部署配置 (包含确认令牌)
+   */
+  async deployLive(
+    strategyId: string,
+    config: LiveDeployConfig
+  ): Promise<DeploymentResult> {
+    try {
+      return await this.request<DeploymentResult>('/strategies/deploy/live', {
+        method: 'POST',
+        body: JSON.stringify({ strategyId, ...config }),
+      })
+    } catch (error) {
+      throw this.handleDeploymentError(error, 'live')
+    }
+  }
+
+  /**
+   * 获取部署状态
+   * @param deploymentId 部署 ID
+   */
+  async getDeploymentStatus(deploymentId: string): Promise<DeploymentStatus> {
+    return this.request<DeploymentStatus>(`/deployments/${deploymentId}/status`)
+  }
+
+  /**
+   * 获取策略回测结果摘要
+   * @param strategyId 策略 ID
+   */
+  async getStrategyBacktestResult(strategyId: string): Promise<BacktestSummary> {
+    return this.request<BacktestSummary>(`/strategies/${strategyId}/backtest`)
+  }
+
+  /**
+   * 获取 Paper 阶段表现数据
+   * @param agentId Agent ID
+   */
+  async getPaperPerformance(agentId: string): Promise<PaperPerformance> {
+    return this.request<PaperPerformance>(`/agents/${agentId}/paper-performance`)
+  }
+
+  /**
+   * 取消部署
+   * @param deploymentId 部署 ID
+   */
+  async cancelDeployment(deploymentId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/deployments/${deploymentId}/cancel`, {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * 处理部署错误
+   */
+  private handleDeploymentError(error: unknown, mode: 'paper' | 'live'): DeploymentError {
+    if (error instanceof DeploymentError) {
+      return error
+    }
+
+    const message = error instanceof Error ? error.message : '未知错误'
+
+    // 根据错误消息推断错误类型
+    if (message.includes('回测') || message.includes('backtest')) {
+      return new DeploymentError('策略回测未通过', 'BACKTEST_NOT_PASSED', error)
+    }
+    if (message.includes('Paper') || message.includes('7 天') || message.includes('运行时间')) {
+      return new DeploymentError('Paper 运行时间不足', 'PAPER_TIME_INSUFFICIENT', error)
+    }
+    if (message.includes('令牌') || message.includes('token') || message.includes('确认')) {
+      return new DeploymentError('确认令牌无效', 'INVALID_TOKEN', error)
+    }
+    if (message.includes('余额') || message.includes('balance')) {
+      return new DeploymentError('账户余额不足', 'INSUFFICIENT_BALANCE', error)
+    }
+    if (message.includes('网络') || message.includes('network') || message.includes('fetch')) {
+      return new DeploymentError('网络连接失败', 'NETWORK_ERROR', error)
+    }
+
+    return new DeploymentError(
+      `${mode === 'live' ? 'Live' : 'Paper'} 部署失败: ${message}`,
+      'API_ERROR',
+      error
+    )
   }
 }
 

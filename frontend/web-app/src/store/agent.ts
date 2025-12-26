@@ -1,10 +1,12 @@
 /**
  * Agent Store - 交易代理状态管理
  * 基于 PRD S77 Sidebar 布局规范
+ * Story 1.2: 扩展部署状态管理
  */
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import type { AgentDeploymentStatus, DeploymentStatus } from '@/types/deployment'
 
 // Agent 状态类型
 export type AgentStatus = 'live' | 'paper' | 'shadow' | 'paused' | 'stopped'
@@ -21,6 +23,20 @@ export interface Agent {
   winRate: number       // 胜率
   createdAt: number
   updatedAt: number
+
+  // ===== 部署相关字段 (Story 1.2) =====
+  /** 部署状态 */
+  deploymentStatus?: AgentDeploymentStatus | undefined
+  /** 部署时间戳 */
+  deployedAt?: number | undefined
+  /** 关联的回测 ID */
+  backtestId?: string | undefined
+  /** Paper 模式的虚拟资金 */
+  virtualCapital?: number | undefined
+  /** Live 模式的初始资金 */
+  initialCapital?: number | undefined
+  /** Paper 开始时间 (用于计算运行天数) */
+  paperStartedAt?: number | undefined
 }
 
 // 风险概览接口
@@ -71,6 +87,22 @@ interface AgentState {
   addChatHistory: (chat: ChatHistory) => void
   removeChatHistory: (id: string) => void
   clearChatHistory: () => void
+
+  // ===== 部署相关 Actions (Story 1.2) =====
+  /** 部署 Agent 到 Paper 模式 */
+  deployAgentToPaper: (agentId: string, virtualCapital: number) => void
+  /** 部署 Agent 到 Live 模式 */
+  deployAgentToLive: (agentId: string, initialCapital: number) => void
+  /** 更新部署进度 */
+  updateDeploymentProgress: (agentId: string, status: DeploymentStatus) => void
+  /** 回滚部署 */
+  rollbackDeployment: (agentId: string, previousStatus: AgentStatus) => void
+  /** 检查是否可以部署到 Paper */
+  canDeployToPaper: (agentId: string) => boolean
+  /** 检查是否可以部署到 Live */
+  canDeployToLive: (agentId: string) => boolean
+  /** 获取 Paper 运行天数 */
+  getPaperRunningDays: (agentId: string) => number
 }
 
 // 默认风险概览
@@ -226,5 +258,115 @@ export const useAgentStore = create<AgentState>()(
 
     clearChatHistory: () =>
       set({ chatHistory: [] }, false, 'agent/clearChatHistory'),
+
+    // ===== 部署相关 Actions (Story 1.2) =====
+
+    deployAgentToPaper: (agentId, virtualCapital) =>
+      set(
+        (state) => ({
+          agents: state.agents.map((a) =>
+            a.id === agentId
+              ? {
+                  ...a,
+                  status: 'paper' as AgentStatus,
+                  deploymentStatus: 'deployed' as const,
+                  deployedAt: Date.now(),
+                  paperStartedAt: Date.now(),
+                  virtualCapital,
+                  updatedAt: Date.now(),
+                }
+              : a
+          ),
+        }),
+        false,
+        'agent/deployToPaper'
+      ),
+
+    deployAgentToLive: (agentId, initialCapital) =>
+      set(
+        (state) => ({
+          agents: state.agents.map((a) =>
+            a.id === agentId
+              ? {
+                  ...a,
+                  status: 'live' as AgentStatus,
+                  deploymentStatus: 'deployed' as const,
+                  deployedAt: Date.now(),
+                  initialCapital,
+                  updatedAt: Date.now(),
+                }
+              : a
+          ),
+        }),
+        false,
+        'agent/deployToLive'
+      ),
+
+    updateDeploymentProgress: (agentId, status) =>
+      set(
+        (state) => ({
+          agents: state.agents.map((a) =>
+            a.id === agentId
+              ? {
+                  ...a,
+                  deploymentStatus:
+                    status.status === 'completed'
+                      ? ('deployed' as const)
+                      : status.status === 'failed'
+                      ? ('failed' as const)
+                      : ('deploying' as const),
+                  updatedAt: Date.now(),
+                }
+              : a
+          ),
+        }),
+        false,
+        'agent/updateDeploymentProgress'
+      ),
+
+    rollbackDeployment: (agentId, previousStatus) =>
+      set(
+        (state) => ({
+          agents: state.agents.map((a) =>
+            a.id === agentId
+              ? {
+                  ...a,
+                  status: previousStatus,
+                  deploymentStatus: 'failed' as const,
+                  updatedAt: Date.now(),
+                }
+              : a
+          ),
+        }),
+        false,
+        'agent/rollbackDeployment'
+      ),
+
+    canDeployToPaper: (agentId) => {
+      const state = useAgentStore.getState()
+      const agent = state.agents.find((a) => a.id === agentId)
+      if (!agent) return false
+      // 检查是否有回测 ID (表示回测已通过)
+      return !!agent.backtestId
+    },
+
+    canDeployToLive: (agentId) => {
+      const state = useAgentStore.getState()
+      const agent = state.agents.find((a) => a.id === agentId)
+      if (!agent) return false
+      // 必须在 Paper 模式
+      if (agent.status !== 'paper') return false
+      // 检查 Paper 运行时间 >= 7 天
+      const runningDays = state.getPaperRunningDays(agentId)
+      return runningDays >= 7
+    },
+
+    getPaperRunningDays: (agentId) => {
+      const state = useAgentStore.getState()
+      const agent = state.agents.find((a) => a.id === agentId)
+      if (!agent || !agent.paperStartedAt) return 0
+      const msPerDay = 24 * 60 * 60 * 1000
+      return Math.floor((Date.now() - agent.paperStartedAt) / msPerDay)
+    },
   }))
 )
