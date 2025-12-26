@@ -112,7 +112,7 @@ export const DEFAULT_TAKE_PROFIT: TakeProfitConfig = {
 
 export const DEFAULT_POSITION_LIMIT: PositionLimitConfig = {
   maxPositionPercent: 20,
-  maxTradeAmount: 10000,
+  maxTradeAmount: 1000,
 }
 
 export const DEFAULT_RISK_SETTINGS: RiskSettings = {

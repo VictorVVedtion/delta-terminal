@@ -1,4 +1,5 @@
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAgentStore, Agent, AgentStatus } from '@/store/agent'
 import { Plus } from 'lucide-react'
@@ -92,11 +93,12 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
 }
 
 export function AgentList() {
+  const router = useRouter()
   const { agents, activeAgentId, setActiveAgent } = useAgentStore()
 
   const handleNewAgent = () => {
-    // TODO: 打开新建策略对话
-    console.log('Create new agent')
+    // 跳转到 /chat 页面开始新策略对话
+    router.push('/chat')
   }
 
   // MOCK: Generate a fake thinking process for the active agent to demonstrate "Glass Box"

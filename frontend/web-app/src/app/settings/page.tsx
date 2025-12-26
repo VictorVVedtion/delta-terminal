@@ -1,6 +1,7 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/MainLayout'
 import {
   Settings,
@@ -10,6 +11,7 @@ import {
   User,
   Palette,
   AlertTriangle,
+  Brain,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,6 +28,7 @@ import {
   type ExchangeAccount,
 } from '@/store/exchange'
 import { notify } from '@/lib/notification'
+import { AIConfigPanel } from '@/components/ai/AIConfigPanel'
 
 // =============================================================================
 // Exchange Settings Section
@@ -175,17 +178,95 @@ function ExchangeSettingsSection() {
 // =============================================================================
 
 function NotificationSettingsSection() {
+  const [settings, setSettings] = React.useState({
+    tradeNotifications: true,
+    priceAlerts: true,
+    strategyAlerts: true,
+    systemNotifications: true,
+    emailNotifications: false,
+    pushNotifications: true,
+  })
+
+  const toggleSetting = (key: keyof typeof settings) => {
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const notificationOptions = [
+    { key: 'tradeNotifications' as const, label: '交易通知', description: '订单执行、成交确认等交易相关通知' },
+    { key: 'priceAlerts' as const, label: '价格提醒', description: '价格达到设定目标时提醒' },
+    { key: 'strategyAlerts' as const, label: '策略提醒', description: '策略启动、停止、异常等状态变化' },
+    { key: 'systemNotifications' as const, label: '系统通知', description: '系统更新、维护等重要通知' },
+  ]
+
+  const channelOptions = [
+    { key: 'pushNotifications' as const, label: '推送通知', description: '浏览器推送通知' },
+    { key: 'emailNotifications' as const, label: '邮件通知', description: '重要事件通过邮件通知' },
+  ]
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">通知设置</h3>
         <p className="text-sm text-muted-foreground">管理您的通知偏好</p>
       </div>
+
+      {/* 通知类型 */}
       <Card>
-        <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center py-8">
-            通知设置功能即将推出
-          </p>
+        <CardHeader>
+          <CardTitle className="text-base">通知类型</CardTitle>
+          <CardDescription>选择您想要接收的通知类型</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {notificationOptions.map(option => (
+            <div key={option.key} className="flex items-center justify-between py-2">
+              <div>
+                <p className="font-medium text-sm">{option.label}</p>
+                <p className="text-xs text-muted-foreground">{option.description}</p>
+              </div>
+              <button
+                onClick={() => toggleSetting(option.key)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  settings[option.key] ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings[option.key] ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* 通知渠道 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">通知渠道</CardTitle>
+          <CardDescription>选择接收通知的方式</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {channelOptions.map(option => (
+            <div key={option.key} className="flex items-center justify-between py-2">
+              <div>
+                <p className="font-medium text-sm">{option.label}</p>
+                <p className="text-xs text-muted-foreground">{option.description}</p>
+              </div>
+              <button
+                onClick={() => toggleSetting(option.key)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  settings[option.key] ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings[option.key] ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
@@ -193,17 +274,95 @@ function NotificationSettingsSection() {
 }
 
 function SecuritySettingsSection() {
+  const [twoFactorEnabled, setTwoFactorEnabled] = React.useState(false)
+  const [sessionTimeout, setSessionTimeout] = React.useState('30')
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">安全设置</h3>
         <p className="text-sm text-muted-foreground">管理账户安全选项</p>
       </div>
+
+      {/* 两步验证 */}
       <Card>
-        <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center py-8">
-            安全设置功能即将推出
-          </p>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            两步验证
+          </CardTitle>
+          <CardDescription>增加额外的安全层保护您的账户</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">启用两步验证</p>
+              <p className="text-xs text-muted-foreground">
+                {twoFactorEnabled ? '已启用 - 使用验证器应用' : '建议启用以提高账户安全性'}
+              </p>
+            </div>
+            <button
+              onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                twoFactorEnabled ? 'bg-primary' : 'bg-muted'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  twoFactorEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 会话设置 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">会话设置</CardTitle>
+          <CardDescription>管理登录会话和超时设置</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">自动登出时间</p>
+              <p className="text-xs text-muted-foreground">无操作后自动登出</p>
+            </div>
+            <select
+              value={sessionTimeout}
+              onChange={(e) => setSessionTimeout(e.target.value)}
+              className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
+            >
+              <option value="15">15 分钟</option>
+              <option value="30">30 分钟</option>
+              <option value="60">1 小时</option>
+              <option value="never">永不</option>
+            </select>
+          </div>
+          <div className="pt-2 border-t">
+            <Button variant="outline" size="sm" className="w-full">
+              登出所有其他设备
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* API 密钥管理 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">API 密钥</CardTitle>
+          <CardDescription>管理您的 API 访问密钥</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              您还没有创建任何 API 密钥
+            </p>
+            <Button variant="outline" size="sm">
+              创建 API 密钥
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -211,35 +370,238 @@ function SecuritySettingsSection() {
 }
 
 function ProfileSettingsSection() {
+  const [profile, setProfile] = React.useState({
+    displayName: 'Trader',
+    email: 'trader@example.com',
+    timezone: 'Asia/Shanghai',
+    language: 'zh-CN',
+  })
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">个人资料</h3>
         <p className="text-sm text-muted-foreground">管理您的个人信息</p>
       </div>
+
+      {/* 头像和基本信息 */}
       <Card>
-        <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center py-8">
-            个人资料设置功能即将推出
-          </p>
+        <CardHeader>
+          <CardTitle className="text-base">基本信息</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 头像 */}
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <Button variant="outline" size="sm">
+                更换头像
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                支持 JPG、PNG，最大 2MB
+              </p>
+            </div>
+          </div>
+
+          {/* 显示名称 */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">显示名称</label>
+            <input
+              type="text"
+              value={profile.displayName}
+              onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+              className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+
+          {/* 邮箱 */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">邮箱地址</label>
+            <input
+              type="email"
+              value={profile.email}
+              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+              className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm"
+            />
+          </div>
         </CardContent>
       </Card>
+
+      {/* 区域设置 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">区域设置</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">时区</p>
+              <p className="text-xs text-muted-foreground">用于显示时间和图表</p>
+            </div>
+            <select
+              value={profile.timezone}
+              onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+              className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
+            >
+              <option value="Asia/Shanghai">中国标准时间 (UTC+8)</option>
+              <option value="Asia/Tokyo">东京时间 (UTC+9)</option>
+              <option value="America/New_York">美东时间 (UTC-5)</option>
+              <option value="Europe/London">伦敦时间 (UTC+0)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">语言</p>
+              <p className="text-xs text-muted-foreground">界面显示语言</p>
+            </div>
+            <select
+              value={profile.language}
+              onChange={(e) => setProfile({ ...profile, language: e.target.value })}
+              className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
+            >
+              <option value="zh-CN">简体中文</option>
+              <option value="en-US">English</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 保存按钮 */}
+      <div className="flex justify-end">
+        <Button>保存更改</Button>
+      </div>
     </div>
   )
 }
 
 function AppearanceSettingsSection() {
+  const [theme, setTheme] = React.useState<'dark' | 'light' | 'system'>('dark')
+  const [chartStyle, setChartStyle] = React.useState('candle')
+  const [compactMode, setCompactMode] = React.useState(false)
+
+  const themeOptions = [
+    { value: 'dark', label: '深色模式', icon: '🌙' },
+    { value: 'light', label: '浅色模式', icon: '☀️' },
+    { value: 'system', label: '跟随系统', icon: '💻' },
+  ]
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">外观设置</h3>
         <p className="text-sm text-muted-foreground">自定义应用外观</p>
       </div>
+
+      {/* 主题选择 */}
       <Card>
-        <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center py-8">
-            外观设置功能即将推出
-          </p>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            主题
+          </CardTitle>
+          <CardDescription>选择您喜欢的界面主题</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            {themeOptions.map(option => (
+              <button
+                key={option.value}
+                onClick={() => setTheme(option.value as typeof theme)}
+                className={`p-4 rounded-lg border-2 text-center transition-colors ${
+                  theme === option.value
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <span className="text-2xl">{option.icon}</span>
+                <p className="text-sm font-medium mt-2">{option.label}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 图表设置 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">图表样式</CardTitle>
+          <CardDescription>设置图表显示偏好</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">K线类型</p>
+              <p className="text-xs text-muted-foreground">选择默认的K线显示样式</p>
+            </div>
+            <select
+              value={chartStyle}
+              onChange={(e) => setChartStyle(e.target.value)}
+              className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
+            >
+              <option value="candle">蜡烛图</option>
+              <option value="bar">美国线</option>
+              <option value="line">折线图</option>
+              <option value="area">面积图</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 布局设置 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">布局</CardTitle>
+          <CardDescription>调整界面布局偏好</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">紧凑模式</p>
+              <p className="text-xs text-muted-foreground">减少间距，显示更多内容</p>
+            </div>
+            <button
+              onClick={() => setCompactMode(!compactMode)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                compactMode ? 'bg-primary' : 'bg-muted'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  compactMode ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 颜色预览 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">颜色预览</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="text-center">
+              <div className="w-full h-12 rounded-md bg-green-500 mb-2" />
+              <p className="text-xs text-muted-foreground">涨</p>
+            </div>
+            <div className="text-center">
+              <div className="w-full h-12 rounded-md bg-red-500 mb-2" />
+              <p className="text-xs text-muted-foreground">跌</p>
+            </div>
+            <div className="text-center">
+              <div className="w-full h-12 rounded-md bg-primary mb-2" />
+              <p className="text-xs text-muted-foreground">主色</p>
+            </div>
+            <div className="text-center">
+              <div className="w-full h-12 rounded-md bg-muted mb-2" />
+              <p className="text-xs text-muted-foreground">背景</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -250,7 +612,24 @@ function AppearanceSettingsSection() {
 // Settings Page
 // =============================================================================
 
+// 有效的 tab 值
+const VALID_TABS = ['exchanges', 'ai', 'notifications', 'security', 'profile', 'appearance']
+
 export default function SettingsPage() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+
+  // 从 URL 参数获取初始 tab，如果无效则默认为 exchanges
+  const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'exchanges'
+  const [activeTab, setActiveTab] = useState(initialTab)
+
+  // 当 URL 参数变化时更新 activeTab
+  useEffect(() => {
+    if (tabParam && VALID_TABS.includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
+
   return (
     <MainLayout>
       <div className="container max-w-4xl py-6 space-y-6">
@@ -264,32 +643,44 @@ export default function SettingsPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="exchanges" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="exchanges" className="gap-2">
-              <Link2 className="h-4 w-4" />
-              <span className="hidden sm:inline">交易所</span>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="exchanges" className="gap-1.5 text-xs px-2">
+              <Link2 className="h-4 w-4 shrink-0" />
+              <span>交易所</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">通知</span>
+            <TabsTrigger value="ai" className="gap-1.5 text-xs px-2">
+              <Brain className="h-4 w-4 shrink-0" />
+              <span>AI</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">安全</span>
+            <TabsTrigger value="notifications" className="gap-1.5 text-xs px-2">
+              <Bell className="h-4 w-4 shrink-0" />
+              <span>通知</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">资料</span>
+            <TabsTrigger value="security" className="gap-1.5 text-xs px-2">
+              <Shield className="h-4 w-4 shrink-0" />
+              <span>安全</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="gap-2">
-              <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">外观</span>
+            <TabsTrigger value="profile" className="gap-1.5 text-xs px-2">
+              <User className="h-4 w-4 shrink-0" />
+              <span>资料</span>
+            </TabsTrigger>
+            <TabsTrigger value="appearance" className="gap-1.5 text-xs px-2">
+              <Palette className="h-4 w-4 shrink-0" />
+              <span>外观</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="exchanges">
             <ExchangeSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="ai">
+            <Card>
+              <CardContent className="p-0">
+                <AIConfigPanel className="min-h-[500px]" />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="notifications">

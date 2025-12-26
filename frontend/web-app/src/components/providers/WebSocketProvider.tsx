@@ -170,17 +170,44 @@ export function WebSocketProvider({ children, autoConnect = true }: WebSocketPro
     }
   }, [autoConnect, isAuthenticated, isConnected, isConnecting, connect, disconnect])
 
-  // Handle connection status updates
+  // Handle connection status updates with debouncing to prevent flicker
   useEffect(() => {
+    let lastStatus = isConnected
+    let debounceTimer: NodeJS.Timeout | null = null
+
     const checkConnection = setInterval(() => {
       const connected = wsClient.isConnected()
-      if (connected !== isConnected) {
-        setIsConnected(connected)
+
+      // Only update if status has been stable for 500ms
+      if (connected !== lastStatus) {
+        if (debounceTimer) clearTimeout(debounceTimer)
+
+        debounceTimer = setTimeout(() => {
+          if (wsClient.isConnected() === connected) {
+            setIsConnected(connected)
+            lastStatus = connected
+          }
+        }, 500)
       }
     }, 1000)
 
-    return () => clearInterval(checkConnection)
+    return () => {
+      clearInterval(checkConnection)
+      if (debounceTimer) clearTimeout(debounceTimer)
+    }
   }, [isConnected])
+
+  // Auto-reconnect when disconnected
+  useEffect(() => {
+    if (!isConnected && !isConnecting && isAuthenticated && autoConnect) {
+      const reconnectTimer = setTimeout(() => {
+        console.log('Attempting auto-reconnect...')
+        connect()
+      }, 3000) // Wait 3 seconds before attempting reconnect
+
+      return () => clearTimeout(reconnectTimer)
+    }
+  }, [isConnected, isConnecting, isAuthenticated, autoConnect, connect])
 
   const value: WebSocketContextValue = {
     isConnected,

@@ -1,9 +1,11 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAgentStore, ChatHistory } from '@/store/agent'
 import { MessageSquare, Trash2 } from 'lucide-react'
+import { notify } from '@/lib/notification'
 
 /**
  * 历史对话组件
@@ -18,12 +20,27 @@ interface ChatItemProps {
 
 function ChatItem({ chat, onClick, onDelete }: ChatItemProps) {
   const timeAgo = getTimeAgo(chat.timestamp)
+  const [isDeleting, setIsDeleting] = React.useState(false)
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isDeleting) return
+
+    // 简单确认后删除
+    setIsDeleting(true)
+    onDelete()
+    notify('info', '对话已删除', {
+      description: chat.title,
+      source: 'ChatHistory',
+    })
+  }
 
   return (
     <div
       className={cn(
         'group flex items-start gap-2 py-1.5 px-2 -mx-2',
-        'rounded hover:bg-muted/50 cursor-pointer transition-colors'
+        'rounded hover:bg-muted/50 cursor-pointer transition-colors',
+        isDeleting && 'opacity-50'
       )}
       onClick={onClick}
     >
@@ -33,14 +50,14 @@ function ChatItem({ chat, onClick, onDelete }: ChatItemProps) {
         <div className="text-[9px] text-muted-foreground">{timeAgo}</div>
       </div>
       <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onDelete()
-        }}
+        onClick={handleDelete}
+        disabled={isDeleting}
         className={cn(
           'opacity-0 group-hover:opacity-100',
-          'p-1 hover:bg-destructive/20 rounded transition-all'
+          'p-1 hover:bg-destructive/20 rounded transition-all',
+          isDeleting && 'cursor-not-allowed'
         )}
+        title="删除对话"
       >
         <Trash2 className="h-2.5 w-2.5 text-destructive" />
       </button>
@@ -63,11 +80,18 @@ function getTimeAgo(timestamp: number): string {
 }
 
 export function ChatHistoryPanel() {
+  const router = useRouter()
   const { chatHistory, removeChatHistory } = useAgentStore()
 
-  const handleChatClick = (chatId: string) => {
-    // TODO: 加载历史对话
-    console.log('Load chat:', chatId)
+  const handleChatClick = (chat: ChatHistory) => {
+    // 跳转到 /chat 页面，带上对话 ID
+    router.push(`/chat?history=${chat.id}`)
+
+    // 显示加载提示
+    notify('info', '加载对话', {
+      description: chat.title,
+      source: 'ChatHistory',
+    })
   }
 
   if (chatHistory.length === 0) {
@@ -90,7 +114,7 @@ export function ChatHistoryPanel() {
           <ChatItem
             key={chat.id}
             chat={chat}
-            onClick={() => handleChatClick(chat.id)}
+            onClick={() => handleChatClick(chat)}
             onDelete={() => removeChatHistory(chat.id)}
           />
         ))}
