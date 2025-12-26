@@ -342,28 +342,28 @@ export const useAgentStore = create<AgentState>()(
         'agent/rollbackDeployment'
       ),
 
-    canDeployToPaper: (agentId) => {
-      const state = useAgentStore.getState()
-      const agent = state.agents.find((a) => a.id === agentId)
+    canDeployToPaper: (agentId: string): boolean => {
+      const { agents } = useAgentStore.getState()
+      const agent = agents.find((a: Agent) => a.id === agentId)
       if (!agent) return false
       // 检查是否有回测 ID (表示回测已通过)
       return !!agent.backtestId
     },
 
-    canDeployToLive: (agentId) => {
-      const state = useAgentStore.getState()
-      const agent = state.agents.find((a) => a.id === agentId)
+    canDeployToLive: (agentId: string): boolean => {
+      const { agents, getPaperRunningDays } = useAgentStore.getState()
+      const agent = agents.find((a: Agent) => a.id === agentId)
       if (!agent) return false
       // 必须在 Paper 模式
       if (agent.status !== 'paper') return false
       // 检查 Paper 运行时间 >= 7 天
-      const runningDays = state.getPaperRunningDays(agentId)
+      const runningDays = getPaperRunningDays(agentId)
       return runningDays >= 7
     },
 
-    getPaperRunningDays: (agentId) => {
-      const state = useAgentStore.getState()
-      const agent = state.agents.find((a) => a.id === agentId)
+    getPaperRunningDays: (agentId: string): number => {
+      const { agents } = useAgentStore.getState()
+      const agent = agents.find((a: Agent) => a.id === agentId)
       if (!agent || !agent.paperStartedAt) return 0
       const msPerDay = 24 * 60 * 60 * 1000
       return Math.floor((Date.now() - agent.paperStartedAt) / msPerDay)

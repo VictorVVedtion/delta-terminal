@@ -194,12 +194,13 @@ export async function mockGetDeploymentStatus(
 ): Promise<DeploymentStatus> {
   await simulateDelay(500)
   // 随机返回不同状态用于测试
-  const statuses = [
+  const statuses: DeploymentStatus[] = [
     mockDeploymentStatusPending,
     mockDeploymentStatusInProgress,
     mockDeploymentStatusCompleted,
   ]
-  return statuses[Math.floor(Math.random() * statuses.length)]
+  const index = Math.floor(Math.random() * statuses.length)
+  return statuses[index] as DeploymentStatus
 }
 
 /**

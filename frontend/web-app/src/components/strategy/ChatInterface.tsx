@@ -6,9 +6,12 @@ import { Badge } from '@/components/ui/badge'
 import { Send, Bot, User, Sparkles } from 'lucide-react'
 import { InsightMessage } from '@/components/insight'
 import { CanvasPanel } from '@/components/canvas'
+import { DeployCanvas } from '@/components/canvas/DeployCanvas'
 import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
 import { useMockThinkingStream } from '@/hooks/useThinkingStream'
-import type { InsightData, InsightParam, InsightCardStatus } from '@/types/insight'
+import { useDeployment } from '@/hooks/useDeployment'
+import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } from '@/types/insight'
+import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -34,6 +37,10 @@ interface ChatInterfaceProps {
   onInsightApprove?: ((insight: InsightData, params: InsightParam[]) => void) | undefined
   /** A2UI: Called when user rejects an insight */
   onInsightReject?: ((insight: InsightData) => void) | undefined
+  /** Story 1.3: Called when deployment is triggered */
+  onDeployRequest?: ((mode: 'paper' | 'live', strategyId: string) => void) | undefined
+  /** Story 1.3: Called when deployment completes */
+  onDeployComplete?: ((result: { success: boolean; message: string }) => void) | undefined
 }
 
 // =============================================================================
@@ -45,6 +52,8 @@ export function ChatInterface({
   onInsightExpand,
   onInsightApprove,
   onInsightReject,
+  onDeployRequest,
+  onDeployComplete,
 }: ChatInterfaceProps) {
   // ==========================================================================
   // State
@@ -82,6 +91,51 @@ export function ChatInterface({
   const [canvasOpen, setCanvasOpen] = React.useState(false)
   const [canvasInsight, setCanvasInsight] = React.useState<InsightData | null>(null)
   const [canvasLoading, setCanvasLoading] = React.useState(false)
+
+  // ==========================================================================
+  // Story 1.3: Deployment State
+  // ==========================================================================
+  const [deployOpen, setDeployOpen] = React.useState(false)
+  const [deployMode, setDeployMode] = React.useState<'paper' | 'live'>('paper')
+  const [deployStrategyId, setDeployStrategyId] = React.useState<string>('')
+  const [deployLoading, setDeployLoading] = React.useState(false)
+
+  // useDeployment hook for API integration
+  const {
+    state: deployState,
+    backtestResult,
+    paperPerformance,
+    deploy,
+    reset: resetDeployment,
+  } = useDeployment({
+    strategyId: deployStrategyId,
+    onSuccess: (result) => {
+      // Add success message to chat
+      const successMessage: Message = {
+        id: `deploy_success_${Date.now()}`,
+        role: 'assistant',
+        content: `🚀 ${deployMode === 'paper' ? 'Paper' : 'Live'} 部署成功！\n\n${result.message}\n\nAgent ID: ${result.agentId}`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, successMessage])
+      setDeployOpen(false)
+      setDeployLoading(false)
+      resetDeployment()
+      onDeployComplete?.({ success: true, message: result.message })
+    },
+    onError: (error) => {
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: `deploy_error_${Date.now()}`,
+        role: 'assistant',
+        content: `❌ 部署失败\n\n${error.toUserMessage()}`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+      setDeployLoading(false)
+      onDeployComplete?.({ success: false, message: error.message })
+    },
+  })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -169,6 +223,61 @@ export function ChatInterface({
     // Notify parent
     onInsightReject?.(insight)
   }, [onInsightReject])
+
+  // ==========================================================================
+  // Story 1.3: Deployment Handlers
+  // ==========================================================================
+
+  /**
+   * Trigger deployment canvas when insight contains deploy actions
+   */
+  const handleInsightAction = React.useCallback((insight: InsightData, action: InsightActionType) => {
+    if (action === 'deploy_paper' || action === 'deploy_live') {
+      const strategyId = insight.target?.strategy_id || insight.id
+      setDeployStrategyId(strategyId)
+      setDeployMode(action === 'deploy_paper' ? 'paper' : 'live')
+      setDeployOpen(true)
+      onDeployRequest?.(action === 'deploy_paper' ? 'paper' : 'live', strategyId)
+    }
+  }, [onDeployRequest])
+
+  /**
+   * Handle deploy from DeployCanvas
+   */
+  const handleDeploy = React.useCallback(async (config: DeployConfig) => {
+    setDeployLoading(true)
+    try {
+      await deploy(config)
+    } catch {
+      // Error handled in useDeployment onError callback
+    }
+  }, [deploy])
+
+  /**
+   * Handle deploy canvas close
+   */
+  const handleDeployCancel = React.useCallback(() => {
+    setDeployOpen(false)
+    setDeployLoading(false)
+    resetDeployment()
+  }, [resetDeployment])
+
+  /**
+   * Check if insight has deploy actions and trigger deploy canvas
+   */
+  React.useEffect(() => {
+    // Auto-detect deploy actions from insights
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage?.insight?.actions) {
+      const deployAction = lastMessage.insight.actions.find(
+        (a): a is 'deploy_paper' | 'deploy_live' =>
+          a === 'deploy_paper' || a === 'deploy_live'
+      )
+      if (deployAction) {
+        handleInsightAction(lastMessage.insight, deployAction)
+      }
+    }
+  }, [messages, handleInsightAction])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -361,7 +470,7 @@ export function ChatInterface({
   return (
     <div className={cn(
       'flex flex-col h-full transition-all duration-300 ease-out',
-      canvasOpen && 'lg:mr-[480px]',
+      (canvasOpen || deployOpen) && 'lg:mr-[520px]',
     )}>
       {/* Chat Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -481,6 +590,20 @@ export function ChatInterface({
         onApprove={handleInsightApprove}
         onReject={(insight) => handleInsightReject(insight)}
         isLoading={canvasLoading}
+      />
+
+      {/* Story 1.3: Deploy Canvas */}
+      <DeployCanvas
+        strategyId={deployStrategyId}
+        strategyName={messages.find(m => m.insight?.target?.strategy_id === deployStrategyId)?.insight?.target?.name}
+        symbol={messages.find(m => m.insight?.target?.strategy_id === deployStrategyId)?.insight?.target?.symbol}
+        mode={deployMode}
+        backtestResult={backtestResult || { passed: true, expectedReturn: 0, maxDrawdown: 0, winRate: 0 }}
+        paperPerformance={paperPerformance || undefined}
+        isOpen={deployOpen}
+        onDeploy={handleDeploy}
+        onCancel={handleDeployCancel}
+        isLoading={deployLoading || deployState.phase === 'deploying'}
       />
     </div>
   )

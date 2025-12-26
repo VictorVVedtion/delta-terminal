@@ -255,6 +255,12 @@ export interface InsightData {
   impact?: InsightImpact;
   explanation: string;
   created_at: string;
+  /**
+   * 可用动作列表 (Story 1.3)
+   * 当 AI 返回包含 'deploy_paper' 或 'deploy_live' 时，
+   * ChatInterface 会自动弹出 DeployCanvas
+   */
+  actions?: InsightActionType[];
 }
 
 export interface RiskAlertInsight extends InsightData {
@@ -284,6 +290,29 @@ export interface ParamValidationResult {
   errors: Record<string, string>;
   warnings: Record<string, string>;
 }
+
+// =============================================================================
+// Insight Action Types (Story 1.3)
+// =============================================================================
+
+/**
+ * 可执行的洞察动作类型
+ * - approve: 批准策略提案
+ * - reject: 拒绝策略提案
+ * - run_backtest: 运行回测
+ * - deploy_paper: 部署到 Paper 模式
+ * - deploy_live: 部署到 Live 模式
+ * - stop_agent: 停止 Agent
+ * - modify_params: 修改参数
+ */
+export type InsightActionType =
+  | 'approve'
+  | 'reject'
+  | 'run_backtest'
+  | 'deploy_paper'
+  | 'deploy_live'
+  | 'stop_agent'
+  | 'modify_params';
 
 // =============================================================================
 // InsightCard Display Types
