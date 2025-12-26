@@ -21,6 +21,7 @@ import {
   DEFAULT_RISK_SETTINGS,
 } from '@/types/risk'
 import { useRiskValidation } from '@/hooks/useRiskValidation'
+import { notify } from '@/lib/notification'
 
 // =============================================================================
 // Types
@@ -138,8 +139,23 @@ export function DeployCanvas({
       riskSettings,
       ...(mode === 'live' ? { confirmationToken: `confirm_${Date.now()}` } : {}),
     }
-    await onDeploy(config)
-  }, [mode, capital, riskSettings, confirmed, canDeployLive, riskValidation.valid, onDeploy])
+
+    try {
+      await onDeploy(config)
+
+      // Story 5.3: 部署成功通知
+      notify('success', '部署成功', {
+        description: `${strategyName} 已部署到${mode === 'live' ? '实盘' : '模拟盘'}，初始资金 $${capital.toLocaleString()}`,
+        source: 'DeployCanvas',
+      })
+    } catch (error) {
+      // Story 5.3: 部署失败通知
+      notify('error', '部署失败', {
+        description: error instanceof Error ? error.message : '请检查网络连接后重试',
+        source: 'DeployCanvas',
+      })
+    }
+  }, [mode, capital, riskSettings, confirmed, canDeployLive, riskValidation.valid, onDeploy, strategyName])
 
   // Deploy button disabled state
   const isDeployDisabled =

@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { notify } from '@/lib/notification'
 
 // =============================================================================
 // Type Definitions
@@ -149,6 +150,9 @@ export function MonitorCanvas({
   metrics,
   isLoading = false,
 }: MonitorCanvasProps) {
+  // Track previous status for notification triggering
+  const prevStatusRef = React.useRef<StrategyStatus | null>(null)
+
   // Close on escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -159,6 +163,47 @@ export function MonitorCanvas({
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
+
+  // Story 5.3: Notify on strategy status changes
+  React.useEffect(() => {
+    const prevStatus = prevStatusRef.current
+    prevStatusRef.current = strategy.status
+
+    // Only notify on status transitions
+    if (prevStatus && prevStatus !== strategy.status) {
+      const strategyName = strategy.name
+
+      switch (strategy.status) {
+        case 'paused':
+          notify('warning', '策略已暂停', {
+            description: `${strategyName} 已暂停运行`,
+            source: 'MonitorCanvas',
+            ...(onResume ? {
+              action: {
+                label: '恢复',
+                onClick: onResume,
+              },
+            } : {}),
+          })
+          break
+        case 'stopped':
+          notify('info', '策略已停止', {
+            description: `${strategyName} 已停止运行`,
+            source: 'MonitorCanvas',
+          })
+          break
+        case 'running':
+          // Only notify if transitioning from paused to running
+          if (prevStatus === 'paused') {
+            notify('success', '策略已恢复', {
+              description: `${strategyName} 已恢复运行`,
+              source: 'MonitorCanvas',
+            })
+          }
+          break
+      }
+    }
+  }, [strategy.status, strategy.name, onResume])
 
   // Get status badge config
   const getStatusBadge = (status: StrategyStatus) => {

@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/lib/api'
 import { useStrategyStore } from '@/store'
+import { notify } from '@/lib/notification'
 
 /**
  * KillSwitch - 紧急全局停止按钮
@@ -73,11 +74,21 @@ export function KillSwitch() {
       // 关闭对话框
       setIsOpen(false)
 
-      // 可选: 显示成功通知
-      // toast.success('紧急停止已执行')
+      // 显示成功通知
+      notify('success', '紧急停止已执行', {
+        description: `已取消 ${await apiClient.getActiveOrdersCount()} 个挂单，平仓 ${await apiClient.getOpenPositionsCount()} 个持仓，暂停 ${runningStrategies.length} 个策略`,
+        source: 'KillSwitch',
+      })
     } catch (error) {
       console.error('[KillSwitch] 执行失败:', error)
-      // toast.error('紧急停止执行失败，请手动检查')
+      notify('error', '紧急停止执行失败', {
+        description: '请手动检查账户状态',
+        source: 'KillSwitch',
+        action: {
+          label: '重试',
+          onClick: () => handleEmergencyStop(),
+        },
+      })
     } finally {
       setIsExecuting(false)
     }

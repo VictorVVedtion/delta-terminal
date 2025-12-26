@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
+import { Toaster } from 'sonner';
 
 import './globals.css';
 import { Web3Provider } from '@/providers/Web3Provider';
@@ -55,6 +56,15 @@ export default function RootLayout({
             <ThemeProvider>
               <WebSocketProvider>
                 {children}
+                {/* Story 5.1: Toast 通知容器 */}
+                <Toaster
+                  position="top-right"
+                  richColors
+                  closeButton
+                  toastOptions={{
+                    className: 'font-sans',
+                  }}
+                />
               </WebSocketProvider>
             </ThemeProvider>
           </AuthProvider>

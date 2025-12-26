@@ -39,6 +39,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.12.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^2.2.0",
     "viem": "^2.43.3",
     "wagmi": "^2.19.5",

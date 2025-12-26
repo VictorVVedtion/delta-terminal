@@ -21,6 +21,7 @@ import { Progress } from '@/components/ui/progress'
 import { Card, CardContent } from '@/components/ui/card'
 import { InsightData } from '@/types/insight'
 import { cn } from '@/lib/utils'
+import { notify } from '@/lib/notification'
 
 // =============================================================================
 // Type Definitions
@@ -103,6 +104,9 @@ export function BacktestCanvas({
   trades,
   equityCurve = [],
 }: BacktestCanvasProps) {
+  // Track previous status for notification triggering
+  const prevStatusRef = React.useRef<BacktestStatus | null>(null)
+
   // Close on escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -113,6 +117,29 @@ export function BacktestCanvas({
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
+
+  // Story 5.3: Notify on backtest completion/failure
+  React.useEffect(() => {
+    const prevStatus = prevStatusRef.current
+    prevStatusRef.current = status
+
+    // Only notify on status transitions
+    if (prevStatus && prevStatus !== status) {
+      const strategyName = insight.target?.name || '策略'
+
+      if (status === 'completed') {
+        notify('success', '回测完成', {
+          description: `${strategyName} 收益率 ${metrics.totalReturn >= 0 ? '+' : ''}${metrics.totalReturn.toFixed(1)}%，胜率 ${metrics.winRate.toFixed(0)}%`,
+          source: 'BacktestCanvas',
+        })
+      } else if (status === 'failed') {
+        notify('error', '回测失败', {
+          description: `${strategyName} 回测过程中出现错误`,
+          source: 'BacktestCanvas',
+        })
+      }
+    }
+  }, [status, insight.target?.name, metrics.totalReturn, metrics.winRate])
 
   // Get status badge variant and label
   const getStatusInfo = (status: BacktestStatus) => {
