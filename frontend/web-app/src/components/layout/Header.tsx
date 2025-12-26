@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { ThemeSwitcher } from '@/components/ui/theme-switcher'
 import { ConnectionIndicator } from '@/components/ui/connection-status'
+import { KillSwitch } from '@/components/KillSwitch'
 
 export function Header() {
   const router = useRouter()
@@ -86,6 +87,9 @@ export function Header() {
             <ConnectionIndicator />
             <span className="text-xs text-muted-foreground">实时</span>
           </div>
+
+          {/* Kill Switch - Emergency Stop */}
+          <KillSwitch />
 
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative">

@@ -276,6 +276,17 @@ class ApiClient {
     })
   }
 
+  async cancelAllOrders() {
+    return this.request<{ cancelledCount: number }>('/orders/cancel-all', {
+      method: 'POST',
+    })
+  }
+
+  async getActiveOrdersCount() {
+    const orders = await this.getOrders({ status: 'open' })
+    return Array.isArray(orders) ? orders.length : 0
+  }
+
   // ========== 资产相关 ==========
 
   async getPortfolio() {
@@ -290,6 +301,21 @@ class ApiClient {
     return this.request<unknown[]>('/portfolio/transactions', {
       params: { limit },
     })
+  }
+
+  async getPositions() {
+    return this.request<unknown[]>('/portfolio/positions')
+  }
+
+  async closeAllPositions() {
+    return this.request<{ closedCount: number }>('/portfolio/positions/close-all', {
+      method: 'POST',
+    })
+  }
+
+  async getOpenPositionsCount() {
+    const positions = await this.getPositions()
+    return Array.isArray(positions) ? positions.length : 0
   }
 
   // ========== 回测相关 ==========
@@ -338,6 +364,20 @@ class ApiClient {
     return this.request<unknown>('/ai/analyze-market', {
       method: 'POST',
       body: JSON.stringify({ symbol }),
+    })
+  }
+
+  // ========== KillSwitch 相关 ==========
+
+  async logKillSwitchEvent(data: {
+    timestamp: string
+    cancelledOrders: number
+    closedPositions: number
+    stoppedStrategies: number
+  }) {
+    return this.request<{ success: boolean }>('/system/killswitch-log', {
+      method: 'POST',
+      body: JSON.stringify(data),
     })
   }
 }

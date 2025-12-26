@@ -7,6 +7,9 @@
 export { ParamSlider } from './ParamSlider'
 export { HeatmapSlider } from './HeatmapSlider'
 export { ParamControl } from './ParamControl'
+export { ParamToggle } from './ParamToggle'
+export { ParamButtonGroup } from './ParamButtonGroup'
+export { LogicBuilder } from './LogicBuilder'
 
 // Re-export types
 export type { InsightParam, ParamType, ParamConfig } from '@/types/insight'

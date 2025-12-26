@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiverBit Design System - Delta Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* =============================================
+           RIVERBIT DESIGN SYSTEM - CSS VARIABLES
+           Based on Figma: RiverBit-Design-system
+           ============================================= */
+        
+        :root {
+            /* ========== BRAND COLORS ========== */
+            --rb-cyan: #0EECBC;
+            --rb-cyan-light: #22C3A0;
+            --rb-cyan-dim: rgba(14, 236, 188, 0.15);
+            --rb-cyan-hover: rgba(14, 236, 188, 0.25);
+            
+            /* ========== SEMANTIC COLORS ========== */
+            --rb-green: #61DD3C;
+            --rb-green-dim: rgba(97, 221, 60, 0.15);
+            --rb-yellow: #E8BD30;
+            --rb-yellow-dim: rgba(232, 189, 48, 0.15);
+            --rb-red: #DD3C41;
+            --rb-red-dim: rgba(221, 60, 65, 0.15);
+            
+            /* ========== GRAYSCALE (D-Scale) ========== */
+            --rb-black: #000000;
+            --rb-white: #FFFFFF;
+            --rb-d950: #070E12;  /* Darkest - Layer Tier 0 */
+            --rb-d930: #0D1417;
+            --rb-d900: #151B1E;  /* Primary Background */
+            --rb-d800: #1F292E;  /* Card Background / Border */
+            --rb-d700: #354046;  /* Border Light */
+            --rb-d600: #5C6970;
+            --rb-d500: #75838A;  /* Text Secondary */
+            --rb-d400: #89949A;
+            --rb-d300: #ABB5BA;
+            --rb-d200: #C5CFD3;
+            --rb-d100: #E2E7E9;
+            --rb-d70: #EBEEF0;   /* Text Main */
+            --rb-d30: #F7F8F8;   /* Lightest */
+            
+            /* ========== SEMANTIC ALIASES ========== */
+            --layer-tier-0: var(--rb-d950);
+            --layer-tier-1: var(--rb-d930);
+            --layer-tier-2: var(--rb-d900);
+            --layer-card: var(--rb-d800);
+            --border-default: var(--rb-d800);
+            --border-light: var(--rb-d700);
+            --text-main: var(--rb-d70);
+            --text-secondary: var(--rb-d500);
+            --text-placeholder: var(--rb-d700);
+            
+            /* ========== TYPOGRAPHY ========== */
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            
+            /* Font Sizes (Mona Sans mapping) */
+            --text-h1: 32px;
+            --text-h2: 28px;
+            --text-h3: 24px;
+            --text-h4: 20px;
+            --text-h5: 18px;
+            --text-h6: 16px;
+            --text-h7: 14px;
+            --text-h8: 12px;
+            --text-subtitle: 18px;
+            --text-main-size: 16px;
+            --text-description: 14px;
+            --text-smaller: 12px;
+            
+            /* Line Heights */
+            --lh-h1: 48px;
+            --lh-h2: 40px;
+            --lh-h3: 32px;
+            --lh-h4: 32px;
+            --lh-h5: 28px;
+            --lh-h6: 24px;
+            --lh-h7: 20px;
+            --lh-h8: 16px;
+            
+            /* ========== SPACING ========== */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 12px;
+            --space-lg: 16px;
+            --space-xl: 20px;
+            --space-2xl: 24px;
+            --space-3xl: 32px;
+            --space-4xl: 48px;
+            
+            /* ========== RADIUS ========== */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-full: 9999px;
+            
+            /* ========== SHADOWS ========== */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+            --shadow-glow-cyan: 0 0 20px rgba(14, 236, 188, 0.3);
+            
+            /* ========== TRANSITIONS ========== */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.2s ease;
+            --transition-slow: 0.3s ease;
+        }
+
+        /* ========== BASE STYLES ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: var(--font-sans);
+            background: var(--layer-tier-0);
+            color: var(--text-main);
+            line-height: 1.6;
+            font-size: var(--text-main-size);
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+        
+        /* ========== DOCUMENT HEADER ========== */
+        .doc-header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid var(--border-default);
+        }
+        .doc-header h1 {
+            font-size: var(--text-h1);
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: var(--lh-h1);
+        }
+        .doc-header h1 .brand { color: var(--rb-cyan); }
+        .doc-header .subtitle {
+            font-size: var(--text-subtitle);
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        .doc-header .meta {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            font-size: var(--text-smaller);
+            color: var(--text-secondary);
+        }
+        
+        /* ========== SECTION STYLES ========== */
+        .section {
+            margin-bottom: 80px;
+        }
+        .section-header {
+            margin-bottom: 32px;
+        }
+        .section-num {
+            font-size: var(--text-smaller);
+            font-weight: 600;
+            color: var(--rb-cyan);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .section-title {
+            font-size: var(--text-h2);
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: var(--lh-h2);
+        }
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: var(--text-description);
+            max-width: 800px;
+        }
+        
+        .subsection {
+            margin-bottom: 48px;
+        }
+        .subsection-title {
+            font-size: var(--text-h6);
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-left: 12px;
+            border-left: 3px solid var(--rb-cyan);
+            line-height: var(--lh-h6);
+        }
+        
+        /* ========== COLOR SWATCHES ========== */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 16px;
+        }
+        .color-swatch {
+            background: var(--layer-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        .color-swatch-preview {
+            height: 80px;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+        }
+        .color-swatch-info {
+            padding: 12px;
+        }
+        .color-swatch-name {
+            font-size: var(--text-description);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .color-swatch-hex {
+            font-family: var(--font-mono);
+            font-size: var(--text-smaller);
+            color: var(--text-secondary);
+        }
+        
+        /* ========== TYPOGRAPHY SAMPLES ========== */
+        .type-sample {
+            background: var(--layer-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 12px;
+        }
+        .type-sample-label {
+            font-size: var(--text-smaller);
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .type-sample-meta {
+            font-family: var(--font-mono);
+            font-size: var(--text-smaller);
+            color: var(--rb-cyan);
+            margin-top: 8px;
+        }
+        
+        /* ========== BUTTON STYLES ========== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            font-size: var(--text-description);
+            font-weight: 500;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            font-family: var(--font-sans);
+        }
+        
+        /* Primary Button - Cyan background */
+        .btn-primary {
+            background: var(--rb-cyan);
+            color: var(--rb-d900);
+            font-weight: 700;
+        }
+        .btn-primary:hover {
+            background: var(--rb-cyan-light);
+            box-shadow: var(--shadow-glow-cyan);
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        .btn-primary:disabled {
+            background: var(--rb-d700);
+            color: var(--rb-d500);
+            cursor: not-allowed;
+        }
+        
+        /* Secondary-2 Button - Lighter cyan */
+        .btn-secondary-2 {
+            background: var(--rb-cyan-light);
+            color: var(--layer-tier-0);
+            font-weight: 700;
+        }
+        
+        /* Secondary Button - Dark with border */
+        .btn-secondary {
+            background: var(--layer-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-light);
+        }
+        .btn-secondary:hover {
+            background: var(--rb-d700);
+            border-color: var(--rb-d600);
+        }
+        
+        /* Outline Button */
+        .btn-outline {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-light);
+        }
+        .btn-outline:hover {
+            background: var(--rb-cyan-dim);
+            border-color: var(--rb-cyan);
+            color: var(--rb-cyan);
+        }
+        
+        /* Ghost Button */
+        .btn-ghost {
+            background: transparent;
+            color: var(--rb-cyan);
+            border: none;
+        }
+        .btn-ghost:hover {
+            background: var(--rb-cyan-dim);
+        }
+        
+        /* Button Sizes */
+        .btn-sm { padding: 6px 12px; font-size: var(--text-smaller); }
+        .btn-lg { padding: 14px 28px; font-size: var(--text-h6); }
+        
+        /* ========== FORM CONTROLS ========== */
+        .input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--layer-tier-1);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-size: var(--text-description);
+            font-family: var(--font-sans);
+            transition: all var(--transition-normal);
+        }
+        .input::placeholder { color: var(--text-placeholder); }
+        .input:hover { border-color: var(--border-light); }
+        .input:focus {
+            outline: none;
+            border-color: var(--rb-cyan);
+            box-shadow: 0 0 0 2px var(--rb-cyan-dim);
+        }
+        .input.error { border-color: var(--rb-red); }
+        .input:disabled {
+            background: var(--layer-tier-0);
+            color: var(--text-placeholder);
+            cursor: not-allowed;
+        }
+        
+        /* Input Sizes */
+        .input-sm { padding: 8px 12px; height: 40px; }
+        .input-md { padding: 12px 16px; height: 48px; }
+        .input-lg { padding: 14px 20px; height: 52px; }
+        
+        /* ========== TOGGLE/SWITCH ========== */
+        .switch {
+            width: 40px;
+            height: 20px;
+            background: var(--rb-d700);
+            border-radius: var(--radius-full);
+            position: relative;
+            cursor: pointer;
+            transition: background var(--transition-normal);
+        }
+        .switch.on { background: var(--rb-cyan); }
+        .switch-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: var(--rb-white);
+            border-radius: 50%;
+            transition: left var(--transition-normal);
+        }
+        .switch.on .switch-thumb { left: 22px; }
+        
+        /* ========== CHECKBOX ========== */
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            background: var(--layer-tier-1);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        .checkbox:hover { border-color: var(--rb-cyan); }
+        .checkbox.checked {
+            background: var(--rb-cyan);
+            border-color: var(--rb-cyan);
+        }
+        .checkbox.checked::after {
+            content: '✓';
+            color: var(--rb-d900);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        
+        /* ========== RADIO ========== */
+        .radio {
+            width: 16px;
+            height: 16px;
+            background: var(--layer-tier-1);
+            border: 1px solid var(--border-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        .radio:hover { border-color: var(--rb-cyan); }
+        .radio.selected {
+            border-color: var(--rb-cyan);
+        }
+        .radio.selected::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--rb-cyan);
+            border-radius: 50%;
+        }
+        
+        /* ========== CARDS ========== */
+        .card {
+            background: var(--layer-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px;
+            background: var(--layer-tier-1);
+            border-bottom: 1px solid var(--border-default);
+        }
+        .card-title {
+            font-size: var(--text-description);
+            font-weight: 600;
+        }
+        .card-body { padding: 20px; }
+        
+        /* ========== BADGES ========== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            font-size: var(--text-smaller);
+            font-weight: 500;
+            border-radius: var(--radius-full);
+        }
+        .badge-cyan { background: var(--rb-cyan-dim); color: var(--rb-cyan); }
+        .badge-green { background: var(--rb-green-dim); color: var(--rb-green); }
+        .badge-yellow { background: var(--rb-yellow-dim); color: var(--rb-yellow); }
+        .badge-red { background: var(--rb-red-dim); color: var(--rb-red); }
+        .badge-gray { background: var(--rb-d700); color: var(--text-secondary); }
+        
+        /* ========== TABS ========== */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--layer-tier-1);
+            border-radius: var(--radius-md);
+        }
+        .tab {
+            flex: 1;
+            padding: 10px 16px;
+            text-align: center;
+            font-size: var(--text-description);
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        .tab:hover { color: var(--text-main); }
+        .tab.active {
+            background: var(--layer-card);
+            color: var(--text-main);
+        }
+        
+        /* ========== DIALOG/MODAL ========== */
+        .dialog {
+            background: var(--layer-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            max-width: 400px;
+        }
+        .dialog-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: 0 auto 16px;
+        }
+        .dialog-icon.success { background: var(--rb-green-dim); }
+        .dialog-icon.error { background: var(--rb-red-dim); }
+        .dialog-icon.warning { background: var(--rb-yellow-dim); }
+        .dialog-title {
+            font-size: var(--text-h5);
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .dialog-message {
+            font-size: var(--text-description);
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .dialog-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .dialog-actions .btn { flex: 1; }
+        
+        /* ========== TOOLTIP ========== */
+        .tooltip {
+            background: var(--layer-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            font-size: var(--text-description);
+            color: var(--text-secondary);
+            max-width: 300px;
+            box-shadow: var(--shadow-md);
+        }
+        
+        /* ========== TOAST ========== */
+        .toast {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--layer-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            font-size: var(--text-description);
+        }
+        .toast.success { border-color: var(--rb-green); }
+        .toast.error { border-color: var(--rb-red); }
+        
+        /* ========== EMPTY STATE ========== */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .empty-icon {
+            width: 128px;
+            height: 128px;
+            margin: 0 auto 16px;
+            background: var(--layer-tier-1);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            opacity: 0.5;
+        }
+        .empty-title {
+            font-size: var(--text-h6);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .empty-desc {
+            font-size: var(--text-description);
+            color: var(--text-secondary);
+        }
+        
+        /* ========== LOADING ========== */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--rb-d700);
+            border-top-color: var(--rb-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* ========== PROGRESS ========== */
+        .progress {
+            height: 4px;
+            background: var(--rb-d700);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--rb-cyan);
+            border-radius: var(--radius-full);
+            transition: width var(--transition-slow);
+        }
+        
+        /* ========== LAYOUT HELPERS ========== */
+        .grid { display: grid; gap: 16px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .grid-5 { grid-template-columns: repeat(5, 1fr); }
+        .grid-6 { grid-template-columns: repeat(6, 1fr); }
+        
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-sm { gap: var(--space-sm); }
+        .gap-md { gap: var(--space-md); }
+        .gap-lg { gap: var(--space-lg); }
+        
+        .mt-sm { margin-top: var(--space-sm); }
+        .mt-md { margin-top: var(--space-md); }
+        .mt-lg { margin-top: var(--space-lg); }
+        .mb-sm { margin-bottom: var(--space-sm); }
+        .mb-md { margin-bottom: var(--space-md); }
+        .mb-lg { margin-bottom: var(--space-lg); }
+        
+        .divider {
+            height: 1px;
+            background: var(--border-default);
+            margin: 60px 0;
+        }
+        
+        /* ========== CODE BLOCK ========== */
+        .code {
+            background: var(--layer-tier-1);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: var(--text-smaller);
+            color: var(--text-secondary);
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .code .key { color: var(--rb-cyan); }
+        .code .value { color: var(--rb-green); }
+        .code .comment { color: var(--rb-d500); }
+        
+        /* ========== COMPONENT SHOWCASE ========== */
+        .showcase {
+            background: var(--layer-tier-1);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 16px;
+        }
+        .showcase-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .showcase-label {
+            min-width: 100px;
+            font-size: var(--text-smaller);
+            color: var(--text-secondary);
+        }
+        
+        /* ========== ANNOTATION ========== */
+        .annotation {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: var(--layer-tier-1);
+            border-radius: var(--radius-md);
+            font-size: var(--text-smaller);
+            color: var(--text-secondary);
+        }
+        .annotation strong { color: var(--text-main); }
+        .annotation code {
+            background: var(--rb-d700);
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="doc-header">
+            <h1><span class="brand">◆</span> RiverBit Design System</h1>
+            <p class="subtitle">Delta Terminal · Complete Design Specification</p>
+            <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 24px; font-size: var(--text-description);">
+                基于 Figma RiverBit-Design-system 的完整设计规范，适用于 Delta Terminal 产品。
+            </p>
+            <div class="meta">
+                <span>📅 2024-12-25</span>
+                <span>🎨 v1.0</span>
+                <span>📐 Design Tokens + Components</span>
+            </div>
+        </header>
+
+        <!-- ==========================================
+             PART 1: COLOR SYSTEM
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 1</div>
+                <h2 class="section-title">Color System</h2>
+                <p class="section-desc">RiverBit 品牌色彩体系，包含品牌色、语义色和灰度色阶</p>
+            </div>
+
+            <!-- Brand Colors -->
+            <div class="subsection">
+                <h3 class="subsection-title">1.1 品牌色 Brand Colors</h3>
+                <div class="grid grid-2" style="max-width: 600px;">
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #0EECBC;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">Riverbit Cyan</div>
+                            <div class="color-swatch-hex">#0EECBC</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #22C3A0;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">Riverbit Cyan Light</div>
+                            <div class="color-swatch-hex">#22C3A0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="annotation">
+                    <strong>使用场景：</strong>主按钮、强调文字、链接、品牌标识、交互反馈高亮
+                </div>
+            </div>
+
+            <!-- Semantic Colors -->
+            <div class="subsection">
+                <h3 class="subsection-title">1.2 语义色 Semantic Colors</h3>
+                <div class="grid grid-5" style="max-width: 800px;">
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #000000; border: 1px solid #1F292E;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">Black</div>
+                            <div class="color-swatch-hex">#000000</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #FFFFFF;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">White</div>
+                            <div class="color-swatch-hex">#FFFFFF</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #61DD3C;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">Green</div>
+                            <div class="color-swatch-hex">#61DD3C</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #E8BD30;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">Yellow</div>
+                            <div class="color-swatch-hex">#E8BD30</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #DD3C41;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">Red</div>
+                            <div class="color-swatch-hex">#DD3C41</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="annotation">
+                    <strong>Green：</strong>盈利、成功、做多 LONG · <strong>Yellow：</strong>警告、提醒、待处理 · <strong>Red：</strong>亏损、错误、做空 SHORT
+                </div>
+            </div>
+
+            <!-- Grayscale -->
+            <div class="subsection">
+                <h3 class="subsection-title">1.3 灰度色阶 D-Scale (Dark Theme)</h3>
+                <div class="color-grid">
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #070E12; border: 1px solid #1F292E;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D950</div>
+                            <div class="color-swatch-hex">#070E12</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #0D1417;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D930</div>
+                            <div class="color-swatch-hex">#0D1417</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #151B1E;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D900</div>
+                            <div class="color-swatch-hex">#151B1E</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #1F292E;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D800</div>
+                            <div class="color-swatch-hex">#1F292E</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #354046;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D700</div>
+                            <div class="color-swatch-hex">#354046</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #5C6970;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D600</div>
+                            <div class="color-swatch-hex">#5C6970</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #75838A;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D500</div>
+                            <div class="color-swatch-hex">#75838A</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #89949A;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D400</div>
+                            <div class="color-swatch-hex">#89949A</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #ABB5BA;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D300</div>
+                            <div class="color-swatch-hex">#ABB5BA</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #C5CFD3;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D200</div>
+                            <div class="color-swatch-hex">#C5CFD3</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #E2E7E9;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D100</div>
+                            <div class="color-swatch-hex">#E2E7E9</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #EBEEF0;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D70</div>
+                            <div class="color-swatch-hex">#EBEEF0</div>
+                        </div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-swatch-preview" style="background: #F7F8F8;"></div>
+                        <div class="color-swatch-info">
+                            <div class="color-swatch-name">D30</div>
+                            <div class="color-swatch-hex">#F7F8F8</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="annotation">
+                    <strong>D950:</strong> Layer Tier 0 (最深背景) · <strong>D930:</strong> Layer Tier 1 · <strong>D900:</strong> Layer Tier 2 · <strong>D800:</strong> Card / Border · <strong>D700:</strong> Border Light / Placeholder · <strong>D500:</strong> Text Secondary · <strong>D70:</strong> Text Main
+                </div>
+            </div>
+
+            <!-- Semantic Aliases -->
+            <div class="subsection">
+                <h3 class="subsection-title">1.4 语义别名 Semantic Aliases</h3>
+                <div class="code">
+<span class="comment">/* Layer System */</span>
+<span class="key">--layer-tier-0:</span> <span class="value">#070E12</span>;  <span class="comment">/* 最底层背景 */</span>
+<span class="key">--layer-tier-1:</span> <span class="value">#0D1417</span>;  <span class="comment">/* 输入框背景 */</span>
+<span class="key">--layer-tier-2:</span> <span class="value">#151B1E</span>;  <span class="comment">/* 内容区域背景 */</span>
+<span class="key">--layer-card:</span>   <span class="value">#1F292E</span>;  <span class="comment">/* 卡片背景 */</span>
+
+<span class="comment">/* Border System */</span>
+<span class="key">--border-default:</span> <span class="value">#1F292E</span>;  <span class="comment">/* 默认边框 */</span>
+<span class="key">--border-light:</span>   <span class="value">#354046</span>;  <span class="comment">/* 浅色边框 / Hover */</span>
+
+<span class="comment">/* Text System */</span>
+<span class="key">--text-main:</span>        <span class="value">#EBEEF0</span>;  <span class="comment">/* 主要文字 */</span>
+<span class="key">--text-secondary:</span>   <span class="value">#75838A</span>;  <span class="comment">/* 次要文字 */</span>
+<span class="key">--text-placeholder:</span> <span class="value">#354046</span>;  <span class="comment">/* 占位符 */</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ==========================================
+             PART 2: TYPOGRAPHY
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 2</div>
+                <h2 class="section-title">Typography</h2>
+                <p class="section-desc">字体规范采用 Mona Sans (可替代为 Inter)，含标题和正文两套体系</p>
+            </div>
+
+            <!-- Headings -->
+            <div class="subsection">
+                <h3 class="subsection-title">2.1 标题 Headings (Bold)</h3>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H1</div>
+                    <div style="font-size: 32px; font-weight: 700; line-height: 48px;">H1-Mona Sans-Bold-32px</div>
+                    <div class="type-sample-meta">size: 32px · weight: 700 · line-height: 48px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H2</div>
+                    <div style="font-size: 28px; font-weight: 700; line-height: 40px;">H2-Mona Sans-Bold-28px</div>
+                    <div class="type-sample-meta">size: 28px · weight: 700 · line-height: 40px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H3</div>
+                    <div style="font-size: 24px; font-weight: 700; line-height: 32px;">H3-Mona Sans-Bold-24px</div>
+                    <div class="type-sample-meta">size: 24px · weight: 700 · line-height: 32px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H4</div>
+                    <div style="font-size: 20px; font-weight: 700; line-height: 32px;">H4-Mona Sans-Bold-20px</div>
+                    <div class="type-sample-meta">size: 20px · weight: 700 · line-height: 32px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H5</div>
+                    <div style="font-size: 18px; font-weight: 700; line-height: 28px;">H5-Mona Sans-Bold-18px</div>
+                    <div class="type-sample-meta">size: 18px · weight: 700 · line-height: 28px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H6</div>
+                    <div style="font-size: 16px; font-weight: 700; line-height: 24px;">H6-Mona Sans-Bold-16px</div>
+                    <div class="type-sample-meta">size: 16px · weight: 700 · line-height: 24px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H7</div>
+                    <div style="font-size: 14px; font-weight: 700; line-height: 20px;">H7-Mona Sans-Bold-14px</div>
+                    <div class="type-sample-meta">size: 14px · weight: 700 · line-height: 20px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">H8</div>
+                    <div style="font-size: 12px; font-weight: 700; line-height: 16px;">H8-Mona Sans-Bold-12px</div>
+                    <div class="type-sample-meta">size: 12px · weight: 700 · line-height: 16px</div>
+                </div>
+            </div>
+
+            <!-- Body Text -->
+            <div class="subsection">
+                <h3 class="subsection-title">2.2 正文 Body Text (Regular)</h3>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">Subtitle</div>
+                    <div style="font-size: 18px; font-weight: 400; line-height: 24px; color: var(--text-secondary);">Subtitle-Mona Sans-Regular-18px</div>
+                    <div class="type-sample-meta">size: 18px · weight: 400 · line-height: 24px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">MainText</div>
+                    <div style="font-size: 16px; font-weight: 400; line-height: 20px; color: var(--text-secondary);">MainText-Mona Sans-Regular-16px</div>
+                    <div class="type-sample-meta">size: 16px · weight: 400 · line-height: 20px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">Description</div>
+                    <div style="font-size: 14px; font-weight: 400; line-height: 20px; color: var(--text-secondary);">Description-Mona Sans-Regular-14px</div>
+                    <div class="type-sample-meta">size: 14px · weight: 400 · line-height: 20px</div>
+                </div>
+                
+                <div class="type-sample">
+                    <div class="type-sample-label">Smaller</div>
+                    <div style="font-size: 12px; font-weight: 400; line-height: 14px; color: var(--text-secondary);">Smaller-Mona Sans-Regular-12px</div>
+                    <div class="type-sample-meta">size: 12px · weight: 400 · line-height: 14px</div>
+                </div>
+            </div>
+
+            <!-- CSS Variables -->
+            <div class="subsection">
+                <h3 class="subsection-title">2.3 CSS 变量定义</h3>
+                <div class="code">
+<span class="comment">/* Font Family */</span>
+<span class="key">--font-sans:</span> <span class="value">'Inter', -apple-system, BlinkMacSystemFont, sans-serif</span>;
+<span class="key">--font-mono:</span> <span class="value">'JetBrains Mono', 'SF Mono', Consolas, monospace</span>;
+
+<span class="comment">/* Headings (Bold 700) */</span>
+<span class="key">--text-h1:</span> <span class="value">32px</span>;  <span class="key">--lh-h1:</span> <span class="value">48px</span>;
+<span class="key">--text-h2:</span> <span class="value">28px</span>;  <span class="key">--lh-h2:</span> <span class="value">40px</span>;
+<span class="key">--text-h3:</span> <span class="value">24px</span>;  <span class="key">--lh-h3:</span> <span class="value">32px</span>;
+<span class="key">--text-h4:</span> <span class="value">20px</span>;  <span class="key">--lh-h4:</span> <span class="value">32px</span>;
+<span class="key">--text-h5:</span> <span class="value">18px</span>;  <span class="key">--lh-h5:</span> <span class="value">28px</span>;
+<span class="key">--text-h6:</span> <span class="value">16px</span>;  <span class="key">--lh-h6:</span> <span class="value">24px</span>;
+<span class="key">--text-h7:</span> <span class="value">14px</span>;  <span class="key">--lh-h7:</span> <span class="value">20px</span>;
+<span class="key">--text-h8:</span> <span class="value">12px</span>;  <span class="key">--lh-h8:</span> <span class="value">16px</span>;
+
+<span class="comment">/* Body (Regular 400) */</span>
+<span class="key">--text-subtitle:</span>    <span class="value">18px</span>;
+<span class="key">--text-main-size:</span>   <span class="value">16px</span>;
+<span class="key">--text-description:</span> <span class="value">14px</span>;
+<span class="key">--text-smaller:</span>     <span class="value">12px</span>;
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ==========================================
+             PART 3: BUTTONS
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 3</div>
+                <h2 class="section-title">Buttons</h2>
+                <p class="section-desc">五种按钮类型，六种交互状态</p>
+            </div>
+
+            <!-- Primary Button -->
+            <div class="subsection">
+                <h3 class="subsection-title">3.1 Primary Button</h3>
+                <div class="showcase">
+                    <div class="showcase-row">
+                        <span class="showcase-label">Default</span>
+                        <button class="btn btn-primary">CTA Button</button>
+                    </div>
+                    <div class="showcase-row mt-md">
+                        <span class="showcase-label">Disabled</span>
+                        <button class="btn btn-primary" disabled>CTA Button</button>
+                    </div>
+                </div>
+                <div class="code">
+<span class="key">background:</span> <span class="value">#0EECBC</span>;
+<span class="key">color:</span> <span class="value">#151B1E</span>;
+<span class="key">font-weight:</span> <span class="value">700</span>;
+<span class="key">border-radius:</span> <span class="value">8px</span>;
+<span class="key">padding:</span> <span class="value">10px 20px</span>;
+<span class="comment">/* Hover: background #22C3A0, box-shadow glow */</span>
+<span class="comment">/* Disabled: background #354046, color #75838A */</span>
+                </div>
+            </div>
+
+            <!-- Secondary-2 Button -->
+            <div class="subsection">
+                <h3 class="subsection-title">3.2 Secondary-2 Button</h3>
+                <div class="showcase">
+                    <div class="showcase-row">
+                        <span class="showcase-label">Default</span>
+                        <button class="btn btn-secondary-2">Button</button>
+                    </div>
+                </div>
+                <div class="code">
+<span class="key">background:</span> <span class="value">#22C3A0</span>;
+<span class="key">color:</span> <span class="value">#070E12</span>;
+<span class="key">font-weight:</span> <span class="value">700</span>;
+                </div>
+            </div>
+
+            <!-- Secondary Button -->
+            <div class="subsection">
+                <h3 class="subsection-title">3.3 Secondary Button</h3>
+                <div class="showcase">
+                    <div class="showcase-row">
+                        <span class="showcase-label">Default</span>
+                        <button class="btn btn-secondary">Cancel</button>
+                    </div>
+                    <div class="showcase-row mt-md">
+                        <span class="showcase-label">Disabled</span>
+                        <button class="btn btn-secondary" disabled style="color: var(--text-placeholder);">Cancel</button>
+                    </div>
+                </div>
+                <div class="code">
+<span class="key">background:</span> <span class="value">#1F292E</span>;
+<span class="key">color:</span> <span class="value">#EBEEF0</span>;
+<span class="key">border:</span> <span class="value">1px solid #354046</span>;
+<span class="comment">/* Hover: background #354046 */</span>
+                </div>
+            </div>
+
+            <!-- Outline Button -->
+            <div class="subsection">
+                <h3 class="subsection-title">3.4 Outline Button</h3>
+                <div class="showcase">
+                    <div class="showcase-row">
+                        <span class="showcase-label">Default</span>
+                        <button class="btn btn-outline">More →</button>
+                    </div>
+                    <div class="showcase-row mt-md">
+                        <span class="showcase-label">Hover</span>
+                        <button class="btn btn-outline" style="background: rgba(14, 236, 188, 0.15); border-color: #0EECBC; color: #0EECBC;">More →</button>
+                    </div>
+                </div>
+                <div class="code">
+<span class="key">background:</span> <span class="value">transparent</span>;
+<span class="key">color:</span> <span class="value">#EBEEF0</span>;
+<span class="key">border:</span> <span class="value">1px solid #354046</span>;
+<span class="comment">/* Hover: background rgba(14, 236, 188, 0.15), border-color #0EECBC, color #0EECBC */</span>
+                </div>
+            </div>
+
+            <!-- Ghost Button -->
+            <div class="subsection">
+                <h3 class="subsection-title">3.5 Ghost Button</h3>
+                <div class="showcase">
+                    <div class="showcase-row">
+                        <span class="showcase-label">Default</span>
+                        <button class="btn btn-ghost">Download</button>
+                    </div>
+                    <div class="showcase-row mt-md">
+                        <span class="showcase-label">Hover</span>
+                        <button class="btn btn-ghost" style="background: rgba(14, 236, 188, 0.15);">Download</button>
+                    </div>
+                </div>
+                <div class="code">
+<span class="key">background:</span> <span class="value">transparent</span>;
+<span class="key">color:</span> <span class="value">#0EECBC</span>;
+<span class="key">border:</span> <span class="value">none</span>;
+<span class="comment">/* Hover: background rgba(14, 236, 188, 0.15) */</span>
+                </div>
+            </div>
+
+            <!-- Button States Matrix -->
+            <div class="subsection">
+                <h3 class="subsection-title">3.6 状态矩阵 State Matrix</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-default);">
+                                    <th style="text-align: left; padding: 12px 8px; color: var(--text-secondary);">Type</th>
+                                    <th style="text-align: center; padding: 12px 8px; color: var(--text-secondary);">Default</th>
+                                    <th style="text-align: center; padding: 12px 8px; color: var(--text-secondary);">Hover</th>
+                                    <th style="text-align: center; padding: 12px 8px; color: var(--text-secondary);">Active</th>
+                                    <th style="text-align: center; padding: 12px 8px; color: var(--text-secondary);">Focus</th>
+                                    <th style="text-align: center; padding: 12px 8px; color: var(--text-secondary);">Disable</th>
+                                    <th style="text-align: center; padding: 12px 8px; color: var(--text-secondary);">Loading</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid var(--border-default);">
+                                    <td style="padding: 12px 8px; font-weight: 600;">Primary</td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-default);">
+                                    <td style="padding: 12px 8px; font-weight: 600;">Secondary-2</td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-default);">
+                                    <td style="padding: 12px 8px; font-weight: 600;">Secondary</td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-default);">
+                                    <td style="padding: 12px 8px; font-weight: 600;">Outline</td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 8px; font-weight: 600;">Ghost</td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                    <td style="text-align: center; padding: 12px 8px;"><span class="badge badge-cyan">✓</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ==========================================
+             PART 4: FORM CONTROLS
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 4</div>
+                <h2 class="section-title">Form Controls</h2>
+                <p class="section-desc">输入框、搜索框、文本域、选择控件</p>
+            </div>
+
+            <!-- Input -->
+            <div class="subsection">
+                <h3 class="subsection-title">4.1 Input 输入框</h3>
+                <div class="showcase">
+                    <div class="grid grid-3" style="gap: 24px;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Small (40px)</div>
+                            <input class="input input-sm" placeholder="Placeholder">
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Medium (48px)</div>
+                            <input class="input input-md" placeholder="Placeholder">
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Large (52px)</div>
+                            <input class="input input-lg" placeholder="Placeholder">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="showcase mt-lg">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 16px;">States</div>
+                    <div class="grid grid-2" style="gap: 16px;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Default</div>
+                            <input class="input" placeholder="Enter text...">
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Hover</div>
+                            <input class="input" placeholder="Enter text..." style="border-color: #354046;">
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Focus</div>
+                            <input class="input" placeholder="Enter text..." style="border-color: #0EECBC; box-shadow: 0 0 0 2px rgba(14, 236, 188, 0.15);">
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Typing</div>
+                            <input class="input" value="User input..." style="border-color: #0EECBC; box-shadow: 0 0 0 2px rgba(14, 236, 188, 0.15);">
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Error</div>
+                            <input class="input error" value="Invalid input" style="border-color: #DD3C41;">
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Disabled</div>
+                            <input class="input" placeholder="Disabled" disabled>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="subsection">
+                <h3 class="subsection-title">4.2 Search 搜索框</h3>
+                <div class="showcase">
+                    <div class="grid grid-3" style="gap: 24px;">
+                        <div style="position: relative;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Small</div>
+                            <input class="input input-sm" placeholder="Search..." style="padding-left: 36px;">
+                            <span style="position: absolute; left: 12px; top: 32px; color: var(--text-secondary);">🔍</span>
+                        </div>
+                        <div style="position: relative;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Medium</div>
+                            <input class="input input-md" placeholder="Search..." style="padding-left: 40px;">
+                            <span style="position: absolute; left: 14px; top: 34px; color: var(--text-secondary);">🔍</span>
+                        </div>
+                        <div style="position: relative;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Large</div>
+                            <input class="input input-lg" placeholder="Search..." style="padding-left: 44px;">
+                            <span style="position: absolute; left: 16px; top: 36px; color: var(--text-secondary);">🔍</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TextArea -->
+            <div class="subsection">
+                <h3 class="subsection-title">4.3 TextArea 文本域</h3>
+                <div class="showcase">
+                    <div class="grid grid-2" style="gap: 24px;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Default</div>
+                            <textarea class="input" style="height: 120px; resize: vertical;" placeholder="Enter your message..."></textarea>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Typing</div>
+                            <textarea class="input" style="height: 120px; resize: vertical; border-color: #0EECBC;">User is typing content here...</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkbox, Switch, Radio -->
+            <div class="subsection">
+                <h3 class="subsection-title">4.4 选择控件 Selection Controls</h3>
+                <div class="showcase">
+                    <div class="grid grid-3" style="gap: 32px;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 16px;">Checkbox</div>
+                            <div class="flex items-center gap-lg">
+                                <div class="checkbox"></div>
+                                <div class="checkbox" style="border-color: #0EECBC;"></div>
+                                <div class="checkbox checked"></div>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">Default · Hover · Checked</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 16px;">Radio</div>
+                            <div class="flex items-center gap-lg">
+                                <div class="radio"></div>
+                                <div class="radio" style="border-color: #0EECBC;"></div>
+                                <div class="radio selected"></div>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">Default · Hover · Selected</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 16px;">Switch</div>
+                            <div class="flex items-center gap-lg">
+                                <div class="switch"><div class="switch-thumb"></div></div>
+                                <div class="switch on"><div class="switch-thumb"></div></div>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">Off · On</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ==========================================
+             PART 5: COMPONENTS
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 5</div>
+                <h2 class="section-title">Components</h2>
+                <p class="section-desc">标签页、徽章、卡片、弹窗、提示等通用组件</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.1 Tabs 标签页</h3>
+                <div class="showcase">
+                    <div style="max-width: 500px;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Segmented Tabs</div>
+                        <div class="tabs">
+                            <button class="tab active">Overview</button>
+                            <button class="tab">Positions</button>
+                            <button class="tab">History</button>
+                        </div>
+                    </div>
+                    
+                    <div style="max-width: 300px; margin-top: 24px;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Text Tabs</div>
+                        <div style="display: flex; gap: 24px; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
+                            <span style="font-size: 14px; color: var(--rb-cyan); border-bottom: 2px solid var(--rb-cyan); padding-bottom: 8px; margin-bottom: -9px;">Active</span>
+                            <span style="font-size: 14px; color: var(--text-secondary);">Inactive</span>
+                            <span style="font-size: 14px; color: var(--text-secondary);">Inactive</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badges -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.2 Badges 徽章</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-md" style="flex-wrap: wrap;">
+                        <span class="badge badge-cyan">Cyan</span>
+                        <span class="badge badge-green">Success</span>
+                        <span class="badge badge-yellow">Warning</span>
+                        <span class="badge badge-red">Error</span>
+                        <span class="badge badge-gray">Neutral</span>
+                    </div>
+                    <div class="flex items-center gap-md mt-lg" style="flex-wrap: wrap;">
+                        <span class="badge badge-green">● Live</span>
+                        <span class="badge badge-yellow">● Paper</span>
+                        <span class="badge badge-cyan">● Backtest</span>
+                        <span class="badge badge-red">● Stopped</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.3 Cards 卡片</h3>
+                <div class="grid grid-2" style="max-width: 700px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Card Title</span>
+                        </div>
+                        <div class="card-body">
+                            <p style="font-size: 14px; color: var(--text-secondary);">Card content goes here. Background uses --layer-card (#1F292E).</p>
+                        </div>
+                    </div>
+                    <div class="card" style="border-color: var(--rb-cyan);">
+                        <div class="card-header" style="background: var(--rb-cyan-dim);">
+                            <span class="card-title" style="color: var(--rb-cyan);">Highlighted Card</span>
+                        </div>
+                        <div class="card-body">
+                            <p style="font-size: 14px; color: var(--text-secondary);">Card with accent border for emphasis.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dialog -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.4 Dialog 对话框</h3>
+                <div class="showcase">
+                    <div class="grid grid-3" style="gap: 24px;">
+                        <div class="dialog">
+                            <div class="dialog-icon success">✓</div>
+                            <div class="dialog-title">Success</div>
+                            <div class="dialog-message">Your order has been placed successfully.</div>
+                            <div class="dialog-actions">
+                                <button class="btn btn-primary">Continue</button>
+                            </div>
+                        </div>
+                        
+                        <div class="dialog">
+                            <div class="dialog-icon error">✕</div>
+                            <div class="dialog-title">Error</div>
+                            <div class="dialog-message">Transaction failed. Please try again.</div>
+                            <div class="dialog-actions">
+                                <button class="btn btn-secondary">Cancel</button>
+                                <button class="btn btn-primary">Retry</button>
+                            </div>
+                        </div>
+                        
+                        <div class="dialog">
+                            <div class="dialog-icon warning">!</div>
+                            <div class="dialog-title">Warning</div>
+                            <div class="dialog-message">Are you sure you want to continue?</div>
+                            <div class="dialog-actions">
+                                <button class="btn btn-secondary">Cancel</button>
+                                <button class="btn btn-primary">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tooltip -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.5 Tooltip 提示框</h3>
+                <div class="showcase">
+                    <div class="tooltip" style="display: inline-block;">
+                        Contract: BTCUSDT, ETHUSDT, SOLUSDT<br>
+                        A closing loss of ≥100 USDT qualifies for automatic compensation.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toast -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.6 Toast 轻提示</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-lg" style="flex-wrap: wrap;">
+                        <div class="toast success">
+                            <span style="color: var(--rb-green);">✓</span>
+                            <span>Copied to clipboard</span>
+                        </div>
+                        <div class="toast error">
+                            <span style="color: var(--rb-red);">✕</span>
+                            <span>Operation failed</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.7 Empty State 空状态</h3>
+                <div class="card" style="max-width: 400px;">
+                    <div class="empty">
+                        <div class="empty-icon">📊</div>
+                        <div class="empty-title">No data found</div>
+                        <div class="empty-desc">Please be patient, your interface will be available shortly.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.8 Loading 加载状态</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-lg">
+                        <div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Spinner</div>
+                            <div class="spinner"></div>
+                        </div>
+                        <div style="width: 200px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Progress Bar</div>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: 65%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.9 Pagination 分页</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-sm">
+                        <button class="btn btn-ghost btn-sm">←</button>
+                        <button class="btn btn-secondary btn-sm" style="min-width: 36px;">1</button>
+                        <button class="btn btn-ghost btn-sm" style="min-width: 36px; background: var(--rb-cyan-dim); color: var(--rb-cyan);">2</button>
+                        <button class="btn btn-secondary btn-sm" style="min-width: 36px;">3</button>
+                        <span style="color: var(--text-secondary);">...</span>
+                        <button class="btn btn-secondary btn-sm" style="min-width: 36px;">10</button>
+                        <button class="btn btn-ghost btn-sm">→</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stepper -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.10 Stepper 步进器</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-sm" style="background: var(--layer-card); border: 1px solid var(--border-default); border-radius: 8px; padding: 4px; width: fit-content;">
+                        <button class="btn btn-ghost btn-sm" style="min-width: 32px;">−</button>
+                        <span style="min-width: 40px; text-align: center; font-family: var(--font-mono);">5</span>
+                        <button class="btn btn-ghost btn-sm" style="min-width: 32px;">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Copy Button -->
+            <div class="subsection">
+                <h3 class="subsection-title">5.11 Copy Button 复制按钮</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-lg">
+                        <div style="display: flex; align-items: center; gap: 8px; background: var(--layer-card); padding: 8px 12px; border-radius: 8px;">
+                            <span style="font-family: var(--font-mono); font-size: 12px;">0xbe...4d7a12</span>
+                            <button class="btn btn-ghost btn-sm" style="padding: 4px 8px;">📋</button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; background: var(--rb-green-dim); padding: 8px 12px; border-radius: 8px;">
+                            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--rb-green);">Copied!</span>
+                            <span style="color: var(--rb-green);">✓</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ==========================================
+             PART 6: SPACING & LAYOUT
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 6</div>
+                <h2 class="section-title">Spacing & Layout</h2>
+                <p class="section-desc">间距系统、圆角、阴影、栅格</p>
+            </div>
+
+            <!-- Spacing -->
+            <div class="subsection">
+                <h3 class="subsection-title">6.1 Spacing 间距</h3>
+                <div class="code">
+<span class="key">--space-xs:</span>  <span class="value">4px</span>;
+<span class="key">--space-sm:</span>  <span class="value">8px</span>;
+<span class="key">--space-md:</span>  <span class="value">12px</span>;
+<span class="key">--space-lg:</span>  <span class="value">16px</span>;
+<span class="key">--space-xl:</span>  <span class="value">20px</span>;
+<span class="key">--space-2xl:</span> <span class="value">24px</span>;
+<span class="key">--space-3xl:</span> <span class="value">32px</span>;
+<span class="key">--space-4xl:</span> <span class="value">48px</span>;
+                </div>
+            </div>
+
+            <!-- Border Radius -->
+            <div class="subsection">
+                <h3 class="subsection-title">6.2 Border Radius 圆角</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-lg">
+                        <div style="width: 60px; height: 60px; background: var(--rb-cyan-dim); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px;">4px</div>
+                        <div style="width: 60px; height: 60px; background: var(--rb-cyan-dim); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px;">8px</div>
+                        <div style="width: 60px; height: 60px; background: var(--rb-cyan-dim); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 11px;">12px</div>
+                        <div style="width: 60px; height: 60px; background: var(--rb-cyan-dim); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 11px;">16px</div>
+                        <div style="width: 60px; height: 60px; background: var(--rb-cyan-dim); border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 11px;">Full</div>
+                    </div>
+                </div>
+                <div class="code">
+<span class="key">--radius-sm:</span>   <span class="value">4px</span>;   <span class="comment">/* Checkbox, small elements */</span>
+<span class="key">--radius-md:</span>   <span class="value">8px</span>;   <span class="comment">/* Buttons, Inputs, Cards */</span>
+<span class="key">--radius-lg:</span>   <span class="value">12px</span>;  <span class="comment">/* Large cards, Modals */</span>
+<span class="key">--radius-xl:</span>   <span class="value">16px</span>;  <span class="comment">/* Page sections */</span>
+<span class="key">--radius-full:</span> <span class="value">9999px</span>; <span class="comment">/* Pills, Avatars */</span>
+                </div>
+            </div>
+
+            <!-- Shadows -->
+            <div class="subsection">
+                <h3 class="subsection-title">6.3 Shadows 阴影</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-lg">
+                        <div style="width: 100px; height: 60px; background: var(--layer-card); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px;">Small</div>
+                        <div style="width: 100px; height: 60px; background: var(--layer-card); border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 11px;">Medium</div>
+                        <div style="width: 100px; height: 60px; background: var(--layer-card); border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 11px;">Large</div>
+                        <div style="width: 100px; height: 60px; background: var(--layer-card); border-radius: 8px; box-shadow: 0 0 20px rgba(14,236,188,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--rb-cyan);">Glow</div>
+                    </div>
+                </div>
+                <div class="code">
+<span class="key">--shadow-sm:</span>       <span class="value">0 1px 2px rgba(0, 0, 0, 0.3)</span>;
+<span class="key">--shadow-md:</span>       <span class="value">0 4px 8px rgba(0, 0, 0, 0.4)</span>;
+<span class="key">--shadow-lg:</span>       <span class="value">0 8px 16px rgba(0, 0, 0, 0.5)</span>;
+<span class="key">--shadow-glow-cyan:</span> <span class="value">0 0 20px rgba(14, 236, 188, 0.3)</span>;
+                </div>
+            </div>
+
+            <!-- Transitions -->
+            <div class="subsection">
+                <h3 class="subsection-title">6.4 Transitions 过渡</h3>
+                <div class="code">
+<span class="key">--transition-fast:</span>   <span class="value">0.15s ease</span>;  <span class="comment">/* Hover states */</span>
+<span class="key">--transition-normal:</span> <span class="value">0.2s ease</span>;   <span class="comment">/* Default interactions */</span>
+<span class="key">--transition-slow:</span>   <span class="value">0.3s ease</span>;   <span class="comment">/* Page transitions, modals */</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ==========================================
+             PART 7: DELTA TERMINAL SPECIFIC
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 7</div>
+                <h2 class="section-title">Delta Terminal Patterns</h2>
+                <p class="section-desc">交易界面特有的设计模式</p>
+            </div>
+
+            <!-- Trading Colors -->
+            <div class="subsection">
+                <h3 class="subsection-title">7.1 交易色彩 Trading Colors</h3>
+                <div class="showcase">
+                    <div class="grid grid-2" style="max-width: 500px; gap: 16px;">
+                        <div style="background: var(--rb-green-dim); border: 1px solid var(--rb-green); border-radius: 8px; padding: 16px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--rb-green);">LONG</div>
+                            <div style="font-size: 12px; color: var(--rb-green);">做多 / 盈利</div>
+                        </div>
+                        <div style="background: var(--rb-red-dim); border: 1px solid var(--rb-red); border-radius: 8px; padding: 16px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--rb-red);">SHORT</div>
+                            <div style="font-size: 12px; color: var(--rb-red);">做空 / 亏损</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PnL Display -->
+            <div class="subsection">
+                <h3 class="subsection-title">7.2 盈亏显示 PnL Display</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-lg" style="flex-wrap: wrap;">
+                        <div style="background: var(--layer-card); border-radius: 8px; padding: 16px; min-width: 150px;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">Unrealized PnL</div>
+                            <div style="font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--rb-green);">+$2,450.00</div>
+                            <div style="font-family: var(--font-mono); font-size: 12px; color: var(--rb-green);">+18.5%</div>
+                        </div>
+                        <div style="background: var(--layer-card); border-radius: 8px; padding: 16px; min-width: 150px;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">Unrealized PnL</div>
+                            <div style="font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--rb-red);">-$850.00</div>
+                            <div style="font-family: var(--font-mono); font-size: 12px; color: var(--rb-red);">-6.2%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Indicators -->
+            <div class="subsection">
+                <h3 class="subsection-title">7.3 状态指示 Status Indicators</h3>
+                <div class="showcase">
+                    <div class="flex items-center gap-lg" style="flex-wrap: wrap;">
+                        <div class="flex items-center gap-sm">
+                            <span style="width: 8px; height: 8px; background: var(--rb-green); border-radius: 50%;"></span>
+                            <span style="font-size: 14px;">Live</span>
+                        </div>
+                        <div class="flex items-center gap-sm">
+                            <span style="width: 8px; height: 8px; background: var(--rb-yellow); border-radius: 50%;"></span>
+                            <span style="font-size: 14px;">Paper</span>
+                        </div>
+                        <div class="flex items-center gap-sm">
+                            <span style="width: 8px; height: 8px; background: var(--rb-cyan); border-radius: 50%;"></span>
+                            <span style="font-size: 14px;">Backtesting</span>
+                        </div>
+                        <div class="flex items-center gap-sm">
+                            <span style="width: 8px; height: 8px; background: var(--rb-d500); border-radius: 50%;"></span>
+                            <span style="font-size: 14px;">Paused</span>
+                        </div>
+                        <div class="flex items-center gap-sm">
+                            <span style="width: 8px; height: 8px; background: var(--rb-red); border-radius: 50%;"></span>
+                            <span style="font-size: 14px;">Stopped</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metric Cards -->
+            <div class="subsection">
+                <h3 class="subsection-title">7.4 指标卡片 Metric Cards</h3>
+                <div class="grid grid-4" style="max-width: 800px;">
+                    <div class="card">
+                        <div class="card-body" style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Win Rate</div>
+                            <div style="font-family: var(--font-mono); font-size: 24px; font-weight: 700;">71%</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body" style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Max DD</div>
+                            <div style="font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--rb-red);">-6.2%</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body" style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Sharpe</div>
+                            <div style="font-family: var(--font-mono); font-size: 24px; font-weight: 700;">2.45</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body" style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Trades</div>
+                            <div style="font-family: var(--font-mono); font-size: 24px; font-weight: 700;">38</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slider Control -->
+            <div class="subsection">
+                <h3 class="subsection-title">7.5 滑块控件 Slider Control</h3>
+                <div class="showcase">
+                    <div style="max-width: 400px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 12px; color: var(--text-secondary);">Leverage</span>
+                            <span style="font-family: var(--font-mono); font-size: 14px; font-weight: 600;">5x</span>
+                        </div>
+                        <div style="height: 6px; background: var(--rb-d700); border-radius: 3px; position: relative;">
+                            <div style="width: 50%; height: 100%; background: var(--rb-cyan); border-radius: 3px;"></div>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 16px; height: 16px; background: var(--rb-cyan); border-radius: 50%; box-shadow: 0 0 0 3px rgba(14, 236, 188, 0.3);"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                            <span style="font-size: 11px; color: var(--text-secondary);">1x</span>
+                            <span style="font-size: 11px; color: var(--text-secondary);">10x</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat Message -->
+            <div class="subsection">
+                <h3 class="subsection-title">7.6 AI 对话消息 Chat Message</h3>
+                <div class="showcase">
+                    <div style="max-width: 600px;">
+                        <!-- User Message -->
+                        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-direction: row-reverse;">
+                            <div style="width: 36px; height: 36px; background: var(--rb-cyan-dim); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--rb-cyan); flex-shrink: 0;">V</div>
+                            <div style="background: var(--rb-cyan-dim); border-radius: 12px 12px 0 12px; padding: 12px 16px; max-width: 400px;">
+                                <p style="font-size: 14px;">帮我创建一个 RSI 超卖反弹策略</p>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Message -->
+                        <div style="display: flex; gap: 12px;">
+                            <div style="width: 36px; height: 36px; background: var(--layer-card); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">◆</div>
+                            <div style="background: var(--layer-card); border-radius: 12px 12px 12px 0; padding: 12px 16px; max-width: 400px;">
+                                <p style="font-size: 14px;">好的，我为你设计了一个 RSI 超卖反弹策略：</p>
+                                <div style="margin-top: 12px; padding: 12px; background: var(--layer-tier-1); border-radius: 8px; font-size: 12px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                        <span style="color: var(--text-secondary);">Entry</span>
+                                        <span>RSI &lt; 30</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                        <span style="color: var(--text-secondary);">Exit</span>
+                                        <span>RSI &gt; 70</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="color: var(--text-secondary);">Stop Loss</span>
+                                        <span>-3%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- ==========================================
+             PART 8: DESIGN TOKENS EXPORT
+             ========================================== -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-num">Part 8</div>
+                <h2 class="section-title">Design Tokens Export</h2>
+                <p class="section-desc">完整的 CSS 变量导出，可直接复制使用</p>
+            </div>
+
+            <div class="code" style="max-height: 600px; overflow-y: auto;">
+<span class="comment">/* =============================================
+   RIVERBIT DESIGN SYSTEM - CSS VARIABLES
+   Version: 1.0
+   Source: Figma RiverBit-Design-system
+   ============================================= */</span>
+
+:root {
+  <span class="comment">/* ========== BRAND COLORS ========== */</span>
+  <span class="key">--rb-cyan:</span> <span class="value">#0EECBC</span>;
+  <span class="key">--rb-cyan-light:</span> <span class="value">#22C3A0</span>;
+  <span class="key">--rb-cyan-dim:</span> <span class="value">rgba(14, 236, 188, 0.15)</span>;
+  <span class="key">--rb-cyan-hover:</span> <span class="value">rgba(14, 236, 188, 0.25)</span>;
+
+  <span class="comment">/* ========== SEMANTIC COLORS ========== */</span>
+  <span class="key">--rb-green:</span> <span class="value">#61DD3C</span>;
+  <span class="key">--rb-green-dim:</span> <span class="value">rgba(97, 221, 60, 0.15)</span>;
+  <span class="key">--rb-yellow:</span> <span class="value">#E8BD30</span>;
+  <span class="key">--rb-yellow-dim:</span> <span class="value">rgba(232, 189, 48, 0.15)</span>;
+  <span class="key">--rb-red:</span> <span class="value">#DD3C41</span>;
+  <span class="key">--rb-red-dim:</span> <span class="value">rgba(221, 60, 65, 0.15)</span>;
+
+  <span class="comment">/* ========== GRAYSCALE (D-Scale) ========== */</span>
+  <span class="key">--rb-black:</span> <span class="value">#000000</span>;
+  <span class="key">--rb-white:</span> <span class="value">#FFFFFF</span>;
+  <span class="key">--rb-d950:</span> <span class="value">#070E12</span>;
+  <span class="key">--rb-d930:</span> <span class="value">#0D1417</span>;
+  <span class="key">--rb-d900:</span> <span class="value">#151B1E</span>;
+  <span class="key">--rb-d800:</span> <span class="value">#1F292E</span>;
+  <span class="key">--rb-d700:</span> <span class="value">#354046</span>;
+  <span class="key">--rb-d600:</span> <span class="value">#5C6970</span>;
+  <span class="key">--rb-d500:</span> <span class="value">#75838A</span>;
+  <span class="key">--rb-d400:</span> <span class="value">#89949A</span>;
+  <span class="key">--rb-d300:</span> <span class="value">#ABB5BA</span>;
+  <span class="key">--rb-d200:</span> <span class="value">#C5CFD3</span>;
+  <span class="key">--rb-d100:</span> <span class="value">#E2E7E9</span>;
+  <span class="key">--rb-d70:</span> <span class="value">#EBEEF0</span>;
+  <span class="key">--rb-d30:</span> <span class="value">#F7F8F8</span>;
+
+  <span class="comment">/* ========== SEMANTIC ALIASES ========== */</span>
+  <span class="key">--layer-tier-0:</span> <span class="value">var(--rb-d950)</span>;
+  <span class="key">--layer-tier-1:</span> <span class="value">var(--rb-d930)</span>;
+  <span class="key">--layer-tier-2:</span> <span class="value">var(--rb-d900)</span>;
+  <span class="key">--layer-card:</span> <span class="value">var(--rb-d800)</span>;
+  <span class="key">--border-default:</span> <span class="value">var(--rb-d800)</span>;
+  <span class="key">--border-light:</span> <span class="value">var(--rb-d700)</span>;
+  <span class="key">--text-main:</span> <span class="value">var(--rb-d70)</span>;
+  <span class="key">--text-secondary:</span> <span class="value">var(--rb-d500)</span>;
+  <span class="key">--text-placeholder:</span> <span class="value">var(--rb-d700)</span>;
+
+  <span class="comment">/* ========== TYPOGRAPHY ========== */</span>
+  <span class="key">--font-sans:</span> <span class="value">'Inter', -apple-system, BlinkMacSystemFont, sans-serif</span>;
+  <span class="key">--font-mono:</span> <span class="value">'JetBrains Mono', 'SF Mono', Consolas, monospace</span>;
+
+  <span class="key">--text-h1:</span> <span class="value">32px</span>;  <span class="key">--lh-h1:</span> <span class="value">48px</span>;
+  <span class="key">--text-h2:</span> <span class="value">28px</span>;  <span class="key">--lh-h2:</span> <span class="value">40px</span>;
+  <span class="key">--text-h3:</span> <span class="value">24px</span>;  <span class="key">--lh-h3:</span> <span class="value">32px</span>;
+  <span class="key">--text-h4:</span> <span class="value">20px</span>;  <span class="key">--lh-h4:</span> <span class="value">32px</span>;
+  <span class="key">--text-h5:</span> <span class="value">18px</span>;  <span class="key">--lh-h5:</span> <span class="value">28px</span>;
+  <span class="key">--text-h6:</span> <span class="value">16px</span>;  <span class="key">--lh-h6:</span> <span class="value">24px</span>;
+  <span class="key">--text-h7:</span> <span class="value">14px</span>;  <span class="key">--lh-h7:</span> <span class="value">20px</span>;
+  <span class="key">--text-h8:</span> <span class="value">12px</span>;  <span class="key">--lh-h8:</span> <span class="value">16px</span>;
+
+  <span class="comment">/* ========== SPACING ========== */</span>
+  <span class="key">--space-xs:</span> <span class="value">4px</span>;
+  <span class="key">--space-sm:</span> <span class="value">8px</span>;
+  <span class="key">--space-md:</span> <span class="value">12px</span>;
+  <span class="key">--space-lg:</span> <span class="value">16px</span>;
+  <span class="key">--space-xl:</span> <span class="value">20px</span>;
+  <span class="key">--space-2xl:</span> <span class="value">24px</span>;
+  <span class="key">--space-3xl:</span> <span class="value">32px</span>;
+  <span class="key">--space-4xl:</span> <span class="value">48px</span>;
+
+  <span class="comment">/* ========== RADIUS ========== */</span>
+  <span class="key">--radius-sm:</span> <span class="value">4px</span>;
+  <span class="key">--radius-md:</span> <span class="value">8px</span>;
+  <span class="key">--radius-lg:</span> <span class="value">12px</span>;
+  <span class="key">--radius-xl:</span> <span class="value">16px</span>;
+  <span class="key">--radius-full:</span> <span class="value">9999px</span>;
+
+  <span class="comment">/* ========== SHADOWS ========== */</span>
+  <span class="key">--shadow-sm:</span> <span class="value">0 1px 2px rgba(0, 0, 0, 0.3)</span>;
+  <span class="key">--shadow-md:</span> <span class="value">0 4px 8px rgba(0, 0, 0, 0.4)</span>;
+  <span class="key">--shadow-lg:</span> <span class="value">0 8px 16px rgba(0, 0, 0, 0.5)</span>;
+  <span class="key">--shadow-glow-cyan:</span> <span class="value">0 0 20px rgba(14, 236, 188, 0.3)</span>;
+
+  <span class="comment">/* ========== TRANSITIONS ========== */</span>
+  <span class="key">--transition-fast:</span> <span class="value">0.15s ease</span>;
+  <span class="key">--transition-normal:</span> <span class="value">0.2s ease</span>;
+  <span class="key">--transition-slow:</span> <span class="value">0.3s ease</span>;
+}
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer style="text-align: center; padding: 60px 0; border-top: 1px solid var(--border-default); margin-top: 60px;">
+            <div style="font-size: 32px; margin-bottom: 12px; color: var(--rb-cyan);">◆</div>
+            <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">RiverBit Design System</div>
+            <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Delta Terminal · Complete Design Specification</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">
+                8 Parts · Colors · Typography · Buttons · Forms · Components · Layout · Trading Patterns<br>
+                Source: Figma RiverBit-Design-system · Generated 2024-12-25
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge'
 import { Send, Bot, User, Sparkles } from 'lucide-react'
 import { InsightMessage } from '@/components/insight'
 import { CanvasPanel } from '@/components/canvas'
-import type { InsightData, InsightParam, InsightCardStatus, CanvasMode } from '@/types/insight'
+import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
+import { useMockThinkingStream } from '@/hooks/useThinkingStream'
+import type { InsightData, InsightParam, InsightCardStatus } from '@/types/insight'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -59,10 +61,26 @@ export function ChatInterface({
   const [isLoading, setIsLoading] = React.useState(false)
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
+  // ==========================================================================
+  // S71: Thinking Stream (流式渲染)
+  // ==========================================================================
+  // 开发环境使用 Mock，生产环境使用真实 WebSocket
+  const {
+    process: thinkingProcess,
+    isThinking,
+    startThinking,
+    cancelThinking: _cancelThinking, // 预留取消功能
+  } = useMockThinkingStream()
+
+  // 3 阶段加载状态管理
+  const { state: loadingState } = useInsightLoadingState(
+    isThinking || isLoading,
+    thinkingProcess ?? undefined
+  )
+
   // A2UI: Canvas state
   const [canvasOpen, setCanvasOpen] = React.useState(false)
   const [canvasInsight, setCanvasInsight] = React.useState<InsightData | null>(null)
-  const [canvasMode, setCanvasMode] = React.useState<CanvasMode>('proposal')
   const [canvasLoading, setCanvasLoading] = React.useState(false)
 
   const scrollToBottom = () => {
@@ -80,7 +98,6 @@ export function ChatInterface({
   // A2UI: Handle insight expand to Canvas
   const handleInsightExpand = React.useCallback((insight: InsightData) => {
     setCanvasInsight(insight)
-    setCanvasMode('proposal')
     setCanvasOpen(true)
     onInsightExpand?.(insight)
   }, [onInsightExpand])
@@ -155,7 +172,7 @@ export function ChatInterface({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || isLoading || isThinking) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -165,8 +182,12 @@ export function ChatInterface({
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const userInput = input
     setInput('')
     setIsLoading(true)
+
+    // S71: 启动思考流程
+    startThinking(userInput)
 
     // 模拟AI响应 - A2UI: 返回 InsightData
     setTimeout(() => {
@@ -380,12 +401,17 @@ export function ChatInterface({
               <ChatMessage key={message.id} message={message} />
             )
           ))}
-          {isLoading && (
-            <div className="flex items-center gap-3 text-muted-foreground">
+          {/* S71: 流式渲染 - 3 阶段加载 */}
+          {(isLoading || isThinking) && (
+            <div className="flex gap-3">
+              {/* AI Avatar */}
               <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                 <Bot className="h-4 w-4 animate-pulse" />
               </div>
-              <span className="text-sm">AI 正在思考...</span>
+              {/* InsightCard 3 阶段加载: skeleton → thinking → filling */}
+              <div className="flex-1 max-w-xl">
+                <InsightCardLoading state={loadingState} />
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -421,7 +447,7 @@ export function ChatInterface({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="描述你想要的交易策略..."
-                disabled={isLoading}
+                disabled={isLoading || isThinking}
                 className={cn(
                   'w-full h-12 px-4 pr-12 rounded-xl',
                   'bg-card border border-border',
@@ -434,7 +460,7 @@ export function ChatInterface({
               <Button
                 type="submit"
                 size="icon"
-                disabled={isLoading || !input.trim()}
+                disabled={isLoading || isThinking || !input.trim()}
                 className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg"
               >
                 <Send className="h-4 w-4" />
@@ -451,7 +477,6 @@ export function ChatInterface({
       <CanvasPanel
         insight={canvasInsight}
         isOpen={canvasOpen}
-        mode={canvasMode}
         onClose={handleCanvasClose}
         onApprove={handleInsightApprove}
         onReject={(insight) => handleInsightReject(insight)}
