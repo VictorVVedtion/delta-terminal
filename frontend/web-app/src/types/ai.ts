@@ -378,8 +378,8 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     preset: 'balanced',
     name: '平衡型',
     description: '性能与成本平衡，大多数场景推荐',
-    defaultModel: 'google/gemma-3n-e4b-it:free',
-    estimatedCostPerCall: 0.02,
+    defaultModel: 'deepseek/deepseek-v3.2',
+    estimatedCostPerCall: 0.002,
     icon: '⚖️'
   },
   performance: {
@@ -442,19 +442,19 @@ export const DEFAULT_AI_CONFIG: AIConfig = {
   },
   advanced: {
     taskModels: {
-      scan: 'openai/gpt-5-mini',
-      analysis: 'anthropic/claude-sonnet-4.5',
-      execution: 'anthropic/claude-3.5-haiku',
-      chat: 'openai/gpt-4o',
-      reasoning: 'anthropic/claude-opus-4.5',
-      agent: 'moonshotai/kimi-k2-thinking'
+      scan: 'deepseek/deepseek-v3.2',
+      analysis: 'deepseek/deepseek-v3.2',
+      execution: 'deepseek/deepseek-v3.2',
+      chat: 'deepseek/deepseek-v3.2',
+      reasoning: 'deepseek/deepseek-v3.2',
+      agent: 'deepseek/deepseek-v3.2'
     }
   },
   settings: {
     streaming: true,
     showThinking: true,
     autoRoute: false,
-    maxTokens: 4096,
+    maxTokens: 2048,
     temperature: 0.7
   }
 }

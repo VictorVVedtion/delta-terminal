@@ -23,6 +23,7 @@ import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } 
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import type { BacktestConfig } from '@/types/backtest'
 import { cn } from '@/lib/utils'
+import { notify } from '@/lib/notification'
 
 // =============================================================================
 // Types
@@ -472,6 +473,14 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       setMonitorAgentId(agentId)
       setMonitorOpen(true)
       onMonitorRequest?.(agentId)
+    } else if (action === 'modify_params') {
+      // Handle modify_params: Open canvas for parameter editing
+      setCanvasInsight(insight)
+      setCanvasOpen(true)
+      notify('info', '参数修改', {
+        description: '请在侧边面板中调整策略参数',
+        source: 'ChatInterface',
+      })
     }
   }, [onDeployRequest, onBacktestRequest, onMonitorRequest])
 

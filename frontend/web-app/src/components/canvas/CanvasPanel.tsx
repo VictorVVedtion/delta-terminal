@@ -19,6 +19,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { InsightData, InsightParam, ImpactMetric } from '@/types/insight'
 import { ParamControl } from '@/components/a2ui/controls/ParamControl'
 import { cn } from '@/lib/utils'
+import { useParamConstraints } from '@/hooks/useParamConstraints'
+import { notify } from '@/lib/notification'
 
 // =============================================================================
 // CanvasPanel Props
@@ -72,6 +74,9 @@ export function CanvasPanel({
     [editedParams]
   )
 
+  // Constraint validation
+  const constraintValidation = useParamConstraints(editedParams)
+
   // Check if params have changed
   const hasChanges = React.useMemo(() => {
     if (!insight) return false
@@ -99,12 +104,37 @@ export function CanvasPanel({
     }
   }, [insight])
 
-  // Handle approve with edited params
+  // Handle approve with edited params (with constraint validation)
   const handleApprove = React.useCallback(() => {
-    if (insight) {
-      onApprove?.(insight, editedParams)
+    if (!insight) return
+
+    // Check for constraint violations
+    if (!constraintValidation.valid) {
+      const errorMessages = constraintValidation.violations
+        .filter(v => v.severity === 'error')
+        .map(v => v.message)
+        .join('; ')
+      notify('error', '参数验证失败', {
+        description: errorMessages || '请检查参数配置',
+        source: 'CanvasPanel',
+      })
+      return
     }
-  }, [insight, editedParams, onApprove])
+
+    // Show warnings but allow proceed
+    if (constraintValidation.hasWarnings) {
+      const warningMessages = constraintValidation.violations
+        .filter(v => v.severity === 'warning')
+        .map(v => v.message)
+        .join('; ')
+      notify('warning', '参数存在警告', {
+        description: warningMessages,
+        source: 'CanvasPanel',
+      })
+    }
+
+    onApprove?.(insight, editedParams)
+  }, [insight, editedParams, onApprove, constraintValidation])
 
   // Handle reject
   const handleReject = React.useCallback(() => {

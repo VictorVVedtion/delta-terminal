@@ -27,6 +27,7 @@ import { MarginAlertBadge } from '@/components/safety/MarginAlert'
 import { PaperTradingStatusCard } from '@/components/paper-trading/PaperTradingStatusCard'
 import { PaperTradingPanel } from '@/components/paper-trading/PaperTradingPanel'
 import { usePaperTradingStore } from '@/store/paperTrading'
+import { useHyperliquidPrice } from '@/hooks/useHyperliquidPrice'
 
 export function Header() {
   const router = useRouter()
@@ -41,6 +42,11 @@ export function Header() {
   const getAccountStats = usePaperTradingStore((s) => s.getAccountStats)
   const activeAccount = accounts.length > 0 ? accounts[0] : null
   const ptStats = activeAccount ? getAccountStats(activeAccount.id) : null
+
+  // Hyperliquid 实时价格
+  const { prices: livePrices } = useHyperliquidPrice(['BTC', 'ETH', 'SOL', 'BNB'], {
+    refreshInterval: 5000,
+  })
 
   // 格式化钱包地址显示
   const formatAddress = (address: string) => {
@@ -196,14 +202,26 @@ export function Header() {
         </div>
       </div>
 
-      {/* Market Ticker - 紧凑设计 */}
+      {/* Market Ticker - 实时 Hyperliquid 价格 */}
       <div className="border-t border-border/50 bg-muted/30">
         <div className="container px-4 py-1.5">
           <div className="flex gap-4 overflow-x-auto scrollbar-thin text-xs">
-            <MarketTicker symbol="BTC/USDT" price="43,256.78" change={2.34} />
-            <MarketTicker symbol="ETH/USDT" price="2,289.45" change={-1.23} />
-            <MarketTicker symbol="SOL/USDT" price="98.76" change={5.67} />
-            <MarketTicker symbol="BNB/USDT" price="312.45" change={1.89} />
+            <MarketTicker
+              symbol="BTC/USDT"
+              price={livePrices.get('BTC')?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '--'}
+            />
+            <MarketTicker
+              symbol="ETH/USDT"
+              price={livePrices.get('ETH')?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '--'}
+            />
+            <MarketTicker
+              symbol="SOL/USDT"
+              price={livePrices.get('SOL')?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '--'}
+            />
+            <MarketTicker
+              symbol="BNB/USDT"
+              price={livePrices.get('BNB')?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '--'}
+            />
           </div>
         </div>
       </div>
@@ -223,18 +241,16 @@ export function Header() {
 interface MarketTickerProps {
   symbol: string
   price: string
-  change: number
 }
 
-function MarketTicker({ symbol, price, change }: MarketTickerProps) {
-  const isPositive = change >= 0
+function MarketTicker({ symbol, price }: MarketTickerProps) {
+  const isLoading = price === '--'
 
   return (
     <div className="flex items-center gap-2 whitespace-nowrap">
       <span className="font-medium text-muted-foreground">{symbol}</span>
-      <span className="font-semibold">{price}</span>
-      <span className={isPositive ? 'text-green-500' : 'text-red-500'}>
-        {isPositive ? '+' : ''}{change.toFixed(2)}%
+      <span className={`font-semibold ${isLoading ? 'text-muted-foreground animate-pulse' : ''}`}>
+        ${price}
       </span>
     </div>
   )

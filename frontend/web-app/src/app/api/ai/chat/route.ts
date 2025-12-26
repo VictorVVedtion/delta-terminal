@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const {
       messages,
       model = DEFAULT_MODEL, // 使用前端配置的默认模型
-      maxTokens = 4096,
+      maxTokens = 2048,
       temperature = 0.7,
     } = body
 

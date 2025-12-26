@@ -11,7 +11,7 @@ import { useResearchStore } from '@/store/research'
 import { useInsightStore } from '@/store/insight'
 import { useAIStore } from '@/store/ai'
 import { cn } from '@/lib/utils'
-import { Send, Sparkles, Mic, Paperclip, MoreHorizontal, FlaskConical, ChevronDown, Check, Settings2 } from 'lucide-react'
+import { Send, Sparkles, Mic, Paperclip, MoreHorizontal, FlaskConical, ChevronDown, ChevronLeft, Check, Settings2 } from 'lucide-react'
 import { SIMPLE_PRESETS, AI_MODELS, type SimplePreset } from '@/types/ai'
 import {
   DropdownMenu,
