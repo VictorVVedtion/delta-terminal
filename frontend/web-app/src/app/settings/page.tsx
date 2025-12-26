@@ -12,6 +12,8 @@ import {
   Palette,
   AlertTriangle,
   Brain,
+  HelpCircle,
+  RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +31,7 @@ import {
 } from '@/store/exchange'
 import { notify } from '@/lib/notification'
 import { AIConfigPanel } from '@/components/ai/AIConfigPanel'
+import { useOnboardingStore } from '@/store/onboarding'
 
 // =============================================================================
 // Exchange Settings Section
@@ -481,6 +484,15 @@ function AppearanceSettingsSection() {
   const [theme, setTheme] = React.useState<'dark' | 'light' | 'system'>('dark')
   const [chartStyle, setChartStyle] = React.useState('candle')
   const [compactMode, setCompactMode] = React.useState(false)
+  const { completed: onboardingCompleted, skipped: onboardingSkipped, resetOnboarding } = useOnboardingStore()
+
+  const handleResetOnboarding = () => {
+    resetOnboarding()
+    notify('success', '引导已重置', {
+      description: '刷新页面后将重新显示新手引导',
+      source: 'AppearanceSettings',
+    })
+  }
 
   const themeOptions = [
     { value: 'dark', label: '深色模式', icon: '🌙' },
@@ -574,6 +586,40 @@ function AppearanceSettingsSection() {
                 }`}
               />
             </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 新手引导 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <HelpCircle className="h-4 w-4" />
+            新手引导
+          </CardTitle>
+          <CardDescription>管理新手引导设置</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">引导状态</p>
+              <p className="text-xs text-muted-foreground">
+                {onboardingCompleted
+                  ? '已完成引导流程'
+                  : onboardingSkipped
+                    ? '已跳过引导流程'
+                    : '尚未完成引导'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetOnboarding}
+              className="gap-1.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              重新开始引导
+            </Button>
           </div>
         </CardContent>
       </Card>

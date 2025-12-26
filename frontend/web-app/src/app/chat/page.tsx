@@ -555,6 +555,22 @@ export default function ChatPage({ onExpandInsight }: ChatPageProps) {
         {/* Chat Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-3">
+            {/* 返回按钮 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  router.back()
+                } else {
+                  router.push('/strategies')
+                }
+              }}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground -ml-1"
+              title="返回"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
             <div className={cn(
               'w-10 h-10 rounded-xl flex items-center justify-center',
               isResearchMode ? 'bg-purple-500/20' : 'bg-primary/20'

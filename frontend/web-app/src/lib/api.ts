@@ -661,6 +661,35 @@ class ApiClient {
     })
   }
 
+  // ========== 分析相关 (EPIC-008) ==========
+
+  /**
+   * 获取敏感度分析数据
+   * @param strategyId 策略 ID
+   */
+  async getSensitivityAnalysis(strategyId: string): Promise<unknown> {
+    return this.request(`/strategies/${strategyId}/analysis/sensitivity`)
+  }
+
+  /**
+   * 获取归因分析数据
+   * @param strategyId 策略 ID
+   */
+  async getAttributionAnalysis(strategyId: string): Promise<unknown> {
+    return this.request(`/strategies/${strategyId}/analysis/attribution`)
+  }
+
+  /**
+   * 获取策略对比分析数据
+   * @param strategyIds 策略 ID 列表
+   */
+  async getComparisonAnalysis(strategyIds: string[]): Promise<unknown> {
+    return this.request('/strategies/analysis/comparison', {
+      method: 'POST',
+      body: JSON.stringify({ strategyIds }),
+    })
+  }
+
   /**
    * 处理部署错误
    */

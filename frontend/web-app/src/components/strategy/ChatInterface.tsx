@@ -3,12 +3,22 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Send, Bot, User, Settings2, ChevronDown, Check } from 'lucide-react'
+import { Send, Bot, User, Settings2, ChevronDown, Check, Sparkles, X } from 'lucide-react'
 import { InsightMessage } from '@/components/insight'
+import { TemplateSelector } from '@/components/strategy/TemplateSelector'
+import type { StrategyTemplate } from '@/lib/templates/strategies'
 import { CanvasPanel } from '@/components/canvas'
 import { DeployCanvas } from '@/components/canvas/DeployCanvas'
 import { BacktestCanvas } from '@/components/canvas/BacktestCanvas'
 import { MonitorCanvas } from '@/components/canvas/MonitorCanvas'
+// EPIC-008: Analysis Canvas Components
+import { SensitivityCanvas } from '@/components/canvas/SensitivityCanvas'
+import { AttributionCanvas } from '@/components/canvas/AttributionCanvas'
+import { ComparisonCanvas } from '@/components/canvas/ComparisonCanvas'
+// EPIC-009: Version & Intervention Components
+import { VersionHistoryCanvas } from '@/components/canvas/VersionHistoryCanvas'
+import { EmergencyActions } from '@/components/intervention/EmergencyActions'
+import type { EmergencyAction } from '@/types/intervention'
 import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
 import { useDeployment } from '@/hooks/useDeployment'
 import { useBacktest } from '@/hooks/useBacktest'
@@ -16,14 +26,23 @@ import { useMonitor } from '@/hooks/useMonitor'
 import { useChat } from '@/hooks/useAI'
 import { AIConfigPanel } from '@/components/ai'
 import { useAIStore } from '@/store/ai'
+import { useAnalysisStore } from '@/store/analysis'
 import { SIMPLE_PRESETS, type SimplePreset } from '@/types/ai'
 import { generateSystemPrompt, extractInsightData, validateInsightData } from '@/lib/prompts/strategy-assistant'
 import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
-import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } from '@/types/insight'
+import type {
+  InsightData,
+  InsightParam,
+  InsightCardStatus,
+  InsightActionType,
+  SensitivityInsightData,
+  AttributionInsightData,
+  ComparisonInsightData,
+} from '@/types/insight'
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import type { BacktestConfig } from '@/types/backtest'
 import { cn } from '@/lib/utils'
-import { notify } from '@/lib/notification'
+import { notify, notifyWarning } from '@/lib/notification'
 
 // =============================================================================
 // Types
@@ -124,6 +143,9 @@ export function ChatInterface({
   const [configPanelOpen, setConfigPanelOpen] = React.useState(false)
   const [presetMenuOpen, setPresetMenuOpen] = React.useState(false)
 
+  // EPIC-010 S10.3: 策略模板选择器状态
+  const [templateSelectorOpen, setTemplateSelectorOpen] = React.useState(false)
+
   // AI Store - 模型切换
   const { config, setSimplePreset } = useAIStore()
   const currentPreset = config.simple.preset
@@ -165,6 +187,31 @@ export function ChatInterface({
   // ==========================================================================
   const [monitorOpen, setMonitorOpen] = React.useState(false)
   const [monitorAgentId, setMonitorAgentId] = React.useState<string>('')
+
+  // ==========================================================================
+  // EPIC-008 & EPIC-009: Analysis Canvas State (使用全局 store)
+  // ==========================================================================
+  const {
+    sensitivityOpen,
+    sensitivityData,
+    openSensitivityAnalysis,
+    closeSensitivityAnalysis,
+    attributionOpen,
+    attributionData,
+    openAttributionAnalysis,
+    closeAttributionAnalysis,
+    comparisonOpen,
+    comparisonData,
+    openComparisonAnalysis,
+    closeComparisonAnalysis,
+    versionHistoryOpen,
+    versionStrategyId,
+    versionStrategyName,
+    closeVersionHistory,
+    emergencyActionsOpen,
+    emergencyStrategyId,
+    closeEmergencyActions,
+  } = useAnalysisStore()
 
   // useDeployment hook for API integration
   const {
@@ -447,6 +494,29 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   }, [onInsightReject])
 
   // ==========================================================================
+  // EPIC-010 S10.3: Template Selection Handler
+  // ==========================================================================
+  const handleTemplateSelect = React.useCallback((template: StrategyTemplate, insight: InsightData) => {
+    // Add template info message
+    const templateMessage: Message = {
+      id: `template_${Date.now()}`,
+      role: 'assistant',
+      content: `📚 已加载「${template.name}」模板\n\n${template.description}\n\n适用场景：${template.marketConditions.join('、')}\n\n你可以在侧边面板中调整参数，或直接批准创建策略。`,
+      timestamp: Date.now(),
+      insight,
+      insightStatus: 'pending',
+    }
+    setMessages(prev => [...prev, templateMessage])
+
+    // Auto-expand Canvas for parameter adjustment
+    setCanvasInsight(insight)
+    setCanvasOpen(true)
+
+    // Close template selector
+    setTemplateSelectorOpen(false)
+  }, [])
+
+  // ==========================================================================
   // Story 1.3: Deployment Handlers
   // ==========================================================================
 
@@ -582,8 +652,20 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     setMonitorAgentId('')
   }, [])
 
+  // ==========================================================================
+  // EPIC-008 & EPIC-009: Analysis Canvas Handlers
+  // (使用全局 store 的 close handlers，open handlers 在 AgentList 中触发)
+  // ==========================================================================
+
+  const handleEmergencyAction = React.useCallback(async (action: EmergencyAction) => {
+    notifyWarning(`紧急操作: ${action}`, { description: '操作已记录，等待执行' })
+    // TODO: Integrate with actual emergency action API
+    closeEmergencyActions()
+  }, [closeEmergencyActions])
+
   /**
    * Check if insight has deploy, backtest, or monitor actions and trigger corresponding canvas
+   * EPIC-008: Also auto-trigger analysis canvas based on insight type
    */
   React.useEffect(() => {
     // Auto-detect actions from insights
@@ -616,7 +698,33 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         handleInsightAction(lastMessage.insight, monitorAction)
       }
     }
-  }, [messages, handleInsightAction])
+
+    // EPIC-008: Auto-trigger analysis canvas based on insight type
+    if (lastMessage?.insight) {
+      const insight = lastMessage.insight
+
+      // Sensitivity analysis
+      if (insight.type === 'sensitivity') {
+        const data = insight as SensitivityInsightData
+        openSensitivityAnalysis(data)
+        return
+      }
+
+      // Attribution analysis
+      if (insight.type === 'attribution') {
+        const data = insight as AttributionInsightData
+        openAttributionAnalysis(data)
+        return
+      }
+
+      // Comparison analysis
+      if (insight.type === 'comparison') {
+        const data = insight as ComparisonInsightData
+        openComparisonAnalysis(data)
+        return
+      }
+    }
+  }, [messages, handleInsightAction, openSensitivityAnalysis, openAttributionAnalysis, openComparisonAnalysis])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -721,7 +829,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
   return (
     <div className={cn(
-      'flex flex-col h-full transition-all duration-300 ease-out',
+      'chat-interface flex flex-col h-full transition-all duration-300 ease-out',
       (canvasOpen || deployOpen || backtestOpen || monitorOpen) && 'lg:mr-[520px]',
     )}>
       {/* Chat Header */}
@@ -856,7 +964,19 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {/* Quick Prompts */}
       {messages.length === 1 && (
         <div className="max-w-3xl mx-auto w-full px-4 pb-2">
-          <div className="text-xs text-muted-foreground mb-2">快速开始:</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-muted-foreground">快速开始:</div>
+            {/* EPIC-010 S10.3: Template Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTemplateSelectorOpen(true)}
+              className="text-xs gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+            >
+              <Sparkles className="h-3 w-3" />
+              从模板开始
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {quickPrompts.map((prompt, index) => (
               <Button
@@ -1009,6 +1129,62 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         />
       )}
 
+      {/* EPIC-008: Sensitivity Analysis Canvas */}
+      {sensitivityData && (
+        <SensitivityCanvas
+          data={sensitivityData}
+          isOpen={sensitivityOpen}
+          onClose={closeSensitivityAnalysis}
+        />
+      )}
+
+      {/* EPIC-008: Attribution Analysis Canvas */}
+      {attributionData && (
+        <AttributionCanvas
+          data={attributionData}
+          isOpen={attributionOpen}
+          onClose={closeAttributionAnalysis}
+        />
+      )}
+
+      {/* EPIC-008: Comparison Analysis Canvas */}
+      {comparisonData && (
+        <ComparisonCanvas
+          data={comparisonData}
+          isOpen={comparisonOpen}
+          onClose={closeComparisonAnalysis}
+        />
+      )}
+
+      {/* EPIC-009: Version History Canvas */}
+      {versionStrategyId && (
+        <VersionHistoryCanvas
+          strategyId={versionStrategyId}
+          strategyName={versionStrategyName}
+          isOpen={versionHistoryOpen}
+          onClose={closeVersionHistory}
+        />
+      )}
+
+      {/* EPIC-009: Emergency Actions Panel */}
+      {emergencyActionsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md bg-background rounded-lg shadow-xl border p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">紧急操作</h3>
+              <Button variant="ghost" size="sm" onClick={closeEmergencyActions}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <EmergencyActions
+              agentId={emergencyStrategyId}
+              strategyStatus="running"
+              onAction={handleEmergencyAction}
+            />
+          </div>
+        </div>
+      )}
+
       {/* AI Config Panel */}
       {configPanelOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -1017,6 +1193,13 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
           </div>
         </div>
       )}
+
+      {/* EPIC-010 S10.3: Template Selector Modal */}
+      <TemplateSelector
+        isOpen={templateSelectorOpen}
+        onClose={() => setTemplateSelectorOpen(false)}
+        onSelect={handleTemplateSelect}
+      />
     </div>
   )
 }

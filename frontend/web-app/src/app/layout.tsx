@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono';
 import { Toaster } from 'sonner';
 
 import './globals.css';
+import { OnboardingTour } from '@/components/system/OnboardingTour';
 import { Web3Provider } from '@/providers/Web3Provider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
@@ -65,6 +66,8 @@ export default function RootLayout({
                     className: 'font-sans',
                   }}
                 />
+                {/* Story 10.1: 新手引导 */}
+                <OnboardingTour />
               </WebSocketProvider>
             </ThemeProvider>
           </AuthProvider>
