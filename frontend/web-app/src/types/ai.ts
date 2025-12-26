@@ -378,7 +378,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     preset: 'balanced',
     name: '平衡型',
     description: '性能与成本平衡，大多数场景推荐',
-    defaultModel: 'anthropic/claude-sonnet-4.5',
+    defaultModel: 'google/gemma-3n-e4b-it:free',
     estimatedCostPerCall: 0.02,
     icon: '⚖️'
   },
