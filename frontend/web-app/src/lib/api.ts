@@ -552,6 +552,115 @@ class ApiClient {
     })
   }
 
+  // ========== 监控相关 (Story 3.2) ==========
+
+  /**
+   * Agent 状态响应类型
+   */
+  // Note: Types are imported from MonitorCanvas component
+
+  /**
+   * 获取 Agent 状态
+   * @param agentId Agent ID
+   */
+  async getAgentStatus(agentId: string): Promise<{
+    strategy: {
+      name: string
+      symbol: string
+      status: 'running' | 'paused' | 'stopped'
+      createdAt: string
+      updatedAt?: string
+    }
+    pnl: {
+      daily: number
+      total: number
+      unrealized: number
+      realized: number
+    }
+  }> {
+    return this.request(`/agents/${agentId}/status`)
+  }
+
+  /**
+   * 获取 Agent 持仓
+   * @param agentId Agent ID
+   */
+  async getAgentPositions(agentId: string): Promise<Array<{
+    symbol: string
+    amount: number
+    avgPrice: number
+    currentPrice: number
+    unrealizedPnl: number
+    unrealizedPnlPercent: number
+  }>> {
+    return this.request(`/agents/${agentId}/positions`)
+  }
+
+  /**
+   * 获取 Agent 交易记录
+   * @param agentId Agent ID
+   * @param limit 返回条数 (默认 10)
+   */
+  async getAgentTrades(agentId: string, limit: number = 10): Promise<Array<{
+    id: string
+    timestamp: number
+    symbol: string
+    side: 'buy' | 'sell'
+    price: number
+    amount: number
+    fee: number
+    realizedPnl?: number
+  }>> {
+    return this.request(`/agents/${agentId}/trades`, {
+      params: { limit },
+    })
+  }
+
+  /**
+   * 获取 Agent 性能指标
+   * @param agentId Agent ID
+   */
+  async getAgentMetrics(agentId: string): Promise<{
+    winRate: number
+    avgHoldTime: string
+    maxDrawdown: number
+    totalTrades: number
+    winningTrades: number
+    losingTrades: number
+  }> {
+    return this.request(`/agents/${agentId}/metrics`)
+  }
+
+  /**
+   * 暂停 Agent
+   * @param agentId Agent ID
+   */
+  async pauseAgent(agentId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/agents/${agentId}/pause`, {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * 恢复 Agent
+   * @param agentId Agent ID
+   */
+  async resumeAgent(agentId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/agents/${agentId}/resume`, {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * 停止 Agent
+   * @param agentId Agent ID
+   */
+  async stopAgent(agentId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/agents/${agentId}/stop`, {
+      method: 'POST',
+    })
+  }
+
   /**
    * 处理部署错误
    */

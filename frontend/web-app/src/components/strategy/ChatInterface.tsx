@@ -8,10 +8,13 @@ import { InsightMessage } from '@/components/insight'
 import { CanvasPanel } from '@/components/canvas'
 import { DeployCanvas } from '@/components/canvas/DeployCanvas'
 import { BacktestCanvas } from '@/components/canvas/BacktestCanvas'
+import { MonitorCanvas } from '@/components/canvas/MonitorCanvas'
 import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
 import { useMockThinkingStream } from '@/hooks/useThinkingStream'
 import { useDeployment } from '@/hooks/useDeployment'
 import { useBacktest } from '@/hooks/useBacktest'
+import { useMonitor } from '@/hooks/useMonitor'
+import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
 import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } from '@/types/insight'
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import type { BacktestConfig } from '@/types/backtest'
@@ -48,6 +51,10 @@ interface ChatInterfaceProps {
   onBacktestRequest?: ((strategyId: string) => void) | undefined
   /** Story 2.3: Called when backtest completes */
   onBacktestComplete?: ((result: { passed: boolean; metrics: unknown }) => void) | undefined
+  /** Story 3.3: Called when monitor is opened */
+  onMonitorRequest?: ((agentId: string) => void) | undefined
+  /** Story 3.3: Called when strategy status changes */
+  onStrategyStatusChange?: ((agentId: string, status: StrategyStatus) => void) | undefined
 }
 
 // =============================================================================
@@ -63,6 +70,8 @@ export function ChatInterface({
   onDeployComplete,
   onBacktestRequest,
   onBacktestComplete,
+  onMonitorRequest,
+  onStrategyStatusChange,
 }: ChatInterfaceProps) {
   // ==========================================================================
   // State
@@ -115,6 +124,12 @@ export function ChatInterface({
   const [backtestOpen, setBacktestOpen] = React.useState(false)
   const [backtestStrategyId, setBacktestStrategyId] = React.useState<string>('')
   const [backtestInsight, setBacktestInsight] = React.useState<InsightData | null>(null)
+
+  // ==========================================================================
+  // Story 3.3: Monitor State
+  // ==========================================================================
+  const [monitorOpen, setMonitorOpen] = React.useState(false)
+  const [monitorAgentId, setMonitorAgentId] = React.useState<string>('')
 
   // useDeployment hook for API integration
   const {
@@ -203,6 +218,111 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       onBacktestComplete?.({ passed: false, metrics: null })
     },
   })
+
+  // ==========================================================================
+  // Story 3.3: useMonitor Hook
+  // ==========================================================================
+  // Use refs to store latest state for callbacks
+  const monitorStateRef = React.useRef<{
+    strategy: { name: string } | null
+    pnl: { total: number } | null
+    metrics: { winRate: number; totalTrades: number } | null
+  }>({
+    strategy: null,
+    pnl: null,
+    metrics: null,
+  })
+
+  const handleMonitorError = React.useCallback((error: Error) => {
+    const errorMessage: Message = {
+      id: `monitor_error_${Date.now()}`,
+      role: 'assistant',
+      content: `❌ 监控错误\n\n${error.message}`,
+      timestamp: Date.now(),
+    }
+    setMessages((prev) => [...prev, errorMessage])
+  }, [])
+
+  const handleMonitorStatusChange = React.useCallback((status: StrategyStatus) => {
+    const currentState = monitorStateRef.current
+    const strategyName = currentState.strategy?.name || '策略'
+
+    // Add status change message to chat
+    let statusMessage: Message | null = null
+
+    if (status === 'paused') {
+      statusMessage = {
+        id: `monitor_paused_${Date.now()}`,
+        role: 'assistant',
+        content: `⏸️ 策略 "${strategyName}" 已暂停运行。
+
+当前状态：
+- 持仓已保留，不会自动平仓
+- 策略不会执行新的交易
+- 可随时恢复运行
+
+需要恢复运行吗？`,
+        timestamp: Date.now(),
+      }
+    } else if (status === 'running') {
+      statusMessage = {
+        id: `monitor_resumed_${Date.now()}`,
+        role: 'assistant',
+        content: `▶️ 策略 "${strategyName}" 已恢复运行。
+
+策略将继续按照设定的参数执行交易。`,
+        timestamp: Date.now(),
+      }
+    } else if (status === 'stopped') {
+      const pnl = currentState.pnl
+      const metrics = currentState.metrics
+      statusMessage = {
+        id: `monitor_stopped_${Date.now()}`,
+        role: 'assistant',
+        content: `🛑 策略 "${strategyName}" 已停止。
+
+最终统计：
+- 总盈亏: ${pnl ? (pnl.total >= 0 ? '+' : '') + pnl.total.toFixed(2) : '0.00'} USDT
+- 胜率: ${metrics ? (metrics.winRate * 100).toFixed(1) : '0.0'}%
+- 总交易: ${metrics?.totalTrades ?? 0} 次
+
+策略已完全停止，需要重新部署才能再次运行。`,
+        timestamp: Date.now(),
+      }
+      // Close monitor canvas when stopped
+      setMonitorOpen(false)
+    }
+
+    if (statusMessage) {
+      setMessages((prev) => [...prev, statusMessage])
+    }
+
+    // Notify parent
+    onStrategyStatusChange?.(monitorAgentId, status)
+  }, [monitorAgentId, onStrategyStatusChange])
+
+  const {
+    state: monitorState,
+    isRunning: _isMonitorRunning, // Reserved for future use
+    isPaused: _isMonitorPaused,   // Reserved for future use
+    pauseAgent,
+    resumeAgent,
+    stopAgent,
+  } = useMonitor({
+    agentId: monitorAgentId,
+    enabled: monitorOpen,
+    onStatusChange: handleMonitorStatusChange,
+    onError: handleMonitorError,
+  })
+
+  // Keep ref in sync with latest state
+  React.useEffect(() => {
+    monitorStateRef.current = {
+      strategy: monitorState.strategy,
+      pnl: monitorState.pnl,
+      metrics: monitorState.metrics,
+    }
+  }, [monitorState.strategy, monitorState.pnl, monitorState.metrics])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -312,8 +432,14 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       setBacktestInsight(insight)
       setBacktestOpen(true)
       onBacktestRequest?.(strategyId)
+    } else if (action === 'stop_agent') {
+      // Story 3.3: Handle monitor/stop_agent action
+      const agentId = insight.target?.agent_id || insight.target?.strategy_id || insight.id
+      setMonitorAgentId(agentId)
+      setMonitorOpen(true)
+      onMonitorRequest?.(agentId)
     }
-  }, [onDeployRequest, onBacktestRequest])
+  }, [onDeployRequest, onBacktestRequest, onMonitorRequest])
 
   /**
    * Handle deploy from DeployCanvas
@@ -401,8 +527,20 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     resetBacktest()
   }, [isBacktestRunning, stopBacktest, resetBacktest])
 
+  // ==========================================================================
+  // Story 3.3: Monitor Handlers
+  // ==========================================================================
+
   /**
-   * Check if insight has deploy or backtest actions and trigger corresponding canvas
+   * Handle monitor canvas close
+   */
+  const handleMonitorClose = React.useCallback(() => {
+    setMonitorOpen(false)
+    setMonitorAgentId('')
+  }, [])
+
+  /**
+   * Check if insight has deploy, backtest, or monitor actions and trigger corresponding canvas
    */
   React.useEffect(() => {
     // Auto-detect actions from insights
@@ -424,6 +562,15 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       )
       if (backtestAction) {
         handleInsightAction(lastMessage.insight, backtestAction)
+        return
+      }
+
+      // Story 3.3: Check for monitor/stop_agent action
+      const monitorAction = lastMessage.insight.actions.find(
+        (a): a is 'stop_agent' => a === 'stop_agent'
+      )
+      if (monitorAction) {
+        handleInsightAction(lastMessage.insight, monitorAction)
       }
     }
   }, [messages, handleInsightAction])
@@ -619,7 +766,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   return (
     <div className={cn(
       'flex flex-col h-full transition-all duration-300 ease-out',
-      (canvasOpen || deployOpen || backtestOpen) && 'lg:mr-[520px]',
+      (canvasOpen || deployOpen || backtestOpen || monitorOpen) && 'lg:mr-[520px]',
     )}>
       {/* Chat Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -804,6 +951,31 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
               value: e.equity,
             })) ?? []
           }
+        />
+      )}
+
+      {/* Story 3.3: Monitor Canvas */}
+      {monitorOpen && monitorState.strategy && (
+        <MonitorCanvas
+          strategyId={monitorAgentId}
+          isOpen={monitorOpen}
+          onClose={handleMonitorClose}
+          onPause={pauseAgent}
+          onResume={resumeAgent}
+          onStop={stopAgent}
+          strategy={monitorState.strategy}
+          pnl={monitorState.pnl || { daily: 0, total: 0, unrealized: 0, realized: 0 }}
+          positions={monitorState.positions}
+          recentTrades={monitorState.recentTrades}
+          metrics={monitorState.metrics || {
+            winRate: 0,
+            avgHoldTime: '0h',
+            maxDrawdown: 0,
+            totalTrades: 0,
+            winningTrades: 0,
+            losingTrades: 0,
+          }}
+          isLoading={monitorState.isLoading}
         />
       )}
     </div>

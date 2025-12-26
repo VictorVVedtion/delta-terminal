@@ -491,3 +491,242 @@ export async function mockGetBacktestHistory(
   await simulateDelay(300)
   return mockBacktestHistory
 }
+
+// =============================================================================
+// Mock Monitor Data (Story 3.2)
+// =============================================================================
+
+/**
+ * Mock 策略信息
+ */
+export const mockStrategyInfo = {
+  name: 'BTC 网格策略',
+  symbol: 'BTC/USDT',
+  status: 'running' as const,
+  createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  updatedAt: new Date().toISOString(),
+}
+
+/**
+ * Mock 盈亏数据
+ */
+export const mockPnLData = {
+  daily: 125.50,
+  total: 1250.80,
+  unrealized: 85.20,
+  realized: 1165.60,
+}
+
+/**
+ * Mock 持仓数据
+ */
+export const mockPositions = [
+  {
+    symbol: 'BTC',
+    amount: 0.05,
+    avgPrice: 42000,
+    currentPrice: 43500,
+    unrealizedPnl: 75,
+    unrealizedPnlPercent: 3.57,
+  },
+  {
+    symbol: 'ETH',
+    amount: 0.5,
+    avgPrice: 2200,
+    currentPrice: 2280,
+    unrealizedPnl: 40,
+    unrealizedPnlPercent: 3.64,
+  },
+]
+
+/**
+ * Mock 交易记录
+ */
+export const mockTrades = [
+  {
+    id: 'trade_001',
+    timestamp: Date.now() - 1 * 60 * 60 * 1000,
+    symbol: 'BTC/USDT',
+    side: 'buy' as const,
+    price: 43200,
+    amount: 0.02,
+    fee: 0.86,
+    realizedPnl: 0,
+  },
+  {
+    id: 'trade_002',
+    timestamp: Date.now() - 3 * 60 * 60 * 1000,
+    symbol: 'BTC/USDT',
+    side: 'sell' as const,
+    price: 43800,
+    amount: 0.015,
+    fee: 0.66,
+    realizedPnl: 12.50,
+  },
+  {
+    id: 'trade_003',
+    timestamp: Date.now() - 6 * 60 * 60 * 1000,
+    symbol: 'ETH/USDT',
+    side: 'buy' as const,
+    price: 2250,
+    amount: 0.3,
+    fee: 0.68,
+    realizedPnl: 0,
+  },
+  {
+    id: 'trade_004',
+    timestamp: Date.now() - 12 * 60 * 60 * 1000,
+    symbol: 'BTC/USDT',
+    side: 'buy' as const,
+    price: 42500,
+    amount: 0.025,
+    fee: 1.06,
+    realizedPnl: 0,
+  },
+  {
+    id: 'trade_005',
+    timestamp: Date.now() - 24 * 60 * 60 * 1000,
+    symbol: 'ETH/USDT',
+    side: 'sell' as const,
+    price: 2320,
+    amount: 0.2,
+    fee: 0.46,
+    realizedPnl: 24.00,
+  },
+]
+
+/**
+ * Mock 性能指标
+ */
+export const mockMetrics = {
+  winRate: 0.65,
+  avgHoldTime: '4.2h',
+  maxDrawdown: 8.5,
+  totalTrades: 28,
+  winningTrades: 18,
+  losingTrades: 10,
+}
+
+// =============================================================================
+// Mock Monitor API Functions (Story 3.2)
+// =============================================================================
+
+// 模拟策略状态变化
+let mockAgentStatus: 'running' | 'paused' | 'stopped' = 'running'
+
+/**
+ * Mock getAgentStatus API
+ */
+export async function mockGetAgentStatus(
+  _agentId: string
+): Promise<{
+  strategy: {
+    name: string
+    symbol: string
+    status: 'running' | 'paused' | 'stopped'
+    createdAt: string
+    updatedAt?: string
+  }
+  pnl: typeof mockPnLData
+}> {
+  await simulateDelay(300)
+
+  // 模拟实时盈亏变化
+  const pnlVariation = (Math.random() - 0.5) * 20
+  return {
+    strategy: {
+      ...mockStrategyInfo,
+      status: mockAgentStatus,
+      updatedAt: new Date().toISOString(),
+    },
+    pnl: {
+      ...mockPnLData,
+      daily: mockPnLData.daily + pnlVariation,
+      unrealized: mockPnLData.unrealized + pnlVariation * 0.5,
+    },
+  }
+}
+
+/**
+ * Mock getAgentPositions API
+ */
+export async function mockGetAgentPositions(
+  _agentId: string
+): Promise<typeof mockPositions> {
+  await simulateDelay(200)
+
+  // 模拟价格变化
+  return mockPositions.map((pos) => {
+    const priceChange = (Math.random() - 0.5) * pos.currentPrice * 0.01
+    const newPrice = pos.currentPrice + priceChange
+    const newPnl = (newPrice - pos.avgPrice) * pos.amount
+    const newPnlPercent = ((newPrice - pos.avgPrice) / pos.avgPrice) * 100
+    return {
+      ...pos,
+      currentPrice: newPrice,
+      unrealizedPnl: newPnl,
+      unrealizedPnlPercent: newPnlPercent,
+    }
+  })
+}
+
+/**
+ * Mock getAgentTrades API
+ */
+export async function mockGetAgentTrades(
+  _agentId: string,
+  limit: number = 10
+): Promise<typeof mockTrades> {
+  await simulateDelay(200)
+  return mockTrades.slice(0, limit)
+}
+
+/**
+ * Mock getAgentMetrics API
+ */
+export async function mockGetAgentMetrics(
+  _agentId: string
+): Promise<typeof mockMetrics> {
+  await simulateDelay(200)
+  return mockMetrics
+}
+
+/**
+ * Mock pauseAgent API
+ */
+export async function mockPauseAgent(
+  _agentId: string
+): Promise<{ success: boolean }> {
+  await simulateDelay(500)
+  mockAgentStatus = 'paused'
+  return { success: true }
+}
+
+/**
+ * Mock resumeAgent API
+ */
+export async function mockResumeAgent(
+  _agentId: string
+): Promise<{ success: boolean }> {
+  await simulateDelay(500)
+  mockAgentStatus = 'running'
+  return { success: true }
+}
+
+/**
+ * Mock stopAgent API
+ */
+export async function mockStopAgent(
+  _agentId: string
+): Promise<{ success: boolean }> {
+  await simulateDelay(800)
+  mockAgentStatus = 'stopped'
+  return { success: true }
+}
+
+/**
+ * 重置 Mock 状态 (用于测试)
+ */
+export function resetMockAgentStatus() {
+  mockAgentStatus = 'running'
+}

@@ -211,6 +211,8 @@ export interface InsightTarget {
   strategy_id: string;
   name: string;
   symbol: string;
+  /** Story 3.3: Agent ID for monitoring */
+  agent_id?: string;
 }
 
 // =============================================================================
