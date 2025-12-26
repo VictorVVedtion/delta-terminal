@@ -96,20 +96,24 @@ export type AgentStatus = 'live' | 'paper' | 'shadow' | 'paused' | 'stopped'
 
 ## Stories
 
-### Story 1: DeployCanvas 组件开发
+### Story 1: DeployCanvas 组件开发 ✅ **已完成**
 
 **标题**: 创建 DeployCanvas 部署确认画布
 
 **描述**:
 开发一个新的 Canvas 组件，支持 Paper 和 Live 两种部署模式的确认流程。
 
+**状态**: ✅ Completed (2025-12-25)
+**Story 文件**: `docs/stories/1.1.deploy-canvas.story.md`
+
 **验收标准**:
-- [ ] 创建 `DeployCanvas.tsx` 组件
-- [ ] 支持 `mode: 'paper' | 'live'` 切换
-- [ ] Paper 模式显示虚拟资金配置
-- [ ] Live 模式显示前置条件检查、资金配置、双重确认
-- [ ] 复用 RiverBit Design System 样式
-- [ ] 与 CanvasPanel 滑出交互一致
+- [x] 创建 `DeployCanvas.tsx` 组件
+- [x] 支持 `mode: 'paper' | 'live'` 切换
+- [x] Paper 模式显示虚拟资金配置
+- [x] Live 模式显示前置条件检查、资金配置、双重确认
+- [x] 复用 RiverBit Design System 样式
+- [x] 与 CanvasPanel 滑出交互一致
+- [x] 完整测试套件 (20+ 测试用例)
 
 **技术细节**:
 ```typescript
@@ -125,9 +129,12 @@ interface DeployCanvasProps {
 
 ---
 
-### Story 2: 部署 API 接口与状态流转
+### Story 2: 部署 API 接口与状态流转 📋 **Ready for Dev**
 
 **标题**: 实现部署 API 接口和 AgentStore 状态管理
+
+**状态**: 📋 Ready for Development
+**Story 文件**: `docs/stories/1.2.deploy-api-state.story.md`
 
 **描述**:
 扩展 API 客户端和 Zustand Store，支持策略部署流程和状态追踪。
