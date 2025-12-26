@@ -23,6 +23,7 @@ import { ConnectionIndicator } from '@/components/ui/connection-status'
 import { KillSwitch } from '@/components/KillSwitch'
 import { NotificationCenter } from '@/components/NotificationCenter'
 import { GlobalAgentStatus } from '@/components/system/GlobalAgentStatus'
+import { MarginAlertBadge } from '@/components/safety/MarginAlert'
 
 export function Header() {
   const router = useRouter()
@@ -85,6 +86,8 @@ export function Header() {
           {/* 状态指示器组 - 合并显示，降低视觉权重 */}
           <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/30 mr-2">
             <GlobalAgentStatus />
+            <div className="h-3 w-[1px] bg-border/50" />
+            <MarginAlertBadge />
             <div className="h-3 w-[1px] bg-border/50" />
             <ConnectionIndicator />
           </div>

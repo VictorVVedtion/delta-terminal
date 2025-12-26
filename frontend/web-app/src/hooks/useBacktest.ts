@@ -8,12 +8,12 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useBacktestStore } from '@/store/backtest'
-import { apiClient } from '@/lib/api'
 import type {
   BacktestConfig,
   BacktestResult,
   BacktestRunState,
 } from '@/types/backtest'
+import type { BacktestInsightData } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -208,58 +208,18 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
   // Poll Status
   // ==========================================================================
 
+  // Note: 当前实现是同步的，不需要轮询
+  // 保留 pollStatus 作为空操作，未来可扩展为异步模式
   const pollStatus = useCallback(async () => {
+    // 同步模式下不需要轮询，回测结果在 startBacktest 中直接返回
     if (!backtestId || isPaused) return
+  }, [backtestId, isPaused])
 
-    try {
-      const status = await apiClient.getBacktestRunStatus(backtestId)
-
-      setState((prev) => ({
-        ...prev,
-        progress: status.progress,
-        currentStep: STEP_MESSAGES[status.stage] || status.stage,
-      }))
-
-      updateStatus(status)
-
-      // Check completion
-      if (status.stage === 'completed' && status.progress >= 100) {
-        const result = await apiClient.getBacktestFullResult(backtestId)
-
-        setState((prev) => ({
-          ...prev,
-          phase: 'completed',
-          progress: 100,
-          currentStep: '回测完成',
-          result,
-        }))
-
-        storeSetResult(result)
-        onSuccess?.(result)
-        cleanup()
-      }
-
-      // Check failure
-      if (status.error) {
-        handleError(createError(status.error, 'EXECUTION_ERROR'))
-      }
-    } catch (error) {
-      console.error('Failed to poll backtest status:', error)
-      // Don't fail immediately, might be a transient error
-    }
-  }, [backtestId, isPaused, updateStatus, storeSetResult, onSuccess, cleanup, handleError, createError])
-
-  // Start polling when running
+  // 保留轮询 effect 结构，但当前不启用
   useEffect(() => {
-    if (state.phase === 'running' && backtestId && !isPaused) {
-      pollingRef.current = setInterval(pollStatus, pollingInterval)
-      return () => {
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current)
-        }
-      }
-    }
-  }, [state.phase, backtestId, isPaused, pollingInterval, pollStatus])
+    // 同步模式下不需要轮询
+    void pollStatus // 消除未使用警告
+  }, [pollStatus])
 
   // ==========================================================================
   // Start Backtest
@@ -295,19 +255,120 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
       }, timeout)
 
       try {
-        // Call API to start backtest
-        const response = await apiClient.runBacktest(backtestConfig)
-        setBacktestId(response.backtestId)
+        // Generate backtest ID
+        const newBacktestId = `bt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        setBacktestId(newBacktestId)
 
         // Update store
-        setCurrentBacktest(response.backtestId, backtestConfig)
+        setCurrentBacktest(newBacktestId, backtestConfig)
 
         setState((prev) => ({
           ...prev,
           progress: 10,
           currentStep: '加载历史数据...',
         }))
+
+        // Convert BacktestConfig to API request format
+        const apiRequest = {
+          jobId: newBacktestId,
+          config: {
+            strategyName: backtestConfig.name,
+            strategyDescription: `${backtestConfig.strategyType} 策略`,
+            symbol: backtestConfig.symbol,
+            timeframe: '1h', // 默认 1 小时周期
+            startDate: new Date(backtestConfig.startDate).getTime(),
+            endDate: new Date(backtestConfig.endDate).getTime(),
+            initialCapital: backtestConfig.initialCapital,
+            parameters: Object.entries(backtestConfig.params).map(([key, value]) => ({
+              key,
+              label: key,
+              value: value as number,
+              type: 'number' as const,
+            })),
+          },
+        }
+
+        setState((prev) => ({
+          ...prev,
+          progress: 30,
+          currentStep: '执行回测策略...',
+        }))
+
+        // Call internal API directly
+        const response = await fetch('/api/backtest/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiRequest),
+          signal: abortControllerRef.current?.signal,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || '回测请求失败')
+        }
+
+        const backtestResult: BacktestInsightData = await response.json()
+
+        setState((prev) => ({
+          ...prev,
+          progress: 90,
+          currentStep: '分析回测结果...',
+        }))
+
+        // Convert BacktestInsightData to BacktestResult format
+        const result: BacktestResult = {
+          id: newBacktestId,
+          config: backtestConfig,
+          metrics: {
+            totalReturn: backtestResult.stats.totalReturn,
+            annualizedReturn: backtestResult.stats.annualizedReturn,
+            maxDrawdown: backtestResult.stats.maxDrawdown,
+            sharpeRatio: backtestResult.stats.sharpeRatio,
+            winRate: backtestResult.stats.winRate,
+            profitFactor: backtestResult.stats.profitFactor,
+            totalTrades: backtestResult.stats.totalTrades,
+            avgWin: backtestResult.stats.avgWin,
+            avgLoss: backtestResult.stats.avgLoss,
+          },
+          trades: backtestResult.trades.map((t) => ({
+            id: t.id,
+            symbol: backtestConfig.symbol,
+            side: t.direction === 'long' ? 'buy' as const : 'sell' as const,
+            entryPrice: t.entryPrice,
+            exitPrice: t.exitPrice ?? t.entryPrice,
+            quantity: t.quantity,
+            entryTime: new Date(t.entryTime).toISOString(),
+            exitTime: t.exitTime ? new Date(t.exitTime).toISOString() : new Date(t.entryTime).toISOString(),
+            pnl: t.pnl,
+            pnlPercent: t.pnlPercent,
+            fee: t.fee,
+          })),
+          equity: backtestResult.equityCurve.map((e) => ({
+            date: new Date(e.timestamp).toISOString(),
+            equity: e.equity,
+            drawdown: e.drawdown,
+          })),
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        }
+
+        // Complete
+        setState({
+          phase: 'completed',
+          progress: 100,
+          currentStep: '回测完成',
+          error: null,
+          result,
+        })
+
+        storeSetResult(result)
+        onSuccess?.(result)
+        cleanup()
       } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          // 用户取消，不作为错误处理
+          return
+        }
         handleError(
           createError(
             error instanceof Error ? error.message : '启动回测失败',
@@ -317,7 +378,7 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
         )
       }
     },
-    [cleanup, timeout, setCurrentBacktest, handleError, createError]
+    [cleanup, timeout, setCurrentBacktest, storeSetResult, onSuccess, handleError, createError]
   )
 
   // ==========================================================================
@@ -327,17 +388,13 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
   const pauseBacktest = useCallback(async (): Promise<void> => {
     if (!backtestId || state.phase !== 'running') return
 
-    try {
-      await apiClient.pauseBacktest(backtestId)
-      setIsPaused(true)
-      updateStatus({ isRunning: false })
-      setState((prev) => ({
-        ...prev,
-        currentStep: '回测已暂停',
-      }))
-    } catch (error) {
-      console.error('Failed to pause backtest:', error)
-    }
+    // 同步模式下，暂停只更新本地状态
+    setIsPaused(true)
+    updateStatus({ isRunning: false })
+    setState((prev) => ({
+      ...prev,
+      currentStep: '回测已暂停',
+    }))
   }, [backtestId, state.phase, updateStatus])
 
   // ==========================================================================
@@ -347,17 +404,13 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
   const resumeBacktest = useCallback(async (): Promise<void> => {
     if (!backtestId || state.phase !== 'running' || !isPaused) return
 
-    try {
-      await apiClient.resumeBacktest(backtestId)
-      setIsPaused(false)
-      updateStatus({ isRunning: true })
-      setState((prev) => ({
-        ...prev,
-        currentStep: STEP_MESSAGES.running,
-      }))
-    } catch (error) {
-      console.error('Failed to resume backtest:', error)
-    }
+    // 同步模式下，恢复只更新本地状态
+    setIsPaused(false)
+    updateStatus({ isRunning: true })
+    setState((prev) => ({
+      ...prev,
+      currentStep: STEP_MESSAGES.running,
+    }))
   }, [backtestId, state.phase, isPaused, updateStatus])
 
   // ==========================================================================
@@ -367,15 +420,13 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
   const cancelBacktest = useCallback(async (): Promise<void> => {
     if (!backtestId) return
 
-    try {
-      await apiClient.cancelBacktestRun(backtestId)
-      handleError(createError('回测已取消', 'CANCELLED'))
-      clearCurrent()
-    } catch (error) {
-      console.error('Failed to cancel backtest:', error)
-    } finally {
-      cleanup()
+    // 同步模式下，取消只中止本地请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
     }
+    handleError(createError('回测已取消', 'CANCELLED'))
+    clearCurrent()
+    cleanup()
   }, [backtestId, cleanup, clearCurrent, handleError, createError])
 
   // ==========================================================================

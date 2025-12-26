@@ -22,6 +22,7 @@ import {
 } from '@/types/risk'
 import { useRiskValidation } from '@/hooks/useRiskValidation'
 import { notify } from '@/lib/notification'
+import { ApprovalFlow } from '@/components/deployment/ApprovalFlow'
 
 // =============================================================================
 // Types
@@ -94,6 +95,7 @@ export function DeployCanvas({
   const [capital, setCapital] = React.useState(mode === 'paper' ? 10000 : 5000)
   const [confirmed, setConfirmed] = React.useState(false)
   const [riskSettings, setRiskSettings] = React.useState<RiskSettingsType>(DEFAULT_RISK_SETTINGS)
+  const [showApprovalFlow, setShowApprovalFlow] = React.useState(false)
 
   // Risk validation
   const riskValidation = useRiskValidation({
@@ -127,17 +129,27 @@ export function DeployCanvas({
     return paperPerformance.runningDays >= paperPerformance.requiredDays
   }, [mode, backtestResult.passed, paperPerformance])
 
-  // Handle deploy
-  const handleDeploy = React.useCallback(async () => {
-    if (mode === 'live' && !confirmed) return
-    if (mode === 'live' && !canDeployLive) return
+  // Handle deploy button click
+  const handleDeployClick = React.useCallback(() => {
     if (!riskValidation.valid) return
 
+    if (mode === 'live') {
+      // For Live mode, show approval flow (S31)
+      if (!canDeployLive) return
+      setShowApprovalFlow(true)
+    } else {
+      // For Paper mode, deploy directly
+      handleDeploy()
+    }
+  }, [mode, riskValidation.valid, canDeployLive])
+
+  // Execute deployment
+  const handleDeploy = React.useCallback(async (approvalToken?: string) => {
     const config: DeployConfig = {
       mode,
       capital,
       riskSettings,
-      ...(mode === 'live' ? { confirmationToken: `confirm_${Date.now()}` } : {}),
+      ...(approvalToken ? { confirmationToken: approvalToken } : {}),
     }
 
     try {
@@ -148,6 +160,9 @@ export function DeployCanvas({
         description: `${strategyName} 已部署到${mode === 'live' ? '实盘' : '模拟盘'}，初始资金 $${capital.toLocaleString()}`,
         source: 'DeployCanvas',
       })
+
+      // Close approval flow if open
+      setShowApprovalFlow(false)
     } catch (error) {
       // Story 5.3: 部署失败通知
       notify('error', '部署失败', {
@@ -155,13 +170,18 @@ export function DeployCanvas({
         source: 'DeployCanvas',
       })
     }
-  }, [mode, capital, riskSettings, confirmed, canDeployLive, riskValidation.valid, onDeploy, strategyName])
+  }, [mode, capital, riskSettings, onDeploy, strategyName])
+
+  // Handle approval flow completion (S31)
+  const handleApprovalComplete = React.useCallback((token: string) => {
+    handleDeploy(token)
+  }, [handleDeploy])
 
   // Deploy button disabled state
   const isDeployDisabled =
     isLoading ||
     !riskValidation.valid ||
-    (mode === 'live' && (!confirmed || !canDeployLive))
+    (mode === 'live' && !canDeployLive)
 
   return (
     <>
@@ -275,7 +295,7 @@ export function DeployCanvas({
           </Button>
 
           <Button
-            onClick={handleDeploy}
+            onClick={handleDeployClick}
             disabled={isDeployDisabled}
             className={cn(
               'flex-[2]',
@@ -293,12 +313,28 @@ export function DeployCanvas({
             ) : (
               <>
                 <Rocket className="h-4 w-4 mr-2" />
-                {mode === 'live' ? '确认实盘部署' : '部署模拟盘'}
+                {mode === 'live' ? '实盘部署' : '部署模拟盘'}
               </>
             )}
           </Button>
         </footer>
       </aside>
+
+      {/* S31: Approval Flow for Live deployment */}
+      <ApprovalFlow
+        isOpen={showApprovalFlow}
+        onClose={() => setShowApprovalFlow(false)}
+        onApprove={handleApprovalComplete}
+        strategyName={strategyName}
+        capital={capital}
+        riskLevel={riskValidation.riskLevel === 'critical' ? 'high' : riskValidation.riskLevel}
+        {...(riskSettings.stopLoss.enabled
+          ? { estimatedLoss: capital * (riskSettings.stopLoss.value / 100) }
+          : {})}
+        {...(riskSettings.takeProfit.enabled
+          ? { estimatedGain: capital * (riskSettings.takeProfit.value / 100) }
+          : {})}
+      />
     </>
   )
 }

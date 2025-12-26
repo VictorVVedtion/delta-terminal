@@ -42,6 +42,10 @@ coverage/
 .pytest_cache/
 htmlcov/
 
+# Playwright 测试输出
+playwright-report/
+test-results/
+
 # 环境变量
 .env
 .env.local

@@ -13,11 +13,14 @@ import {
   Clock,
   Target,
   AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { notify } from '@/lib/notification'
+import { MarginAlert } from '@/components/safety/MarginAlert'
+import { useSafetyStore, selectMarginStatus } from '@/store/safety'
 
 // =============================================================================
 // Type Definitions
@@ -118,6 +121,10 @@ export interface MonitorCanvasProps {
   onStop?: () => void
   /** 修改参数 */
   onModify?: () => void
+  /** 减少仓位回调 (保证金预警) */
+  onReducePosition?: () => void
+  /** 追加保证金回调 */
+  onAddMargin?: () => void
   /** 策略基本信息 */
   strategy: StrategyInfo
   /** 盈亏数据 */
@@ -130,6 +137,8 @@ export interface MonitorCanvasProps {
   metrics: StrategyMetrics
   /** 加载中 */
   isLoading?: boolean
+  /** 显示保证金预警区 (默认true，有持仓时显示) */
+  showMarginAlert?: boolean
 }
 
 // =============================================================================
@@ -143,13 +152,18 @@ export function MonitorCanvas({
   onResume,
   onStop,
   onModify,
+  onReducePosition,
+  onAddMargin,
   strategy,
   pnl,
   positions,
   recentTrades,
   metrics,
   isLoading = false,
+  showMarginAlert = true,
 }: MonitorCanvasProps) {
+  // Get margin status for alert level
+  const marginStatus = useSafetyStore(selectMarginStatus)
   // Track previous status for notification triggering
   const prevStatusRef = React.useRef<StrategyStatus | null>(null)
 
@@ -324,6 +338,22 @@ export function MonitorCanvas({
                 />
               </div>
             </section>
+
+            {/* 保证金预警区 (S28) - 有持仓时显示 */}
+            {showMarginAlert && positions.length > 0 && (
+              <section className="space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4" />
+                  保证金状态
+                </h3>
+                <MarginAlert
+                  compact={false}
+                  showSoundControl={true}
+                  {...(onReducePosition ? { onReducePosition } : {})}
+                  {...(onAddMargin ? { onAddMargin } : {})}
+                />
+              </section>
+            )}
 
             {/* 当前持仓区 */}
             <section className="space-y-3">

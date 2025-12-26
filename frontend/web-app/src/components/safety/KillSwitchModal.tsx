@@ -3,84 +3,95 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  StopCircle,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   Loader2,
   Square,
+  StopCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useAgentStore } from '@/store/agent'
+import { useSafetyStore } from '@/store/safety'
 import { useNotificationStore } from '@/store/notification'
+import { KillSwitchResult } from '@/types/safety'
 
-/**
- * KillSwitch - 紧急全局停止按钮 (增强版)
- * V3 Design Document: S30 - Emergency Stop Mechanism
- *
- * 功能:
- * - 长按确认防止误触
- * - 取消所有挂单
- * - 平所有持仓 (可选)
- * - 暂停所有运行中的策略
- * - 记录操作日志
- *
- * 位置: Header 右侧状态栏
- */
-
-interface KillSwitchResult {
-  success: boolean
-  stoppedStrategies: number
-  cancelledOrders: number
-  closedPositions: number
-  executionTime: number
+interface KillSwitchModalProps {
+  isOpen: boolean
+  onClose: () => void
+  activeStrategies: number
+  pendingOrders: number
 }
 
-type KillSwitchStatus = 'ready' | 'triggered' | 'cooldown'
 type ModalStep = 'confirm' | 'executing' | 'success' | 'error'
 
-const LONG_PRESS_DURATION = 3000 // 3 seconds
-const COOLDOWN_DURATION = 5000 // 5 seconds
-
-export function KillSwitch() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
+/**
+ * Kill Switch Confirmation Modal
+ * V3 Design Document: S30 - Emergency Stop Mechanism
+ *
+ * Provides secondary confirmation before executing emergency stop.
+ * Features:
+ * - Long-press to confirm (prevents accidental triggers)
+ * - Optional close all positions
+ * - Execution feedback
+ * - Result summary
+ */
+export function KillSwitchModal({
+  isOpen,
+  onClose,
+  activeStrategies,
+  pendingOrders,
+}: KillSwitchModalProps) {
+  const [step, setStep] = useState<ModalStep>('confirm')
+  const [closePositions, setClosePositions] = useState(false)
   const [isPressing, setIsPressing] = useState(false)
   const [pressProgress, setPressProgress] = useState(0)
-  const [status, setStatus] = useState<KillSwitchStatus>('ready')
+  const [result, setResult] = useState<KillSwitchResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const agents = useAgentStore((state) => state.agents)
-  const activeAgents = agents.filter(
-    (a) => a.status === 'live' || a.status === 'paper'
-  ).length
+  const triggerKillSwitch = useSafetyStore((state) => state.triggerKillSwitch)
+  const config = useSafetyStore((state) => state.config.killSwitch)
+  const addNotification = useNotificationStore((state) => state.addNotification)
 
-  const isReady = status === 'ready'
+  const CONFIRM_DURATION = 3000 // 3 seconds
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep('confirm')
+      setClosePositions(config.closePositionsDefault)
+      setResult(null)
+      setError(null)
+      setPressProgress(0)
+      setIsPressing(false)
+    }
+  }, [isOpen, config.closePositionsDefault])
 
   // Handle long press start
   const handlePressStart = useCallback(() => {
-    if (!isReady || activeAgents === 0) return
+    if (step !== 'confirm') return
 
     setIsPressing(true)
     setPressProgress(0)
 
     const startTime = Date.now()
 
+    // Update progress
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime
-      const progress = Math.min((elapsed / LONG_PRESS_DURATION) * 100, 100)
+      const progress = Math.min((elapsed / CONFIRM_DURATION) * 100, 100)
       setPressProgress(progress)
     }, 16)
 
+    // Execute after duration
     pressTimerRef.current = setTimeout(() => {
-      setIsPressing(false)
-      setPressProgress(0)
-      setIsModalOpen(true)
-    }, LONG_PRESS_DURATION)
-  }, [isReady, activeAgents])
+      handleExecute()
+    }, CONFIRM_DURATION)
+  }, [step])
 
   // Handle press end
   const handlePressEnd = useCallback(() => {
@@ -96,248 +107,40 @@ export function KillSwitch() {
     setPressProgress(0)
   }, [])
 
-  useEffect(() => {
-    return () => {
-      if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-    }
-  }, [])
-
-  return (
-    <>
-      <div className="relative">
-        {/* Progress ring */}
-        <AnimatePresence>
-          {isPressing && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute inset-0 -m-1"
-            >
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                <circle
-                  cx="18" cy="18" r="16"
-                  fill="none" stroke="currentColor" strokeWidth="2"
-                  className="text-muted-foreground/20"
-                />
-                <circle
-                  cx="18" cy="18" r="16"
-                  fill="none" stroke="currentColor" strokeWidth="2"
-                  strokeDasharray={`${pressProgress} 100`}
-                  className="text-red-500 transition-all duration-75"
-                />
-              </svg>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Main button */}
-        <motion.button
-          type="button"
-          disabled={!isReady || activeAgents === 0}
-          onMouseDown={handlePressStart}
-          onMouseUp={handlePressEnd}
-          onMouseLeave={handlePressEnd}
-          onTouchStart={handlePressStart}
-          onTouchEnd={handlePressEnd}
-          {...(isReady && activeAgents > 0 ? { whileTap: { scale: 0.95 } } : {})}
-          className={cn(
-            'relative flex items-center gap-2 px-3 py-1.5 rounded-lg',
-            'text-sm font-medium transition-colors duration-200',
-            'focus:outline-none focus:ring-2 focus:ring-red-500/50',
-            isReady && activeAgents > 0 && [
-              'bg-red-500/10 hover:bg-red-500/20',
-              'text-red-500 hover:text-red-400',
-              'cursor-pointer',
-            ],
-            isReady && activeAgents === 0 && [
-              'bg-muted/50 text-muted-foreground/50',
-              'cursor-not-allowed',
-            ],
-            status === 'triggered' && [
-              'bg-red-500 text-white animate-pulse',
-            ],
-            status === 'cooldown' && [
-              'bg-amber-500/20 text-amber-500 cursor-not-allowed',
-            ],
-            isPressing && 'bg-red-500/30 ring-2 ring-red-500'
-          )}
-          title={
-            !isReady
-              ? 'Kill Switch is not ready'
-              : activeAgents === 0
-                ? 'No active strategies'
-                : 'Long press to emergency stop all'
-          }
-        >
-          <StopCircle className="w-4 h-4" />
-          <span className="hidden md:inline">
-            {status === 'triggered'
-              ? 'Stopping...'
-              : status === 'cooldown'
-                ? 'Cooldown'
-                : '紧急停止'}
-          </span>
-        </motion.button>
-
-        {/* Active indicator */}
-        {isReady && activeAgents > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-          </span>
-        )}
-      </div>
-
-      {/* Confirmation Modal */}
-      <KillSwitchModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        activeStrategies={activeAgents}
-        pendingOrders={0}
-        onStatusChange={setStatus}
-      />
-    </>
-  )
-}
-
-// ============================================================================
-// Kill Switch Modal Component
-// ============================================================================
-
-interface KillSwitchModalProps {
-  isOpen: boolean
-  onClose: () => void
-  activeStrategies: number
-  pendingOrders: number
-  onStatusChange: (status: KillSwitchStatus) => void
-}
-
-function KillSwitchModal({
-  isOpen,
-  onClose,
-  activeStrategies,
-  pendingOrders,
-  onStatusChange,
-}: KillSwitchModalProps) {
-  const [step, setStep] = useState<ModalStep>('confirm')
-  const [closePositions, setClosePositions] = useState(false)
-  const [isPressing, setIsPressing] = useState(false)
-  const [pressProgress, setPressProgress] = useState(0)
-  const [result, setResult] = useState<KillSwitchResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  const updateAgent = useAgentStore((state) => state.updateAgent)
-  const agents = useAgentStore((state) => state.agents)
-  const addNotification = useNotificationStore((state) => state.addNotification)
-
-  const CONFIRM_DURATION = 3000
-
-  useEffect(() => {
-    if (isOpen) {
-      setStep('confirm')
-      setClosePositions(false)
-      setResult(null)
-      setError(null)
-      setPressProgress(0)
-      setIsPressing(false)
-    }
-  }, [isOpen])
-
-  const handlePressStart = useCallback(() => {
-    if (step !== 'confirm') return
-
-    setIsPressing(true)
-    setPressProgress(0)
-
-    const startTime = Date.now()
-
-    progressIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime
-      const progress = Math.min((elapsed / CONFIRM_DURATION) * 100, 100)
-      setPressProgress(progress)
-    }, 16)
-
-    pressTimerRef.current = setTimeout(() => {
-      handleExecute()
-    }, CONFIRM_DURATION)
-  }, [step])
-
-  const handlePressEnd = useCallback(() => {
-    if (pressTimerRef.current) {
-      clearTimeout(pressTimerRef.current)
-      pressTimerRef.current = null
-    }
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current)
-      progressIntervalRef.current = null
-    }
-    setIsPressing(false)
-    setPressProgress(0)
-  }, [])
-
+  // Execute kill switch
   const handleExecute = async () => {
     handlePressEnd()
     setStep('executing')
-    onStatusChange('triggered')
-
-    const startTime = Date.now()
 
     try {
-      // Stop all running agents
-      const runningAgents = agents.filter(
-        (a) => a.status === 'live' || a.status === 'paper'
-      )
-
-      for (const agent of runningAgents) {
-        updateAgent(agent.id, { status: 'stopped' })
-      }
-
-      // TODO: Call API to cancel orders and close positions
-      // await apiClient.cancelAllOrders()
-      // if (closePositions) await apiClient.closeAllPositions()
-
-      const execResult: KillSwitchResult = {
-        success: true,
-        stoppedStrategies: runningAgents.length,
-        cancelledOrders: pendingOrders,
-        closedPositions: closePositions ? 0 : 0,
-        executionTime: Date.now() - startTime,
-      }
-
+      const execResult = await triggerKillSwitch(closePositions)
       setResult(execResult)
-      setStep('success')
 
-      addNotification({
-        type: 'warning',
-        title: '紧急停止已执行',
-        description: `已停止 ${execResult.stoppedStrategies} 个策略`,
-        source: 'kill-switch',
-      })
-
-      // Set cooldown
-      setTimeout(() => {
-        onStatusChange('ready')
-      }, COOLDOWN_DURATION)
-      onStatusChange('cooldown')
+      if (execResult.success) {
+        setStep('success')
+        addNotification({
+          type: 'warning',
+          title: 'Emergency Stop Executed',
+          description: `Stopped ${execResult.stoppedStrategies} strategies, cancelled ${execResult.cancelledOrders} orders`,
+          source: 'kill-switch',
+        })
+      } else {
+        setStep('error')
+        setError('Some operations failed. Check the details.')
+      }
     } catch (err) {
       setStep('error')
-      setError(err instanceof Error ? err.message : 'Unknown error')
-      onStatusChange('ready')
-
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
       addNotification({
         type: 'error',
-        title: '紧急停止失败',
-        description: '请手动检查账户状态',
+        title: 'Kill Switch Failed',
+        description: 'Failed to execute emergency stop',
         source: 'kill-switch',
       })
     }
   }
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
@@ -379,10 +182,10 @@ function KillSwitchModal({
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
-                  紧急停止确认
+                  Emergency Stop Confirmation
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  此操作不可撤销
+                  This action cannot be undone
                 </p>
               </div>
             </div>
@@ -391,22 +194,24 @@ function KillSwitchModal({
             <div className="p-4">
               {step === 'confirm' && (
                 <div className="space-y-4">
+                  {/* Actions summary */}
                   <div className="rounded-lg bg-muted/50 p-3 space-y-2">
                     <p className="text-sm font-medium text-foreground">
-                      即将执行以下操作:
+                      The following actions will be executed:
                     </p>
                     <ul className="text-sm text-muted-foreground space-y-1">
                       <li className="flex items-center gap-2">
                         <Square className="w-3 h-3 text-red-500" />
-                        停止所有运行中的策略 ({activeStrategies})
+                        Stop all running strategies ({activeStrategies})
                       </li>
                       <li className="flex items-center gap-2">
                         <XCircle className="w-3 h-3 text-red-500" />
-                        取消所有挂单 ({pendingOrders})
+                        Cancel all pending orders ({pendingOrders})
                       </li>
                     </ul>
                   </div>
 
+                  {/* Close positions option */}
                   <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer transition-colors">
                     <Checkbox
                       checked={closePositions}
@@ -414,27 +219,31 @@ function KillSwitchModal({
                     />
                     <div>
                       <p className="text-sm font-medium text-foreground">
-                        平仓所有持仓
+                        Close all positions
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        以市价立即卖出所有持仓
+                        Market sell all open positions immediately
                       </p>
                     </div>
                   </label>
 
+                  {/* Warning */}
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                     <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-red-500">
-                      此操作将立即停止所有交易活动，策略需要手动重启。
+                      This will immediately halt all trading activity. Strategies will
+                      need to be manually restarted.
                     </p>
                   </div>
 
+                  {/* Confirm button with long press */}
                   <div className="relative">
                     <Button
                       variant="destructive"
                       size="lg"
                       className={cn(
                         'w-full h-14 relative overflow-hidden',
+                        'transition-all duration-200',
                         isPressing && 'ring-2 ring-red-400 ring-offset-2 ring-offset-background'
                       )}
                       onMouseDown={handlePressStart}
@@ -443,20 +252,23 @@ function KillSwitchModal({
                       onTouchStart={handlePressStart}
                       onTouchEnd={handlePressEnd}
                     >
+                      {/* Progress fill */}
                       <motion.div
                         className="absolute inset-0 bg-red-400/30"
                         initial={{ width: 0 }}
                         animate={{ width: `${pressProgress}%` }}
                         transition={{ duration: 0.05 }}
                       />
+
+                      {/* Content */}
                       <span className="relative flex items-center gap-2">
                         <StopCircle className="w-5 h-5" />
                         {isPressing ? (
                           <span className="tabular-nums">
-                            按住... {Math.ceil((CONFIRM_DURATION - pressProgress * CONFIRM_DURATION / 100) / 1000)}s
+                            Hold... {Math.ceil((CONFIRM_DURATION - pressProgress * CONFIRM_DURATION / 100) / 1000)}s
                           </span>
                         ) : (
-                          '长按 3 秒确认停止'
+                          'Long press to confirm (3s)'
                         )}
                       </span>
                     </Button>
@@ -468,7 +280,10 @@ function KillSwitchModal({
                 <div className="flex flex-col items-center justify-center py-8 space-y-4">
                   <Loader2 className="w-12 h-12 text-red-500 animate-spin" />
                   <p className="text-lg font-medium text-foreground">
-                    正在执行紧急停止...
+                    Executing Emergency Stop...
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Stopping all strategies and cancelling orders
                   </p>
                 </div>
               )}
@@ -480,27 +295,38 @@ function KillSwitchModal({
                       <CheckCircle2 className="w-8 h-8 text-green-500" />
                     </div>
                     <p className="text-lg font-medium text-foreground">
-                      紧急停止完成
+                      Emergency Stop Complete
                     </p>
                   </div>
 
+                  {/* Results summary */}
                   <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">停止策略:</span>
+                      <span className="text-muted-foreground">Strategies stopped:</span>
                       <span className="font-medium">{result.stoppedStrategies}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">取消订单:</span>
+                      <span className="text-muted-foreground">Orders cancelled:</span>
                       <span className="font-medium">{result.cancelledOrders}</span>
                     </div>
+                    {closePositions && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Positions closed:</span>
+                        <span className="font-medium">{result.closedPositions}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm pt-2 border-t border-border">
-                      <span className="text-muted-foreground">执行时间:</span>
+                      <span className="text-muted-foreground">Execution time:</span>
                       <span className="font-medium">{result.executionTime}ms</span>
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full" onClick={onClose}>
-                    关闭
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={onClose}
+                  >
+                    Close
                   </Button>
                 </div>
               )}
@@ -512,7 +338,7 @@ function KillSwitchModal({
                       <XCircle className="w-8 h-8 text-red-500" />
                     </div>
                     <p className="text-lg font-medium text-foreground">
-                      执行失败
+                      Execution Failed
                     </p>
                   </div>
 
@@ -523,25 +349,34 @@ function KillSwitchModal({
                   )}
 
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={onClose}>
-                      关闭
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={onClose}
+                    >
+                      Close
                     </Button>
                     <Button
                       variant="destructive"
                       className="flex-1"
                       onClick={() => setStep('confirm')}
                     >
-                      重试
+                      Retry
                     </Button>
                   </div>
                 </div>
               )}
             </div>
 
+            {/* Cancel button (only in confirm step) */}
             {step === 'confirm' && (
               <div className="p-4 border-t border-border">
-                <Button variant="ghost" className="w-full" onClick={onClose}>
-                  取消
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={onClose}
+                >
+                  Cancel
                 </Button>
               </div>
             )}
@@ -552,4 +387,4 @@ function KillSwitchModal({
   )
 }
 
-export default KillSwitch
+export default KillSwitchModal

@@ -13,9 +13,13 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 
 // POST /api/ai/chat/stream - 发送 AI 对话请求（流式）
 export async function POST(request: NextRequest) {
+  // 每次请求时重新读取环境变量（确保使用最新值，避免被系统环境变量覆盖）
+  const apiKey = process.env.OPENROUTER_API_KEY
+  const apiUrl = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
+
   try {
     // 检查平台 API Key 配置
-    if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY === 'your-openrouter-api-key-here') {
+    if (!apiKey || apiKey === 'your-openrouter-api-key-here') {
       console.error('OpenRouter API Key not configured')
       return new Response(
         JSON.stringify({ error: '服务暂不可用，请稍后再试' }),
@@ -39,6 +43,26 @@ export async function POST(request: NextRequest) {
       async start(controller) {
         const modelInfo = AI_MODELS[model]
         const supportsThinking = modelInfo?.supportsThinking ?? false
+        let isClosed = false
+
+        // Safe enqueue that checks if controller is still open
+        const safeEnqueue = (data: Uint8Array) => {
+          if (!isClosed) {
+            try {
+              controller.enqueue(data)
+            } catch {
+              // Controller might be closed, ignore
+              isClosed = true
+            }
+          }
+        }
+
+        const safeClose = () => {
+          if (!isClosed) {
+            isClosed = true
+            controller.close()
+          }
+        }
 
         // 发送思考步骤（如果模型支持）
         if (supportsThinking) {
@@ -56,15 +80,15 @@ export async function POST(request: NextRequest) {
             type: 'thinking',
             data: firstStep ? { thinking: firstStep } : {}
           }
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(thinkingChunk)}\n\n`))
+          safeEnqueue(encoder.encode(`data: ${JSON.stringify(thinkingChunk)}\n\n`))
         }
 
         try {
           // 调用 OpenRouter API（流式）
-          const openRouterResponse = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
+          const openRouterResponse = await fetch(`${apiUrl}/chat/completions`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+              'Authorization': `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
               'HTTP-Referer': 'https://delta-terminal.app',
               'X-Title': 'Delta Terminal'
@@ -87,8 +111,8 @@ export async function POST(request: NextRequest) {
               type: 'error',
               data: { error: errorData.error?.message || 'AI 服务暂时不可用' }
             }
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
-            controller.close()
+            safeEnqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
+            safeClose()
             return
           }
 
@@ -106,7 +130,7 @@ export async function POST(request: NextRequest) {
                 }
               }
             }
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(thinkingUpdate)}\n\n`))
+            safeEnqueue(encoder.encode(`data: ${JSON.stringify(thinkingUpdate)}\n\n`))
 
             const thinkingStep2: AIStreamChunk = {
               type: 'thinking',
@@ -119,7 +143,7 @@ export async function POST(request: NextRequest) {
                 }
               }
             }
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(thinkingStep2)}\n\n`))
+            safeEnqueue(encoder.encode(`data: ${JSON.stringify(thinkingStep2)}\n\n`))
           }
 
           // 处理流式响应
@@ -156,7 +180,7 @@ export async function POST(request: NextRequest) {
                     type: 'content',
                     data: { content }
                   }
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(contentChunk)}\n\n`))
+                  safeEnqueue(encoder.encode(`data: ${JSON.stringify(contentChunk)}\n\n`))
                 }
 
                 // 获取使用统计
@@ -184,7 +208,7 @@ export async function POST(request: NextRequest) {
                 }
               }
             }
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(thinkingComplete)}\n\n`))
+            safeEnqueue(encoder.encode(`data: ${JSON.stringify(thinkingComplete)}\n\n`))
           }
 
           // 发送使用统计
@@ -202,24 +226,24 @@ export async function POST(request: NextRequest) {
               }
             }
           }
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(usageChunk)}\n\n`))
+          safeEnqueue(encoder.encode(`data: ${JSON.stringify(usageChunk)}\n\n`))
 
           // 发送完成信号
           const doneChunk: AIStreamChunk = {
             type: 'done',
             data: {}
           }
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(doneChunk)}\n\n`))
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          safeEnqueue(encoder.encode(`data: ${JSON.stringify(doneChunk)}\n\n`))
+          safeEnqueue(encoder.encode('data: [DONE]\n\n'))
         } catch (error) {
           console.error('Stream processing error:', error)
           const errorChunk: AIStreamChunk = {
             type: 'error',
             data: { error: error instanceof Error ? error.message : 'AI 服务异常' }
           }
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
+          safeEnqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
         } finally {
-          controller.close()
+          safeClose()
         }
       }
     })
