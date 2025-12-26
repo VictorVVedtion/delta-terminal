@@ -15,6 +15,7 @@ import { useBacktest } from '@/hooks/useBacktest'
 import { useMonitor } from '@/hooks/useMonitor'
 import { useChat } from '@/hooks/useAI'
 import { AIConfigPanel } from '@/components/ai'
+import { generateSystemPrompt, extractInsightData, validateInsightData } from '@/lib/prompts/strategy-assistant'
 import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
 import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } from '@/types/insight'
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
@@ -624,7 +625,10 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
     // 使用真实 AI 进行响应
     try {
-      const systemPrompt = `你是 Delta AI，一个专业的加密货币交易策略助手。当前模型: ${currentModel || 'auto'}`
+      // 生成带上下文的 System Prompt
+      const systemPrompt = generateSystemPrompt({
+        marketData: { btcPrice: 42000, ethPrice: 2200 }
+      })
 
       await sendStream(userInput, {
         systemPrompt,
@@ -634,80 +638,40 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       // 获取最终内容
       const finalContent = streamContent || '抱歉，请稍后再试。'
 
-      // 如果是策略相关请求，生成 InsightData
-      const isStrategyRequest = userInput.includes('策略') || userInput.includes('创建') || userInput.includes('交易')
+      // 从 AI 响应中提取 InsightData (A2UI 核心逻辑)
+      const { textContent, insightData } = extractInsightData(finalContent)
       let insight: InsightData | undefined = undefined
 
-      if (isStrategyRequest && finalContent.length > 50) {
-        insight = {
+      // 验证并构建 InsightData
+      if (insightData && validateInsightData(insightData)) {
+        // 构建基础对象
+        const builtInsight: InsightData = {
           id: `insight_${Date.now()}`,
-          type: 'strategy_create',
-          target: {
-            strategy_id: 'new',
-            name: '自定义策略',
-            symbol: 'BTC/USDT',
-          },
-          params: [
-            {
-              key: 'risk_level',
-              label: '风险等级',
-              type: 'heatmap_slider',
-              value: 50,
-              level: 1,
-              config: {
-                min: 0, max: 100, step: 1,
-                heatmap_zones: [
-                  { start: 0, end: 33, color: 'green', label: '保守' },
-                  { start: 33, end: 66, color: 'gray', label: '中性' },
-                  { start: 66, end: 100, color: 'red', label: '激进' },
-                ],
-              },
-              description: '选择交易风险偏好',
-            },
-            {
-              key: 'position_size',
-              label: '仓位大小',
-              type: 'slider',
-              value: 10,
-              level: 1,
-              config: { min: 1, max: 50, step: 1, unit: '%', precision: 0 },
-              description: '单笔交易仓位占总资金比例',
-            },
-            {
-              key: 'stop_loss',
-              label: '止损点',
-              type: 'slider',
-              value: 3,
-              level: 1,
-              config: { min: 0.5, max: 10, step: 0.5, unit: '%', precision: 1 },
-            },
-            {
-              key: 'take_profit',
-              label: '止盈点',
-              type: 'slider',
-              value: 9,
-              level: 1,
-              config: { min: 1, max: 20, step: 0.5, unit: '%', precision: 1 },
-            },
-          ],
-          impact: {
-            metrics: [
-              { key: 'expectedReturn', label: '预期收益', value: 12.5, unit: '%', trend: 'up' },
-              { key: 'winRate', label: '胜率', value: 68, unit: '%', trend: 'up' },
-              { key: 'maxDrawdown', label: '最大回撤', value: 6.2, unit: '%', trend: 'down' },
-            ],
-            confidence: 0.75,
-            sample_size: 90,
-          },
-          explanation: finalContent,
+          type: insightData.type as InsightData['type'],
+          params: (insightData.params as InsightParam[]) || [],
+          explanation: textContent,
           created_at: new Date().toISOString(),
         }
+
+        // 有条件添加可选字段
+        if (insightData.target) {
+          Object.assign(builtInsight, { target: insightData.target })
+        }
+        if (insightData.impact) {
+          Object.assign(builtInsight, { impact: insightData.impact })
+        }
+        if (insightData.actions) {
+          Object.assign(builtInsight, { actions: insightData.actions })
+        }
+
+        insight = builtInsight
+        console.log('[A2UI] InsightData extracted:', builtInsight.type, builtInsight.params?.length, 'params')
       }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: finalContent,
+        content: textContent, // 使用去掉 JSON 块的纯文本
         timestamp: Date.now(),
         insight,
         insightStatus: insight ? 'pending' : undefined,
