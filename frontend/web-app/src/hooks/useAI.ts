@@ -41,8 +41,8 @@ interface UseAIOptions {
 interface UseAIReturn {
   /** 发送消息 */
   send: (content: string, options?: SendOptions) => Promise<AIResponse | null>
-  /** 发送消息（流式） */
-  sendStream: (content: string, options?: SendOptions) => Promise<void>
+  /** 发送消息（流式），返回完整响应内容 */
+  sendStream: (content: string, options?: SendOptions) => Promise<string>
   /** 取消当前请求 */
   cancel: () => void
   /** 清除对话历史 */
@@ -258,15 +258,16 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
   )
 
   // Send message (streaming) - 通过后端 API 使用 SSE
+  // 返回完整的 AI 响应内容
   const sendStream = useCallback(
-    async (content: string, sendOptions: SendOptions = {}): Promise<void> => {
+    async (content: string, sendOptions: SendOptions = {}): Promise<string> => {
       // 检查是否可以使用 AI
       if (!canUseAI) {
         const errorMsg = disabledReason || '无法使用 AI 服务'
         setErrorLocal(errorMsg)
         setError(errorMsg)
         onError?.(new Error(errorMsg))
-        return
+        return ''
       }
 
       const model = getModel(sendOptions.model)
@@ -417,15 +418,19 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
           latency: 0,
           finishReason: 'stop'
         })
+
+        // 返回完整内容供调用方使用
+        return fullContent
       } catch (err) {
         if ((err as Error).name === 'AbortError') {
           // 用户取消，不作为错误处理
-          return
+          return ''
         }
         const error = err as Error
         setErrorLocal(error.message)
         setError(error.message)
         onError?.(error)
+        return ''
       } finally {
         setIsLoadingLocal(false)
         setLoading(false)

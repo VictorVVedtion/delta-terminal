@@ -630,13 +630,15 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         marketData: { btcPrice: 42000, ethPrice: 2200 }
       })
 
-      await sendStream(userInput, {
+      const finalContent = await sendStream(userInput, {
         systemPrompt,
         context: { marketData: { btcPrice: 42000, ethPrice: 2200 } }
       })
 
-      // 获取最终内容
-      const finalContent = streamContent || '抱歉，请稍后再试。'
+      // 检查是否有有效内容
+      if (!finalContent) {
+        throw new Error('AI 未返回有效内容')
+      }
 
       // 从 AI 响应中提取 InsightData (A2UI 核心逻辑)
       const { textContent, insightData } = extractInsightData(finalContent)
