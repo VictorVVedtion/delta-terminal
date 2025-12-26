@@ -9,14 +9,14 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Deploy Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to the strategies page
-    await page.goto('/strategies')
+    // Navigate to the chat page (where AI chat triggers deploy)
+    await page.goto('/chat')
     await page.waitForLoadState('networkidle')
   })
 
-  test('should display strategies page', async ({ page }) => {
-    // Verify we're on the strategies page
-    await expect(page).toHaveURL(/strategies/)
+  test('should display chat page with AI interface', async ({ page }) => {
+    // Verify we're on the chat page
+    await expect(page).toHaveURL(/chat/)
 
     // Check for main layout elements
     const mainContent = page.locator('main, [role="main"]')
@@ -211,7 +211,7 @@ test.describe('Deploy Flow', () => {
 
 test.describe('Deploy Canvas - Live Mode', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/strategies')
+    await page.goto('/chat')
     await page.waitForLoadState('networkidle')
   })
 
@@ -283,7 +283,7 @@ test.describe('Deploy Canvas - Live Mode', () => {
 
 test.describe('Deploy Canvas - Risk Settings', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/strategies')
+    await page.goto('/chat')
     await page.waitForLoadState('networkidle')
   })
 

@@ -17,6 +17,7 @@ import type {
 } from '@/types/deployment'
 import { DeploymentError, isDeploymentError } from '@/types/deployment'
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
+import { usePaperTradingStore } from '@/store/paperTrading'
 
 // =============================================================================
 // Types
@@ -243,12 +244,21 @@ export function useDeployment(options: UseDeploymentOptions): UseDeploymentRetur
           currentStep: config.mode === 'paper' ? '启动 Paper 模式...' : '启动 Live 模式...',
         }))
 
-        // Call API
+        // Call API or local store
         let result: DeploymentResult
         if (config.mode === 'paper') {
-          result = await apiClient.deployPaper(strategyId, {
-            virtualCapital: config.capital,
-          })
+          // 使用本地 Paper Trading Store
+          const paperStore = usePaperTradingStore.getState()
+          const accountId = paperStore.initAccount(strategyId, config.capital)
+
+          result = {
+            success: true,
+            agentId: strategyId,
+            deploymentId: `paper_${accountId}`,
+            mode: 'paper',
+            message: 'Paper Trading 已启动',
+            deployedAt: new Date().toISOString(),
+          }
         } else {
           if (!config.confirmationToken) {
             throw new DeploymentError(

@@ -3,7 +3,7 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Send, Bot, User, Sparkles } from 'lucide-react'
+import { Send, Bot, User, Settings2, ChevronDown, Check } from 'lucide-react'
 import { InsightMessage } from '@/components/insight'
 import { CanvasPanel } from '@/components/canvas'
 import { DeployCanvas } from '@/components/canvas/DeployCanvas'
@@ -15,6 +15,8 @@ import { useBacktest } from '@/hooks/useBacktest'
 import { useMonitor } from '@/hooks/useMonitor'
 import { useChat } from '@/hooks/useAI'
 import { AIConfigPanel } from '@/components/ai'
+import { useAIStore } from '@/store/ai'
+import { SIMPLE_PRESETS, type SimplePreset } from '@/types/ai'
 import { generateSystemPrompt, extractInsightData, validateInsightData } from '@/lib/prompts/strategy-assistant'
 import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
 import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } from '@/types/insight'
@@ -119,6 +121,12 @@ export function ChatInterface({
 
   // AI 配置面板状态
   const [configPanelOpen, setConfigPanelOpen] = React.useState(false)
+  const [presetMenuOpen, setPresetMenuOpen] = React.useState(false)
+
+  // AI Store - 模型切换
+  const { config, setSimplePreset } = useAIStore()
+  const currentPreset = config.simple.preset
+  const currentPresetConfig = SIMPLE_PRESETS[currentPreset]
 
   // 组合加载状态
   const isThinking = isAILoading
@@ -710,14 +718,74 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {/* Chat Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="font-semibold">Delta AI 策略助手</h1>
-            <p className="text-xs text-muted-foreground">
-              使用 AI 创建和管理你的交易策略
-            </p>
+          <div className="flex items-center gap-2">
+            <h1 className="font-semibold">Delta AI</h1>
+            {/* 模型快速切换下拉菜单 */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPresetMenuOpen(!presetMenuOpen)}
+                className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+              >
+                <span className="text-sm">{currentPresetConfig.icon}</span>
+                <span className="text-xs">{currentPresetConfig.name}</span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+              {presetMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setPresetMenuOpen(false)}
+                  />
+                  <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-popover border border-border rounded-lg shadow-lg py-1">
+                    <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">
+                      选择 AI 模型预设
+                    </div>
+                    {(Object.keys(SIMPLE_PRESETS) as SimplePreset[]).map((preset) => {
+                      const presetConfig = SIMPLE_PRESETS[preset]
+                      const isActive = preset === currentPreset
+                      return (
+                        <button
+                          key={preset}
+                          onClick={() => {
+                            setSimplePreset(preset)
+                            setPresetMenuOpen(false)
+                          }}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-secondary/50 transition-colors',
+                            isActive && 'bg-primary/10'
+                          )}
+                        >
+                          <span className="text-lg">{presetConfig.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{presetConfig.name}</span>
+                              {isActive && <Check className="h-3 w-3 text-primary" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {presetConfig.defaultModel.split('/')[1]}
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                    <div className="border-t border-border mt-1 pt-1">
+                      <button
+                        onClick={() => {
+                          setPresetMenuOpen(false)
+                          setConfigPanelOpen(true)
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-muted-foreground"
+                      >
+                        <Settings2 className="h-4 w-4" />
+                        <span className="text-sm">高级设置...</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -728,14 +796,14 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
             className="h-8 w-8"
             title="AI 设置"
           >
-            <Sparkles className="h-4 w-4" />
+            <Settings2 className="h-4 w-4" />
           </Button>
           <Badge variant={canUseAI ? 'success' : 'secondary'} className="gap-1">
             <div className={cn(
               'h-2 w-2 rounded-full',
               canUseAI ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
             )} />
-            {canUseAI ? (currentModel?.split('/')[1] || '在线') : (disabledReason || '不可用')}
+            {canUseAI ? (currentModel?.split('/')[1] || currentPresetConfig.defaultModel.split('/')[1]) : (disabledReason || '不可用')}
           </Badge>
         </div>
       </header>

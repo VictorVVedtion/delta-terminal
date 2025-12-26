@@ -9,8 +9,8 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Backtest Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to the strategies page (where AI chat is located)
-    await page.goto('/strategies')
+    // Navigate to the chat page (where AI chat is located)
+    await page.goto('/chat')
     // Wait for page to be ready
     await page.waitForLoadState('networkidle')
   })
@@ -33,9 +33,10 @@ test.describe('Backtest Flow', () => {
     // Wait for AI response (may take some time)
     await page.waitForTimeout(3000)
 
-    // Check for AI response or insight data
-    const responseArea = page.locator('[data-testid="chat-messages"], .chat-messages, [role="log"]')
-    await expect(responseArea).toBeVisible({ timeout: 15000 })
+    // Check for AI response - look for message bubbles
+    const messageBubble = page.locator('.rounded-2xl, [class*="message"]').first()
+    // Message should appear after sending
+    await expect(messageBubble).toBeVisible({ timeout: 15000 })
   })
 
   test('should display BacktestCanvas when backtest is triggered', async ({ page }) => {

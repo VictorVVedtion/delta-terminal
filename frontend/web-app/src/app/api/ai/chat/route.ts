@@ -6,10 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { AIRequest, AIResponse, AI_MODELS } from '@/types/ai'
+import { AIRequest, AIResponse, AI_MODELS, SIMPLE_PRESETS } from '@/types/ai'
 
 const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+
+// 使用前端默认预设的模型作为后备默认值
+const DEFAULT_MODEL = SIMPLE_PRESETS.balanced.defaultModel
 
 // POST /api/ai/chat - 发送 AI 对话请求
 export async function POST(request: NextRequest) {
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
     const body: AIRequest = await request.json()
     const {
       messages,
-      model = 'deepseek/deepseek-v3.2',
+      model = DEFAULT_MODEL, // 使用前端配置的默认模型
       maxTokens = 4096,
       temperature = 0.7,
     } = body

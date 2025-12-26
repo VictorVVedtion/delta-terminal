@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { A2UILayout } from '@/components/layout/A2UILayout'
 import { Button } from '@/components/ui/button'
 import { InsightCard } from '@/components/insight/InsightCard'
@@ -8,8 +9,17 @@ import { ResearchProgress, ResearchReportCard } from '@/components/research'
 import { useModeStore, MODE_CONFIGS } from '@/store/mode'
 import { useResearchStore } from '@/store/research'
 import { useInsightStore } from '@/store/insight'
+import { useAIStore } from '@/store/ai'
 import { cn } from '@/lib/utils'
-import { Send, Sparkles, Mic, Paperclip, MoreHorizontal, FlaskConical } from 'lucide-react'
+import { Send, Sparkles, Mic, Paperclip, MoreHorizontal, FlaskConical, ChevronDown, Check, Settings2 } from 'lucide-react'
+import { SIMPLE_PRESETS, AI_MODELS, type SimplePreset } from '@/types/ai'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type { InsightData, InsightParam, InsightCardStatus, ImpactMetricKey } from '@/types/insight'
 import type { ResearchReport, ResearchStepId } from '@/types/research'
 
@@ -280,8 +290,17 @@ function generateMockInsight(userMessage: string): InsightData {
 // =============================================================================
 
 export default function ChatPage({ onExpandInsight }: ChatPageProps) {
+  const router = useRouter()
   const { currentMode } = useModeStore()
   const modeConfig = MODE_CONFIGS[currentMode]
+
+  // AI Store - 实际的模型选择
+  const { config, setSimplePreset, setCustomModel } = useAIStore()
+  const currentPreset = config.simple.preset
+  const currentPresetConfig = SIMPLE_PRESETS[currentPreset]
+  // 获取实际使用的模型信息
+  const actualModelId = config.simple.customModel || currentPresetConfig.defaultModel
+  const actualModelInfo = AI_MODELS[actualModelId]
 
   // Research store
   const {
@@ -545,11 +564,75 @@ export default function ChatPage({ onExpandInsight }: ChatPageProps) {
             <div>
               <h1 className="text-sm font-semibold text-foreground">{persona.name}</h1>
               <p className="text-xs text-muted-foreground">
-                {modeConfig.icon} {modeConfig.name} · {modeConfig.model}
+                {modeConfig.icon} {modeConfig.name}
               </p>
             </div>
           </div>
+
+          {/* 模型快速切换器 - 显眼位置 */}
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 gap-2 bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/30"
+                >
+                  <span className="text-base">{currentPresetConfig.icon}</span>
+                  <span className="text-xs font-medium">
+                    {actualModelInfo?.name || currentPresetConfig.name}
+                  </span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  选择 AI 模型预设
+                </div>
+                <DropdownMenuSeparator />
+                {Object.entries(SIMPLE_PRESETS).map(([key, preset]) => {
+                  const presetModelInfo = AI_MODELS[preset.defaultModel]
+                  return (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => {
+                        setSimplePreset(key as SimplePreset)
+                        setCustomModel(undefined as unknown as string) // 清除自定义模型
+                      }}
+                      className="flex items-start gap-3 py-2.5 cursor-pointer"
+                    >
+                      <span className="text-lg mt-0.5">{preset.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{preset.name}</span>
+                          {currentPreset === key && !config.simple.customModel && (
+                            <Check className="h-3.5 w-3.5 text-primary" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {presetModelInfo?.name || preset.defaultModel}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                          {preset.description}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        ~${preset.estimatedCostPerCall.toFixed(3)}
+                      </span>
+                    </DropdownMenuItem>
+                  )
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => router.push('/settings?tab=ai')}
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  <span>高级模型设置</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {isResearchMode && currentSession && currentSession.status === 'researching' && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
                 <FlaskConical className="h-3.5 w-3.5 text-purple-400 animate-pulse" />
