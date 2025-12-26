@@ -1,5 +1,14 @@
 """FastAPI 主应用入口"""
 
+# 首先加载环境变量
+from pathlib import Path
+from dotenv import load_dotenv
+
+# 加载 .env.local 和 .env
+env_dir = Path(__file__).parent.parent
+load_dotenv(env_dir / ".env.local")
+load_dotenv(env_dir / ".env")
+
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -27,17 +36,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     # 启动时
     logger.info("Starting NLP Processor Service...")
     logger.info(f"Environment: {settings.environment}")
-    logger.info(f"Claude Model: {settings.claude_model}")
+    logger.info(f"LLM Model: {settings.llm_model}")
 
     # 验证 API 密钥
     try:
-        from .services.llm_service import llm_service
+        from .services.llm_service import get_llm_service
 
+        llm_service = get_llm_service()
         is_valid = await llm_service.validate_api_key()
         if is_valid:
-            logger.info("Anthropic API key validated successfully")
+            logger.info("OpenRouter API key validated successfully")
         else:
-            logger.error("Anthropic API key validation failed")
+            logger.error("OpenRouter API key validation failed")
     except Exception as e:
         logger.error(f"Error validating API key: {e}")
 
@@ -75,7 +85,7 @@ async def health_check() -> HealthResponse:
         status="healthy",
         version="0.1.0",
         dependencies={
-            "anthropic": "ok",
+            "openrouter": "ok",
             "langchain": "ok",
         },
     )

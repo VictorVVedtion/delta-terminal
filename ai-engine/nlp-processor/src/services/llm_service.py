@@ -1,11 +1,13 @@
-"""LLM 服务 - Claude API 集成"""
+"""LLM 服务 - OpenRouter API 集成
+
+使用 OpenRouter 统一 API 调用各种 LLM 模型（Claude, GPT 等）
+"""
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from anthropic import Anthropic, AsyncAnthropic
-from anthropic.types import Message as ClaudeMessage
+import httpx
 
 from ..config import settings
 
@@ -13,15 +15,30 @@ logger = logging.getLogger(__name__)
 
 
 class LLMService:
-    """LLM 服务类"""
+    """LLM 服务类 - OpenRouter 实现"""
 
     def __init__(self) -> None:
         """初始化 LLM 服务"""
-        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-        self.sync_client = Anthropic(api_key=settings.anthropic_api_key)
-        self.model = settings.claude_model
-        self.max_tokens = settings.claude_max_tokens
-        self.temperature = settings.claude_temperature
+        self.api_url = settings.openrouter_api_url
+        self.api_key = settings.openrouter_api_key
+        self.model = settings.llm_model
+        self.max_tokens = settings.llm_max_tokens
+        self.temperature = settings.llm_temperature
+
+        # HTTP 客户端配置
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://delta-terminal.app",
+            "X-Title": "Delta Terminal NLP Processor",
+        }
+
+        # 验证 API Key 配置
+        if not self.api_key:
+            logger.error("OpenRouter API Key 未配置")
+            raise ValueError("OPENROUTER_API_KEY 环境变量未设置")
+
+        logger.info(f"LLM 服务初始化完成: model={self.model}")
 
     async def generate_response(
         self,
@@ -45,25 +62,37 @@ class LLMService:
         try:
             logger.info(f"Generating response with {len(messages)} messages")
 
-            response: ClaudeMessage = await self.client.messages.create(
-                model=self.model,
-                max_tokens=max_tokens or self.max_tokens,
-                temperature=temperature or self.temperature,
-                system=system or "",
-                messages=messages,
-            )
+            # 构建请求体 (OpenAI 兼容格式)
+            request_body: Dict[str, Any] = {
+                "model": self.model,
+                "messages": self._build_messages(messages, system),
+                "max_tokens": max_tokens or self.max_tokens,
+                "temperature": temperature if temperature is not None else self.temperature,
+            }
 
-            # 提取文本内容
-            if response.content and len(response.content) > 0:
-                content = response.content[0]
-                if hasattr(content, "text"):
-                    result = content.text
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    f"{self.api_url}/chat/completions",
+                    headers=self.headers,
+                    json=request_body,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            # 提取响应内容
+            if data.get("choices") and len(data["choices"]) > 0:
+                choice = data["choices"][0]
+                if choice.get("message") and choice["message"].get("content"):
+                    result = choice["message"]["content"]
                     logger.info(f"Generated response length: {len(result)}")
                     return result
 
-            logger.warning("Empty response from Claude API")
+            logger.warning("Empty response from OpenRouter API")
             return ""
 
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from OpenRouter: {e.response.status_code} - {e.response.text}")
+            raise
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             raise
@@ -85,6 +114,7 @@ class LLMService:
         Returns:
             解析后的 JSON 对象
         """
+        response_text = ""
         try:
             # 在系统提示中强调返回 JSON
             json_system = (system or "") + "\n\n请确保返回有效的 JSON 格式。"
@@ -120,7 +150,7 @@ class LLMService:
         messages: List[Dict[str, str]],
         system: Optional[str] = None,
         temperature: Optional[float] = None,
-    ) -> Any:
+    ) -> AsyncGenerator[str, None]:
         """
         生成流式响应
 
@@ -135,21 +165,74 @@ class LLMService:
         try:
             logger.info("Starting streaming response")
 
-            async with self.client.messages.stream(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                temperature=temperature or self.temperature,
-                system=system or "",
-                messages=messages,
-            ) as stream:
-                async for text in stream.text_stream:
-                    yield text
+            # 构建请求体
+            request_body: Dict[str, Any] = {
+                "model": self.model,
+                "messages": self._build_messages(messages, system),
+                "max_tokens": self.max_tokens,
+                "temperature": temperature if temperature is not None else self.temperature,
+                "stream": True,
+            }
+
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{self.api_url}/chat/completions",
+                    headers=self.headers,
+                    json=request_body,
+                ) as response:
+                    response.raise_for_status()
+
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        if line.startswith("data: "):
+                            data_str = line[6:]  # 移除 "data: " 前缀
+                            if data_str.strip() == "[DONE]":
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                if data.get("choices") and len(data["choices"]) > 0:
+                                    delta = data["choices"][0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        yield content
+                            except json.JSONDecodeError:
+                                logger.warning(f"Failed to parse streaming data: {data_str}")
+                                continue
 
             logger.info("Streaming response completed")
 
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error in streaming: {e.response.status_code}")
+            raise
         except Exception as e:
             logger.error(f"Error in streaming response: {e}")
             raise
+
+    def _build_messages(
+        self, messages: List[Dict[str, str]], system: Optional[str]
+    ) -> List[Dict[str, str]]:
+        """
+        构建消息列表（OpenAI 格式）
+
+        Args:
+            messages: 用户消息列表
+            system: 系统提示词
+
+        Returns:
+            完整的消息列表
+        """
+        result = []
+
+        # 添加系统消息
+        if system:
+            result.append({"role": "system", "content": system})
+
+        # 添加对话消息
+        result.extend(messages)
+
+        return result
 
     async def count_tokens(self, text: str) -> int:
         """
@@ -183,11 +266,44 @@ class LLMService:
             logger.error(f"API key validation failed: {e}")
             return False
 
+    async def list_available_models(self) -> List[Dict[str, Any]]:
+        """
+        获取 OpenRouter 可用模型列表
 
-# 全局 LLM 服务实例
-llm_service = LLMService()
+        Returns:
+            模型列表
+        """
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.api_url}/models",
+                    headers=self.headers,
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data.get("data", [])
+        except Exception as e:
+            logger.error(f"Failed to list models: {e}")
+            return []
 
 
-async def get_llm_service() -> LLMService:
-    """获取 LLM 服务实例"""
-    return llm_service
+# 延迟初始化的全局 LLM 服务实例
+_llm_service: Optional[LLMService] = None
+
+
+def get_llm_service() -> LLMService:
+    """获取 LLM 服务实例（懒加载单例）"""
+    global _llm_service
+    if _llm_service is None:
+        _llm_service = LLMService()
+    return _llm_service
+
+
+# 为了向后兼容，提供异步版本
+async def get_llm_service_async() -> LLMService:
+    """获取 LLM 服务实例（异步版本）"""
+    return get_llm_service()
+
+
+# 向后兼容别名
+llm_service = None  # 将在首次调用 get_llm_service() 时初始化

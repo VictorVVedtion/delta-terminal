@@ -26,14 +26,19 @@ class Settings(BaseSettings):
     # 环境配置
     environment: str = Field(default="development", description="运行环境")
 
-    # Claude API 配置
-    anthropic_api_key: str = Field(description="Anthropic API 密钥")
-    claude_model: str = Field(
-        default="claude-3-5-sonnet-20241022",
-        description="Claude 模型名称",
+    # OpenRouter API 配置 (替代直接 Anthropic 调用)
+    openrouter_api_key: str = Field(description="OpenRouter API 密钥")
+    openrouter_api_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        description="OpenRouter API URL",
     )
-    claude_max_tokens: int = Field(default=4096, description="最大 token 数")
-    claude_temperature: float = Field(default=0.7, description="温度参数")
+    llm_model: str = Field(
+        default="anthropic/claude-sonnet-4.5",
+        description="LLM 模型名称 (OpenRouter 格式)",
+    )
+    llm_max_tokens: int = Field(default=4096, description="最大 token 数")
+    llm_temperature: float = Field(default=0.7, description="温度参数")
+
 
     # Redis 配置
     redis_host: str = Field(default="localhost", description="Redis 主机")

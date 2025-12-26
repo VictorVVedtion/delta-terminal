@@ -1,8 +1,9 @@
 /**
  * AI Chat Stream API Route (SSE Streaming)
  *
- * 平台代理 AI 调用 - 使用平台的 OpenRouter API Key
- * 支持流式响应和真实思考步骤提取
+ * 支持两种模式:
+ * 1. 后端编排模式 (推荐) - 通过 AI_ORCHESTRATOR_URL 转发到后端 AI Orchestrator 服务
+ * 2. 直接调用模式 - 直接调用 OpenRouter API (当后端不可用时的降级方案)
  *
  * 思考步骤提取方式:
  * 1. 对于支持 extended thinking 的模型，通过 include_reasoning 获取真实推理过程
@@ -13,11 +14,57 @@
 import { NextRequest } from 'next/server'
 import { AIRequest, AIStreamChunk, AI_MODELS, ThinkingStep, SIMPLE_PRESETS } from '@/types/ai'
 
+// AI Orchestrator 后端服务地址 (优先使用)
+const AI_ORCHESTRATOR_URL = process.env.AI_ORCHESTRATOR_URL
+
+// OpenRouter 直接调用配置 (降级方案)
 const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 
 // 使用前端默认预设的模型作为后备默认值
 const DEFAULT_MODEL = SIMPLE_PRESETS.balanced.defaultModel
+
+// =============================================================================
+// 后端代理函数
+// =============================================================================
+
+/**
+ * 代理请求到后端 AI Orchestrator 服务
+ * 使用预解析的 body 避免重复读取 request.json()
+ */
+async function proxyToOrchestratorWithBody(orchestratorUrl: string, body: AIRequest): Promise<Response> {
+  const orchestratorResponse = await fetch(`${orchestratorUrl}/api/ai/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // TODO: 转发 JWT token 进行身份验证
+      // 'Authorization': request.headers.get('Authorization') || '',
+    },
+    body: JSON.stringify({
+      messages: body.messages,
+      model: body.model,
+      taskType: body.taskType,
+      maxTokens: body.maxTokens,
+      temperature: body.temperature,
+      streaming: true,
+    }),
+  })
+
+  if (!orchestratorResponse.ok) {
+    // 如果后端返回错误，抛出异常触发降级
+    const errorText = await orchestratorResponse.text().catch(() => '')
+    throw new Error(`Orchestrator error: ${orchestratorResponse.status} - ${errorText}`)
+  }
+
+  // 直接转发 SSE 响应
+  return new Response(orchestratorResponse.body, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
+}
 
 // =============================================================================
 // Thinking Step Extractor
@@ -210,10 +257,38 @@ class ThinkingStepExtractor {
 
 // POST /api/ai/chat/stream - 发送 AI 对话请求（流式）
 export async function POST(request: NextRequest) {
-  // 每次请求时重新读取环境变量（确保使用最新值，避免被系统环境变量覆盖）
+  // 每次请求时重新读取环境变量
+  const orchestratorUrl = process.env.AI_ORCHESTRATOR_URL
   const apiKey = process.env.OPENROUTER_API_KEY
   const apiUrl = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
 
+  // 先读取请求体（只能读取一次）
+  let body: AIRequest
+  try {
+    body = await request.json()
+  } catch {
+    return new Response(
+      JSON.stringify({ error: '无效的请求格式' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // ==========================================================================
+  // 模式 1: 后端编排服务 (优先)
+  // ==========================================================================
+  if (orchestratorUrl) {
+    try {
+      console.log('[AI Stream] Using AI Orchestrator backend:', orchestratorUrl)
+      return await proxyToOrchestratorWithBody(orchestratorUrl, body)
+    } catch (error) {
+      console.warn('[AI Stream] Orchestrator failed, falling back to direct OpenRouter:', error)
+      // 降级到直接调用模式
+    }
+  }
+
+  // ==========================================================================
+  // 模式 2: 直接调用 OpenRouter (降级方案)
+  // ==========================================================================
   try {
     // 检查平台 API Key 配置
     if (!apiKey || apiKey === 'your-openrouter-api-key-here') {
@@ -224,8 +299,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 解析请求
-    const body: AIRequest = await request.json()
+    // 使用已解析的 body
     const {
       messages,
       model = DEFAULT_MODEL, // 使用前端配置的默认模型
@@ -298,15 +372,8 @@ export async function POST(request: NextRequest) {
             stream: true
           }
 
-          // 为支持思考的模型添加 reasoning 相关参数
-          if (supportsThinking) {
-            // OpenRouter 支持通过 stream_options 获取 reasoning
-            requestBody.stream_options = {
-              include_usage: true
-            }
-            // 注意：reasoning 参数格式因模型而异，目前通过模拟实现思考步骤
-            // 不再手动设置 reasoning 参数，避免 API 兼容性问题
-          }
+          // 注意：不添加额外参数（如 stream_options、reasoning）
+          // 这些参数在不同模型上有兼容性问题，思考步骤通过内容分析模拟实现
 
           // 调用 OpenRouter API（流式）
           const openRouterResponse = await fetch(`${apiUrl}/chat/completions`, {

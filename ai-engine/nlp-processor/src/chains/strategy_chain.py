@@ -1,9 +1,9 @@
-"""LangChain 策略处理链"""
+"""LangChain 策略处理链 - OpenRouter 集成"""
 
 import logging
 from typing import Any, Dict, List, Optional
 
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -19,15 +19,21 @@ logger = logging.getLogger(__name__)
 
 
 class StrategyChain:
-    """策略处理链"""
+    """策略处理链 - 使用 OpenRouter API"""
 
     def __init__(self) -> None:
         """初始化策略链"""
-        self.llm = ChatAnthropic(
-            model=settings.claude_model,
-            anthropic_api_key=settings.anthropic_api_key,
-            max_tokens=settings.claude_max_tokens,
-            temperature=settings.claude_temperature,
+        # 使用 LangChain OpenAI 兼容接口连接 OpenRouter
+        self.llm = ChatOpenAI(
+            model=settings.llm_model,
+            openai_api_key=settings.openrouter_api_key,
+            openai_api_base=settings.openrouter_api_url,
+            max_tokens=settings.llm_max_tokens,
+            temperature=settings.llm_temperature,
+            default_headers={
+                "HTTP-Referer": "https://delta-terminal.app",
+                "X-Title": "Delta Terminal Strategy Chain",
+            },
         )
         self.json_parser = JsonOutputParser()
 
@@ -265,10 +271,18 @@ class StrategyChain:
             }
 
 
-# 全局策略链实例
-strategy_chain = StrategyChain()
+# 延迟初始化的全局策略链实例
+_strategy_chain: Optional[StrategyChain] = None
+
+
+def get_strategy_chain_sync() -> StrategyChain:
+    """获取策略链实例（同步版本）"""
+    global _strategy_chain
+    if _strategy_chain is None:
+        _strategy_chain = StrategyChain()
+    return _strategy_chain
 
 
 async def get_strategy_chain() -> StrategyChain:
     """获取策略链实例"""
-    return strategy_chain
+    return get_strategy_chain_sync()

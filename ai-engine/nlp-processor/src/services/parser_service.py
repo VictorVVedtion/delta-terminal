@@ -248,5 +248,5 @@ class ParserService:
 
 async def get_parser_service() -> ParserService:
     """获取解析服务实例"""
-    llm_service = await get_llm_service()
+    llm_service = get_llm_service()
     return ParserService(llm_service)

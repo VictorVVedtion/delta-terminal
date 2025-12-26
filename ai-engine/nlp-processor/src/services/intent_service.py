@@ -200,5 +200,5 @@ class IntentService:
 
 async def get_intent_service() -> IntentService:
     """获取意图服务实例"""
-    llm_service = await get_llm_service()
+    llm_service = get_llm_service()
     return IntentService(llm_service)

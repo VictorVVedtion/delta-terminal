@@ -540,5 +540,5 @@ class InsightGeneratorService:
 
 async def get_insight_service() -> InsightGeneratorService:
     """Get insight generator service instance"""
-    llm_service = await get_llm_service()
+    llm_service = get_llm_service()
     return InsightGeneratorService(llm_service)
