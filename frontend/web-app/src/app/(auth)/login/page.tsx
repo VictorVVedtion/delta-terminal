@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuthStore } from '@/store/auth'
 import { apiClient } from '@/lib/api'
+import { MetaMaskIcon, CoinbaseIcon, WalletConnectIcon } from '@/components/icons/WalletIcons'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -27,7 +28,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [step, setStep] = useState<'connect' | 'sign' | 'verifying'>('connect')
-  const [autoSignAttempted, setAutoSignAttempted] = useState(false) // 防止无限重试
+  const [autoSignAttempted, setAutoSignAttempted] = useState(false)
 
   // 已登录则跳转
   useEffect(() => {
@@ -45,24 +46,14 @@ export default function LoginPage() {
     setStep('sign')
 
     try {
-      // 1. 获取 Nonce
       const { message } = await apiClient.getNonce(address)
-
-      // 2. 请求签名
       setStep('verifying')
       const signature = await signMessageAsync({ message })
-
-      // 3. 验证签名并登录
       const response = await apiClient.walletLogin(address, signature)
-
-      // 4. 保存认证状态
       login(response.user, response.tokens.accessToken, response.tokens.refreshToken)
-
-      // 5. 跳转到仪表盘
       router.push('/dashboard')
     } catch (err: unknown) {
       const error = err as Error
-      // 检查是否是用户取消签名
       if (error.message?.includes('User rejected') || error.message?.includes('user rejected')) {
         setError('签名已取消')
       } else {
@@ -82,117 +73,90 @@ export default function LoginPage() {
     }
   }, [isConnected, address, loading, step, isAuthenticated, autoSignAttempted, handleSignIn])
 
-  // 断开连接
   const handleDisconnect = () => {
     disconnect()
     setStep('connect')
     setError('')
-    setAutoSignAttempted(false) // 重置自动签名标志
+    setAutoSignAttempted(false)
   }
 
   return (
-    <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur w-full max-w-md">
-      <CardHeader className="space-y-1 pb-4">
-        <CardTitle className="text-2xl text-center">欢迎来到 Delta Terminal</CardTitle>
-        <p className="text-sm text-muted-foreground text-center">
-          连接钱包开始交易
+    <Card className="border-[hsl(var(--rb-cyan))]/30 shadow-2xl bg-black/40 backdrop-blur-xl w-full max-w-md relative overflow-hidden">
+      {/* Decorative localized glow */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[hsl(var(--rb-cyan))] to-transparent opacity-50" />
+
+      <CardHeader className="space-y-2 pb-6 text-center">
+        <div className="mx-auto w-12 h-12 rounded-xl bg-[hsl(var(--rb-cyan))]/10 flex items-center justify-center mb-2 animate-pulse">
+          <svg className="w-6 h-6 text-[hsl(var(--rb-cyan))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+        </div>
+        <CardTitle className="text-2xl font-bold tracking-tight">IDENTITY UPLINK</CardTitle>
+        <p className="text-xs text-[hsl(var(--rb-cyan))]/70 font-mono tracking-widest uppercase">
+          Secure Terminal Access
         </p>
       </CardHeader>
 
       <CardContent className="space-y-6">
         {error && (
-          <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+          <div className="p-3 text-sm text-[hsl(var(--rb-red))] bg-[hsl(var(--rb-red))]/10 border border-[hsl(var(--rb-red))]/20 rounded-md text-center">
             {error}
           </div>
         )}
 
-        {/* 步骤指示器 */}
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <div className={`flex items-center gap-1.5 ${step === 'connect' ? 'text-primary' : ''}`}>
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-              step === 'connect' ? 'bg-primary text-primary-foreground' :
-              isConnected ? 'bg-green-500/20 text-green-500' : 'bg-muted'
-            }`}>
-              {isConnected ? '✓' : '1'}
-            </div>
-            <span>连接钱包</span>
-          </div>
-          <div className="w-8 h-px bg-border" />
-          <div className={`flex items-center gap-1.5 ${step === 'sign' || step === 'verifying' ? 'text-primary' : ''}`}>
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-              step === 'sign' || step === 'verifying' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-            }`}>
-              2
-            </div>
-            <span>签名验证</span>
-          </div>
-        </div>
-
-        {/* 钱包连接/签名区域 */}
-        <div className="flex flex-col items-center gap-4 py-4">
+        <div className="flex flex-col items-center gap-6 py-2">
           {!isConnected ? (
-            // 未连接：显示连接按钮
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-4 w-full">
               <ConnectButton.Custom>
                 {({ openConnectModal }) => (
                   <Button
                     onClick={openConnectModal}
                     size="lg"
-                    className="w-full min-w-[200px]"
+                    className="w-full relative group overflow-hidden bg-[hsl(var(--rb-cyan))]/10 hover:bg-[hsl(var(--rb-cyan))]/20 text-[hsl(var(--rb-cyan))] border border-[hsl(var(--rb-cyan))]/50 transition-all duration-300"
                   >
-                    <WalletIcon className="mr-2 h-5 w-5" />
-                    连接钱包
+                    <span className="relative z-10 flex items-center justify-center gap-2 font-mono">
+                      <WalletIcon className="w-4 h-4" />
+                      INITIALIZE CONNECTION
+                    </span>
+                    <div className="absolute inset-0 bg-[hsl(var(--rb-cyan))] opacity-0 group-hover:opacity-10 transition-opacity" />
                   </Button>
                 )}
               </ConnectButton.Custom>
-              <p className="text-xs text-muted-foreground text-center">
-                支持 MetaMask, WalletConnect, Coinbase Wallet 等
-              </p>
+
+              <div className="grid grid-cols-3 gap-4 w-full px-4 pt-2 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                {/* Replaced generic text with Icon placeholders for visual impact */}
+                <div className="flex justify-center"><MetaMaskIcon className="w-8 h-8" /></div>
+                <div className="flex justify-center"><CoinbaseIcon className="w-8 h-8" /></div>
+                <div className="flex justify-center"><WalletConnectIcon className="w-8 h-8" /></div>
+              </div>
             </div>
           ) : (
-            // 已连接：显示地址和操作
-            <div className="flex flex-col items-center gap-4 w-full">
-              {/* 已连接的钱包地址 */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-lg w-full justify-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="font-mono text-sm">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </span>
+            <div className="flex flex-col items-center gap-6 w-full animate-fade-in">
+              <div className="relative w-24 h-24">
+                <div className="absolute inset-0 rounded-full border border-[hsl(var(--rb-cyan))]/30 animate-[spin_10s_linear_infinite]" />
+                <div className="absolute inset-2 rounded-full border border-[hsl(var(--rb-cyan))]/50 border-dashed animate-[spin_15s_linear_infinite_reverse]" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-[hsl(var(--rb-cyan))]/20 flex items-center justify-center overflow-hidden">
+                    {/* Placeholder for Canvas Sigil */}
+                    <span className="font-mono text-xs text-[hsl(var(--rb-cyan))]">{address?.slice(0, 4)}</span>
+                  </div>
+                </div>
               </div>
 
               {loading ? (
-                // 加载状态
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-2 text-primary">
-                    <LoadingSpinner />
-                    <span>
-                      {step === 'sign' ? '请在钱包中签名...' : '验证中...'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {step === 'sign'
-                      ? '此签名不会发起任何交易或消耗 Gas'
-                      : '正在验证您的身份'
-                    }
-                  </p>
+                <div className="flex flex-col items-center gap-2 text-[hsl(var(--rb-cyan))]">
+                  <LoadingSpinner />
+                  <span className="text-xs font-mono animate-pulse">
+                    {step === 'sign' ? 'AWAITING SIGNATURE...' : 'VERIFYING CREDENTIALS...'}
+                  </span>
                 </div>
               ) : (
-                // 操作按钮
-                <div className="flex flex-col gap-2 w-full">
-                  <Button
-                    onClick={handleSignIn}
-                    size="lg"
-                    className="w-full"
-                  >
-                    签名登录
+                <div className="flex flex-col gap-3 w-full">
+                  <Button onClick={handleSignIn} size="lg" className="w-full bg-[hsl(var(--rb-cyan))] text-black hover:bg-[hsl(var(--rb-cyan))]/90 font-bold">
+                    ESTABLISH LINK
                   </Button>
-                  <Button
-                    onClick={handleDisconnect}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-muted-foreground"
-                  >
-                    更换钱包
+                  <Button onClick={handleDisconnect} variant="ghost" size="sm" className="w-full text-muted-foreground hover:text-foreground">
+                    TERMINATE
                   </Button>
                 </div>
               )}
@@ -200,15 +164,10 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* 安全提示 */}
-        <div className="pt-4 border-t border-border">
-          <div className="flex items-start gap-2 text-xs text-muted-foreground">
-            <ShieldIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <p>
-              签名验证仅用于证明钱包所有权，不会发起任何链上交易。
-              您的资产始终由您自己掌控。
-            </p>
-          </div>
+        <div className="pt-4 border-t border-[hsl(var(--rb-cyan))]/10 text-center">
+          <p className="text-[10px] text-muted-foreground font-mono">
+            ENCRYPTED CONNECTION • SECURE CHANNEL • T0-L1
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -247,12 +206,3 @@ function WalletIcon({ className }: { className?: string }) {
   )
 }
 
-// 盾牌图标
-function ShieldIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  )
-}

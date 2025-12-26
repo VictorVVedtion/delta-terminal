@@ -12,6 +12,9 @@ export { BacktestCanvas, default as BacktestCanvasDefault } from './BacktestCanv
 export { DeployCanvas, default as DeployCanvasDefault } from './DeployCanvas'
 export { RiskSettings, default as RiskSettingsDefault } from './RiskSettings'
 
+// EPIC-007: A2UI Backtest Insight Canvas
+export { BacktestInsightCanvas, default as BacktestInsightCanvasDefault } from './BacktestInsightCanvas'
+
 // Re-export types
 export type {
   CanvasMode,

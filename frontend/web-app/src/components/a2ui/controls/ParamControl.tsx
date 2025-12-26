@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import type { InsightParam, ParamValue } from '@/types/insight'
 import { ParamSlider } from './ParamSlider'
 import { HeatmapSlider } from './HeatmapSlider'
+import { LogicBuilder } from './LogicBuilder'
 
 // =============================================================================
 // Types
@@ -115,6 +116,19 @@ export function ParamControl({
         <SelectControl
           param={param}
           value={currentValue as string}
+          onChange={onChange}
+          error={error}
+          warning={warning}
+          disabled={disabled}
+          className={className}
+        />
+      )
+
+    case 'logic_builder':
+      return (
+        <LogicBuilder
+          param={param}
+          value={currentValue as any[]} // LogicBuilder expects array
           onChange={onChange}
           error={error}
           warning={warning}

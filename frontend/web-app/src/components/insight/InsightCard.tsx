@@ -17,6 +17,7 @@ import {
   Clock,
   Percent,
   Target,
+  LineChart,
 } from 'lucide-react'
 import type {
   InsightType,
@@ -309,6 +310,12 @@ function getInsightTypeInfo(type: InsightType) {
       icon: <AlertTriangle className="h-5 w-5 text-red-500" />,
       bgColor: 'bg-red-500/10',
       borderColor: 'border-l-red-500',
+    },
+    backtest: {
+      title: '回测结果',
+      icon: <LineChart className="h-5 w-5 text-cyan-500" />,
+      bgColor: 'bg-cyan-500/10',
+      borderColor: 'border-l-cyan-500',
     },
   }
 

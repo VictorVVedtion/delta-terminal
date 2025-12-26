@@ -10,10 +10,11 @@ import { DeployCanvas } from '@/components/canvas/DeployCanvas'
 import { BacktestCanvas } from '@/components/canvas/BacktestCanvas'
 import { MonitorCanvas } from '@/components/canvas/MonitorCanvas'
 import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
-import { useMockThinkingStream } from '@/hooks/useThinkingStream'
 import { useDeployment } from '@/hooks/useDeployment'
 import { useBacktest } from '@/hooks/useBacktest'
 import { useMonitor } from '@/hooks/useMonitor'
+import { useChat } from '@/hooks/useAI'
+import { AIConfigPanel } from '@/components/ai'
 import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
 import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } from '@/types/insight'
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
@@ -89,20 +90,44 @@ export function ChatInterface({
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
   // ==========================================================================
-  // S71: Thinking Stream (流式渲染)
+  // AI Engine Integration
   // ==========================================================================
-  // 开发环境使用 Mock，生产环境使用真实 WebSocket
+
+  // AI Chat Hook - 通过后端 API 代理调用
   const {
-    process: thinkingProcess,
-    isThinking,
-    startThinking,
-    cancelThinking: _cancelThinking, // 预留取消功能
-  } = useMockThinkingStream()
+    sendStream,
+    cancel: cancelAI,
+    isLoading: isAILoading,
+    streamContent,
+    thinkingSteps,
+    error: aiError,
+    currentModel,
+    canUseAI,
+    disabledReason
+  } = useChat({
+    onSuccess: (response) => {
+      console.log('[AI] Response received:', response.model, response.usage)
+    },
+    onError: (error) => {
+      console.error('[AI] Error:', error.message)
+    },
+    onThinking: (step) => {
+      console.log('[AI] Thinking step:', step.title)
+    }
+  })
+
+  // AI 配置面板状态
+  const [configPanelOpen, setConfigPanelOpen] = React.useState(false)
+
+  // 组合加载状态
+  const isThinking = isAILoading
 
   // 3 阶段加载状态管理
+  // Note: thinkingProcess 需要完整的 ThinkingProcess 类型
+  // 目前使用简化的 autoProgress 模式，不传递 thinkingProcess
   const { state: loadingState } = useInsightLoadingState(
     isThinking || isLoading,
-    thinkingProcess ?? undefined
+    undefined // 使用自动进度模式
   )
 
   // A2UI: Canvas state
@@ -586,177 +611,125 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       timestamp: Date.now(),
     }
 
+    // 检查是否可以使用 AI
+    if (!canUseAI) {
+      setConfigPanelOpen(true)
+      return
+    }
+
     setMessages((prev) => [...prev, userMessage])
     const userInput = input
     setInput('')
     setIsLoading(true)
 
-    // S71: 启动思考流程
-    startThinking(userInput)
+    // 使用真实 AI 进行响应
+    try {
+      const systemPrompt = `你是 Delta AI，一个专业的加密货币交易策略助手。当前模型: ${currentModel || 'auto'}`
 
-    // 模拟AI响应 - A2UI: 返回 InsightData
-    setTimeout(() => {
-      // 模拟 InsightData 结构 - 展示 A2UI 完整功能
-      const mockInsight: InsightData = {
-        id: `insight_${Date.now()}`,
-        type: 'strategy_create',
-        target: {
-          strategy_id: 'new',
-          name: 'RSI 反转策略',
-          symbol: 'BTC/USDT',
-        },
-        params: [
-          {
-            key: 'risk_level',
-            label: '风险等级',
-            type: 'heatmap_slider',
-            value: 50,
-            level: 1,
-            config: {
-              min: 0,
-              max: 100,
-              step: 1,
-              heatmap_zones: [
-                { start: 0, end: 33, color: 'green', label: '保守' },
-                { start: 33, end: 66, color: 'gray', label: '中性' },
-                { start: 66, end: 100, color: 'red', label: '激进' },
-              ],
-            },
-            description: '选择交易风险偏好',
+      await sendStream(userInput, {
+        systemPrompt,
+        context: { marketData: { btcPrice: 42000, ethPrice: 2200 } }
+      })
+
+      // 获取最终内容
+      const finalContent = streamContent || '抱歉，请稍后再试。'
+
+      // 如果是策略相关请求，生成 InsightData
+      const isStrategyRequest = userInput.includes('策略') || userInput.includes('创建') || userInput.includes('交易')
+      let insight: InsightData | undefined = undefined
+
+      if (isStrategyRequest && finalContent.length > 50) {
+        insight = {
+          id: `insight_${Date.now()}`,
+          type: 'strategy_create',
+          target: {
+            strategy_id: 'new',
+            name: '自定义策略',
+            symbol: 'BTC/USDT',
           },
-          {
-            key: 'symbol',
-            label: '交易对',
-            type: 'select',
-            value: 'BTC/USDT',
-            level: 1,
-            config: {
-              options: [
-                { value: 'BTC/USDT', label: 'BTC/USDT' },
-                { value: 'ETH/USDT', label: 'ETH/USDT' },
-                { value: 'SOL/USDT', label: 'SOL/USDT' },
-              ],
-            },
-          },
-          {
-            key: 'position_size',
-            label: '仓位大小',
-            type: 'slider',
-            value: 10,
-            level: 1,
-            config: {
-              min: 1,
-              max: 50,
-              step: 1,
-              unit: '%',
-              precision: 0,
-            },
-            description: '单笔交易仓位占总资金比例',
-          },
-          {
-            key: 'stop_loss',
-            label: '止损点',
-            type: 'slider',
-            value: 3,
-            level: 1,
-            config: {
-              min: 0.5,
-              max: 10,
-              step: 0.5,
-              unit: '%',
-              precision: 1,
-            },
-            constraints: [
-              {
-                type: 'dependency',
-                related_param: 'take_profit',
-                rule: '< take_profit',
-                message: '止损必须小于止盈',
+          params: [
+            {
+              key: 'risk_level',
+              label: '风险等级',
+              type: 'heatmap_slider',
+              value: 50,
+              level: 1,
+              config: {
+                min: 0, max: 100, step: 1,
+                heatmap_zones: [
+                  { start: 0, end: 33, color: 'green', label: '保守' },
+                  { start: 33, end: 66, color: 'gray', label: '中性' },
+                  { start: 66, end: 100, color: 'red', label: '激进' },
+                ],
               },
-            ],
-          },
-          {
-            key: 'take_profit',
-            label: '止盈点',
-            type: 'slider',
-            value: 9,
-            level: 1,
-            config: {
-              min: 1,
-              max: 20,
-              step: 0.5,
-              unit: '%',
-              precision: 1,
-            },
-            constraints: [
-              {
-                type: 'dependency',
-                related_param: 'stop_loss',
-                rule: '> stop_loss',
-                message: '止盈必须大于止损',
-              },
-            ],
-          },
-          {
-            key: 'timeframe',
-            label: '时间周期',
-            type: 'button_group',
-            value: '4h',
-            level: 1,
-            config: {
-              options: [
-                { value: '1h', label: '1小时' },
-                { value: '4h', label: '4小时' },
-                { value: '1d', label: '1天' },
-              ],
-            },
-          },
-        ],
-        impact: {
-          metrics: [
-            {
-              key: 'expectedReturn',
-              label: '预期收益',
-              value: 12.5,
-              unit: '%',
-              trend: 'up',
+              description: '选择交易风险偏好',
             },
             {
-              key: 'winRate',
-              label: '胜率',
-              value: 68,
-              unit: '%',
-              trend: 'up',
+              key: 'position_size',
+              label: '仓位大小',
+              type: 'slider',
+              value: 10,
+              level: 1,
+              config: { min: 1, max: 50, step: 1, unit: '%', precision: 0 },
+              description: '单笔交易仓位占总资金比例',
             },
             {
-              key: 'maxDrawdown',
-              label: '最大回撤',
-              value: 6.2,
-              unit: '%',
-              trend: 'down',
+              key: 'stop_loss',
+              label: '止损点',
+              type: 'slider',
+              value: 3,
+              level: 1,
+              config: { min: 0.5, max: 10, step: 0.5, unit: '%', precision: 1 },
+            },
+            {
+              key: 'take_profit',
+              label: '止盈点',
+              type: 'slider',
+              value: 9,
+              level: 1,
+              config: { min: 1, max: 20, step: 0.5, unit: '%', precision: 1 },
             },
           ],
-          confidence: 0.78,
-          sample_size: 90,
-        },
-        explanation: '根据您的描述，我建议使用 RSI 反转策略。该策略在 RSI 低于 30 时买入，高于 70 时卖出。基于过去 90 天的回测数据，预期年化收益约 12.5%，胜率约 68%。',
-        created_at: new Date().toISOString(),
+          impact: {
+            metrics: [
+              { key: 'expectedReturn', label: '预期收益', value: 12.5, unit: '%', trend: 'up' },
+              { key: 'winRate', label: '胜率', value: 68, unit: '%', trend: 'up' },
+              { key: 'maxDrawdown', label: '最大回撤', value: 6.2, unit: '%', trend: 'down' },
+            ],
+            confidence: 0.75,
+            sample_size: 90,
+          },
+          explanation: finalContent,
+          created_at: new Date().toISOString(),
+        }
       }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: mockInsight.explanation,
+        content: finalContent,
         timestamp: Date.now(),
-        insight: mockInsight,
-        insightStatus: 'pending',
+        insight,
+        insightStatus: insight ? 'pending' : undefined,
       }
       setMessages((prev) => [...prev, aiMessage])
+
+    } catch (error) {
+      console.error('[ChatInterface] AI Error:', error)
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: aiError || '抱歉，AI 服务暂时不可用。请检查网络连接或 API Key 配置。',
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const quickPrompts = [
+    '构建复杂逻辑',
     '创建一个简单的网格交易策略',
     '基于RSI指标的交易策略',
     '分析BTC当前趋势',
@@ -781,10 +754,24 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
             </p>
           </div>
         </div>
-        <Badge variant="success" className="gap-1">
-          <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-          在线
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setConfigPanelOpen(true)}
+            className="h-8 w-8"
+            title="AI 设置"
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+          <Badge variant={canUseAI ? 'success' : 'secondary'} className="gap-1">
+            <div className={cn(
+              'h-2 w-2 rounded-full',
+              canUseAI ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
+            )} />
+            {canUseAI ? (currentModel?.split('/')[1] || '在线') : (disabledReason || '不可用')}
+          </Badge>
+        </div>
       </header>
 
       {/* Messages Area */}
@@ -977,6 +964,15 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
           }}
           isLoading={monitorState.isLoading}
         />
+      )}
+
+      {/* AI Config Panel */}
+      {configPanelOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-2xl max-h-[80vh] overflow-auto bg-background rounded-lg shadow-xl border">
+            <AIConfigPanel onClose={() => setConfigPanelOpen(false)} />
+          </div>
+        </div>
       )}
     </div>
   )

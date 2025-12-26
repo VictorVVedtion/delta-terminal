@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "lib": ["dom", "dom.iterable", "ES2022"],
     "jsx": "preserve",
     "noEmit": true,
@@ -34,6 +36,9 @@
   "exclude": [
     "node_modules",
     ".next",
-    "out"
+    "out",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

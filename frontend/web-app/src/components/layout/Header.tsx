@@ -9,7 +9,6 @@ import { useAuthStore } from '@/store/auth'
 import { apiClient } from '@/lib/api'
 import {
   TrendingUp,
-  Bell,
   Settings,
   Wallet,
   Menu,
@@ -22,12 +21,13 @@ import {
 import { ThemeSwitcher } from '@/components/ui/theme-switcher'
 import { ConnectionIndicator } from '@/components/ui/connection-status'
 import { KillSwitch } from '@/components/KillSwitch'
+import { NotificationCenter } from '@/components/NotificationCenter'
+import { GlobalAgentStatus } from '@/components/system/GlobalAgentStatus'
 
 export function Header() {
   const router = useRouter()
   const { user, logout } = useAuthStore()
   const { disconnect } = useDisconnect()
-  const [notifications] = React.useState(3)
   const [showUserMenu, setShowUserMenu] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
 
@@ -82,24 +82,21 @@ export function Header() {
 
         {/* Right Section */}
         <div className="ml-auto flex items-center gap-2">
-          {/* Connection Status */}
-          <div className="hidden md:flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50">
-            <ConnectionIndicator />
-            <span className="text-xs text-muted-foreground">实时</span>
+          {/* Connection Status & Agent Pulse */}
+          <div className="hidden md:flex items-center gap-2">
+            <GlobalAgentStatus />
+            <div className="h-4 w-[1px] bg-border mx-1" />
+            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50">
+              <ConnectionIndicator />
+              <span className="text-xs text-muted-foreground">实时</span>
+            </div>
           </div>
 
           {/* Kill Switch - Emergency Stop */}
           <KillSwitch />
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-xs text-white flex items-center justify-center">
-                {notifications}
-              </span>
-            )}
-          </Button>
+          <NotificationCenter />
 
           {/* Settings */}
           <Button variant="ghost" size="icon" asChild>

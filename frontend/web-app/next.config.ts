@@ -4,17 +4,17 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   // 实验性功能
-  experimental: {
-    // 使用 Turbopack 开发服务器
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-  },
+  // 暂时禁用 Turbopack 以避免构建清单问题
+  // experimental: {
+  //   turbo: {
+  //     rules: {
+  //       '*.svg': {
+  //         loaders: ['@svgr/webpack'],
+  //         as: '*.js',
+  //       },
+  //     },
+  //   },
+  // },
 
   // TypeScript 配置
   typescript: {
@@ -37,8 +37,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [],
   },
 
-  // 输出配置
-  output: 'standalone',
+  // 输出配置 (仅生产环境启用)
+  // output: 'standalone',
 
   // 页面扩展
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],

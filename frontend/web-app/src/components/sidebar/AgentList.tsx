@@ -1,9 +1,9 @@
-'use client'
-
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { useAgentStore, Agent, AgentStatus } from '@/store/agent'
 import { Plus } from 'lucide-react'
+import { ThinkingIndicator } from '@/components/thinking/ThinkingIndicator'
+import { ThinkingProcess } from '@/types/thinking'
 
 /**
  * Agent 列表组件
@@ -23,9 +23,10 @@ interface AgentItemProps {
   agent: Agent
   isActive: boolean
   onClick: () => void
+  thinkingProcess?: ThinkingProcess // Optional thinking process for Glass Box UI
 }
 
-function AgentItem({ agent, isActive, onClick }: AgentItemProps) {
+function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps) {
   const statusConfig = STATUS_CONFIG[agent.status]
   const isPositive = agent.pnl >= 0
   const isShadow = agent.status === 'shadow'
@@ -79,6 +80,13 @@ function AgentItem({ agent, isActive, onClick }: AgentItemProps) {
         <span>·</span>
         <span>{agent.symbol}</span>
       </div>
+
+      {/* Glass Box: Thinking Indicator (Visible when active and has process) */}
+      {isActive && thinkingProcess && (
+        <div className="mt-2 pt-2 border-t border-border/50">
+          <ThinkingIndicator process={thinkingProcess} compact defaultExpanded={false} />
+        </div>
+      )}
     </button>
   )
 }
@@ -91,6 +99,27 @@ export function AgentList() {
     console.log('Create new agent')
   }
 
+  // MOCK: Generate a fake thinking process for the active agent to demonstrate "Glass Box"
+  // In a real app, this would come from a useThinkingStore or agent.thinkingState
+  const mockThinkingProcess: ThinkingProcess | undefined = React.useMemo(() => {
+    return {
+      process_id: 'mock-process-1',
+      user_message: 'Analyze BTC/USDT market conditions',
+      status: 'thinking',
+      todos: [
+        { id: '1', description: 'Analyzing market depth', status: 'completed' },
+        { id: '2', description: 'Calculating RSI divergence', status: 'in_progress' },
+        { id: '3', description: 'Checking risk limits', status: 'pending' },
+      ],
+      tool_history: [],
+      progress: {
+        percentage: 33,
+        current_step: 'Calculating RSI divergence'
+      },
+      started_at: Date.now() - 5000, // Started 5 seconds ago
+    }
+  }, [])
+
   return (
     <div className="flex-1 overflow-y-auto p-3">
       {/* 标题 */}
@@ -100,14 +129,19 @@ export function AgentList() {
 
       {/* Agent 列表 */}
       <div className="space-y-0">
-        {agents.map((agent) => (
-          <AgentItem
-            key={agent.id}
-            agent={agent}
-            isActive={agent.id === activeAgentId}
-            onClick={() => setActiveAgent(agent.id)}
-          />
-        ))}
+        {agents.map((agent) => {
+          const showThinking = agent.id === activeAgentId && mockThinkingProcess
+          return (
+            <AgentItem
+              key={agent.id}
+              agent={agent}
+              isActive={agent.id === activeAgentId}
+              onClick={() => setActiveAgent(agent.id)}
+              // Only show thinking process for the active agent for demo purposes or if they are 'live'
+              {...(showThinking && { thinkingProcess: mockThinkingProcess })}
+            />
+          )
+        })}
       </div>
 
       {/* 新建按钮 */}
