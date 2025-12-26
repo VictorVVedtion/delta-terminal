@@ -13,6 +13,28 @@ import type {
   LiveDeployConfig,
 } from '@/types/deployment'
 import { DeploymentError } from '@/types/deployment'
+import type {
+  BacktestConfig,
+  BacktestResult,
+  BacktestRunState,
+  BacktestHistoryItem,
+} from '@/types/backtest'
+
+// =============================================================================
+// API 特定类型 (Story 2.2)
+// =============================================================================
+
+/** 回测配置输入 (与 BacktestConfig 相同，便于 API 层使用) */
+type BacktestConfigInput = BacktestConfig
+
+/** 回测运行状态 (API 返回格式) */
+type BacktestRunStatus = BacktestRunState
+
+/** 完整回测结果 (API 返回格式) */
+type BacktestFullResult = BacktestResult
+
+/** 回测历史项 (API 返回格式) */
+type BacktestHistoryItemApi = BacktestHistoryItem
 
 // API 基础 URL - 开发时指向认证服务
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -327,8 +349,74 @@ class ApiClient {
     return Array.isArray(positions) ? positions.length : 0
   }
 
-  // ========== 回测相关 ==========
+  // ========== 回测相关 (Story 2.2) ==========
 
+  /**
+   * 启动回测
+   * @param config 回测配置
+   */
+  async runBacktest(config: BacktestConfigInput): Promise<{ backtestId: string }> {
+    return this.request<{ backtestId: string }>('/backtest/run', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    })
+  }
+
+  /**
+   * 获取回测运行状态
+   * @param backtestId 回测 ID
+   */
+  async getBacktestRunStatus(backtestId: string): Promise<BacktestRunStatus> {
+    return this.request<BacktestRunStatus>(`/backtest/${backtestId}/status`)
+  }
+
+  /**
+   * 获取完整回测结果
+   * @param backtestId 回测 ID
+   */
+  async getBacktestFullResult(backtestId: string): Promise<BacktestFullResult> {
+    return this.request<BacktestFullResult>(`/backtest/${backtestId}/result`)
+  }
+
+  /**
+   * 暂停回测
+   * @param backtestId 回测 ID
+   */
+  async pauseBacktest(backtestId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/backtest/${backtestId}/pause`, {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * 恢复回测
+   * @param backtestId 回测 ID
+   */
+  async resumeBacktest(backtestId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/backtest/${backtestId}/resume`, {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * 取消回测
+   * @param backtestId 回测 ID
+   */
+  async cancelBacktestRun(backtestId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/backtest/${backtestId}/cancel`, {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * 获取回测历史
+   * @param strategyId 策略 ID
+   */
+  async getBacktestHistory(strategyId: string): Promise<BacktestHistoryItemApi[]> {
+    return this.request<BacktestHistoryItemApi[]>(`/strategies/${strategyId}/backtest/history`)
+  }
+
+  // Legacy backtest methods (保留兼容)
   async createBacktest(data: {
     strategyId: string
     symbol: string

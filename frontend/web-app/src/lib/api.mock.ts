@@ -1,6 +1,7 @@
 /**
  * API Mock Data - 开发和测试用 Mock 数据
  * Story 1.2: 部署 API 接口与 AgentStore 状态管理
+ * Story 2.2: 回测 API 接口与 Mock 数据
  */
 
 import type {
@@ -9,6 +10,15 @@ import type {
   BacktestSummary,
   PaperPerformance,
 } from '@/types/deployment'
+import type {
+  BacktestConfig,
+  BacktestResult,
+  BacktestRunState,
+  BacktestMetrics,
+  BacktestTrade,
+  EquityPoint,
+  BacktestHistoryItem,
+} from '@/types/backtest'
 
 // =============================================================================
 // Mock Deployment Results
@@ -244,4 +254,240 @@ export function isMockApiEnabled(): boolean {
     isDevelopmentMode() &&
     process.env.NEXT_PUBLIC_USE_MOCK_API === 'true'
   )
+}
+
+// =============================================================================
+// Mock Backtest Data (Story 2.2)
+// =============================================================================
+
+/**
+ * Mock 回测配置
+ */
+export const mockBacktestConfig: BacktestConfig = {
+  name: 'RSI 策略回测',
+  symbol: 'BTC/USDT',
+  strategyType: 'rsi',
+  startDate: '2024-01-01',
+  endDate: '2024-06-30',
+  initialCapital: 10000,
+  feeRate: 0.1,
+  slippage: 0.05,
+  params: {
+    period: 14,
+    overbought: 70,
+    oversold: 30,
+  },
+}
+
+/**
+ * Mock 回测指标
+ */
+export const mockBacktestMetrics: BacktestMetrics = {
+  totalReturn: 23.45,
+  annualizedReturn: 52.8,
+  maxDrawdown: -12.3,
+  sharpeRatio: 1.85,
+  winRate: 62.5,
+  totalTrades: 48,
+  profitFactor: 1.92,
+  avgWin: 3.2,
+  avgLoss: -1.8,
+  maxConsecutiveWins: 6,
+  maxConsecutiveLosses: 3,
+  avgHoldingTime: 18.5,
+}
+
+/**
+ * Mock 权益曲线
+ */
+export const mockEquityCurve: EquityPoint[] = Array.from({ length: 180 }, (_, i) => {
+  const date = new Date('2024-01-01')
+  date.setDate(date.getDate() + i)
+  const baseGrowth = 10000 * (1 + (i / 180) * 0.25)
+  const volatility = Math.sin(i / 10) * 500 + Math.random() * 300
+  return {
+    date: date.toISOString().split('T')[0] as string,
+    equity: baseGrowth + volatility,
+    drawdown: Math.random() * -5,
+  }
+})
+
+/**
+ * Mock 交易记录
+ */
+export const mockBacktestTrades: BacktestTrade[] = Array.from({ length: 48 }, (_, i) => {
+  const entryDate = new Date('2024-01-01')
+  entryDate.setDate(entryDate.getDate() + i * 3 + Math.floor(Math.random() * 3))
+  const exitDate = new Date(entryDate)
+  exitDate.setDate(exitDate.getDate() + 1 + Math.floor(Math.random() * 3))
+
+  const side = Math.random() > 0.5 ? 'buy' : 'sell' as const
+  const entryPrice = 40000 + Math.random() * 20000
+  const pnlPercent = (Math.random() - 0.4) * 10
+  const exitPrice = entryPrice * (1 + pnlPercent / 100)
+  const quantity = 0.01 + Math.random() * 0.1
+
+  return {
+    id: `trade_${i + 1}`,
+    symbol: 'BTC/USDT',
+    side,
+    entryPrice,
+    exitPrice,
+    quantity,
+    pnl: (exitPrice - entryPrice) * quantity * (side === 'buy' ? 1 : -1),
+    pnlPercent,
+    entryTime: entryDate.toISOString(),
+    exitTime: exitDate.toISOString(),
+    fee: entryPrice * quantity * 0.001,
+    signal: side === 'buy' ? 'RSI 超卖' : 'RSI 超买',
+  }
+})
+
+/**
+ * Mock 完整回测结果
+ */
+export const mockBacktestResult: BacktestResult = {
+  id: 'backtest_' + Date.now(),
+  config: mockBacktestConfig,
+  metrics: mockBacktestMetrics,
+  equity: mockEquityCurve,
+  trades: mockBacktestTrades,
+  createdAt: new Date().toISOString(),
+  completedAt: new Date().toISOString(),
+}
+
+/**
+ * Mock 回测进度序列
+ */
+export const mockBacktestProgressSequence: BacktestRunState[] = [
+  { isRunning: true, progress: 0, stage: 'preparing' },
+  { isRunning: true, progress: 15, stage: 'loading_data' },
+  { isRunning: true, progress: 30, stage: 'loading_data' },
+  { isRunning: true, progress: 45, stage: 'running' },
+  { isRunning: true, progress: 60, stage: 'running' },
+  { isRunning: true, progress: 75, stage: 'running' },
+  { isRunning: true, progress: 85, stage: 'analyzing' },
+  { isRunning: true, progress: 95, stage: 'analyzing' },
+  { isRunning: false, progress: 100, stage: 'completed' },
+]
+
+/**
+ * Mock 回测历史
+ */
+export const mockBacktestHistory: BacktestHistoryItem[] = [
+  {
+    id: 'bt_001',
+    name: 'RSI 策略 v1',
+    symbol: 'BTC/USDT',
+    period: '2024-01-01 - 2024-03-31',
+    totalReturn: 15.3,
+    status: 'completed',
+    createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
+  },
+  {
+    id: 'bt_002',
+    name: 'MACD 交叉策略',
+    symbol: 'ETH/USDT',
+    period: '2024-02-01 - 2024-04-30',
+    totalReturn: -3.2,
+    status: 'completed',
+    createdAt: Date.now() - 5 * 24 * 60 * 60 * 1000,
+  },
+  {
+    id: 'bt_003',
+    name: '网格策略测试',
+    symbol: 'BTC/USDT',
+    period: '2024-03-01 - 2024-05-31',
+    totalReturn: 8.7,
+    status: 'completed',
+    createdAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
+  },
+]
+
+// =============================================================================
+// Mock Backtest API Functions (Story 2.2)
+// =============================================================================
+
+let mockProgressIndex = 0
+
+/**
+ * Mock runBacktest API
+ */
+export async function mockRunBacktest(
+  _config: BacktestConfig
+): Promise<{ backtestId: string }> {
+  await simulateDelay(1000)
+  mockProgressIndex = 0 // Reset progress
+  return {
+    backtestId: 'backtest_' + Date.now(),
+  }
+}
+
+/**
+ * Mock getBacktestRunStatus API
+ */
+export async function mockGetBacktestRunStatus(
+  _backtestId: string
+): Promise<BacktestRunState> {
+  await simulateDelay(300)
+  const status = mockBacktestProgressSequence[mockProgressIndex] ||
+    mockBacktestProgressSequence[mockBacktestProgressSequence.length - 1]
+  if (mockProgressIndex < mockBacktestProgressSequence.length - 1) {
+    mockProgressIndex++
+  }
+  return status as BacktestRunState
+}
+
+/**
+ * Mock getBacktestFullResult API
+ */
+export async function mockGetBacktestFullResult(
+  _backtestId: string
+): Promise<BacktestResult> {
+  await simulateDelay(500)
+  return {
+    ...mockBacktestResult,
+    id: _backtestId,
+  }
+}
+
+/**
+ * Mock pauseBacktest API
+ */
+export async function mockPauseBacktest(
+  _backtestId: string
+): Promise<{ success: boolean }> {
+  await simulateDelay(200)
+  return { success: true }
+}
+
+/**
+ * Mock resumeBacktest API
+ */
+export async function mockResumeBacktest(
+  _backtestId: string
+): Promise<{ success: boolean }> {
+  await simulateDelay(200)
+  return { success: true }
+}
+
+/**
+ * Mock cancelBacktestRun API
+ */
+export async function mockCancelBacktestRun(
+  _backtestId: string
+): Promise<{ success: boolean }> {
+  await simulateDelay(200)
+  mockProgressIndex = 0
+  return { success: true }
+}
+
+/**
+ * Mock getBacktestHistory API
+ */
+export async function mockGetBacktestHistory(
+  _strategyId: string
+): Promise<BacktestHistoryItem[]> {
+  await simulateDelay(300)
+  return mockBacktestHistory
 }

@@ -7,11 +7,14 @@ import { Send, Bot, User, Sparkles } from 'lucide-react'
 import { InsightMessage } from '@/components/insight'
 import { CanvasPanel } from '@/components/canvas'
 import { DeployCanvas } from '@/components/canvas/DeployCanvas'
+import { BacktestCanvas } from '@/components/canvas/BacktestCanvas'
 import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
 import { useMockThinkingStream } from '@/hooks/useThinkingStream'
 import { useDeployment } from '@/hooks/useDeployment'
+import { useBacktest } from '@/hooks/useBacktest'
 import type { InsightData, InsightParam, InsightCardStatus, InsightActionType } from '@/types/insight'
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
+import type { BacktestConfig } from '@/types/backtest'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -41,6 +44,10 @@ interface ChatInterfaceProps {
   onDeployRequest?: ((mode: 'paper' | 'live', strategyId: string) => void) | undefined
   /** Story 1.3: Called when deployment completes */
   onDeployComplete?: ((result: { success: boolean; message: string }) => void) | undefined
+  /** Story 2.3: Called when backtest is triggered */
+  onBacktestRequest?: ((strategyId: string) => void) | undefined
+  /** Story 2.3: Called when backtest completes */
+  onBacktestComplete?: ((result: { passed: boolean; metrics: unknown }) => void) | undefined
 }
 
 // =============================================================================
@@ -54,6 +61,8 @@ export function ChatInterface({
   onInsightReject,
   onDeployRequest,
   onDeployComplete,
+  onBacktestRequest,
+  onBacktestComplete,
 }: ChatInterfaceProps) {
   // ==========================================================================
   // State
@@ -100,6 +109,13 @@ export function ChatInterface({
   const [deployStrategyId, setDeployStrategyId] = React.useState<string>('')
   const [deployLoading, setDeployLoading] = React.useState(false)
 
+  // ==========================================================================
+  // Story 2.3: Backtest State
+  // ==========================================================================
+  const [backtestOpen, setBacktestOpen] = React.useState(false)
+  const [backtestStrategyId, setBacktestStrategyId] = React.useState<string>('')
+  const [backtestInsight, setBacktestInsight] = React.useState<InsightData | null>(null)
+
   // useDeployment hook for API integration
   const {
     state: deployState,
@@ -134,6 +150,57 @@ export function ChatInterface({
       setMessages((prev) => [...prev, errorMessage])
       setDeployLoading(false)
       onDeployComplete?.({ success: false, message: error.message })
+    },
+  })
+
+  // ==========================================================================
+  // Story 2.3: useBacktest Hook
+  // ==========================================================================
+  const {
+    state: backtestState,
+    isRunning: isBacktestRunning,
+    isPassed: _isBacktestPassed, // Reserved for future use
+    startBacktest,
+    pauseBacktest,
+    resumeBacktest,
+    cancelBacktest: stopBacktest,
+    reset: resetBacktest,
+  } = useBacktest({
+    strategyId: backtestStrategyId,
+    onSuccess: (result) => {
+      // Add success message to chat
+      const { metrics } = result
+      const passed = metrics.totalReturn > 0 && metrics.maxDrawdown > -30 && metrics.winRate > 40
+      const successMessage: Message = {
+        id: `backtest_success_${Date.now()}`,
+        role: 'assistant',
+        content: `🎉 回测完成！
+
+📊 **关键指标**
+- 总收益率: ${metrics.totalReturn.toFixed(2)}%
+- 年化收益率: ${metrics.annualizedReturn.toFixed(2)}%
+- 最大回撤: ${metrics.maxDrawdown.toFixed(2)}%
+- 夏普比率: ${metrics.sharpeRatio.toFixed(2)}
+- 胜率: ${metrics.winRate.toFixed(2)}%
+- 总交易次数: ${metrics.totalTrades}
+
+${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠️ 策略未达到部署标准，建议优化参数。'}`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, successMessage])
+      setBacktestOpen(false)
+      onBacktestComplete?.({ passed, metrics })
+    },
+    onError: (error) => {
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: `backtest_error_${Date.now()}`,
+        role: 'assistant',
+        content: `❌ 回测失败\n\n${error.message}`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+      onBacktestComplete?.({ passed: false, metrics: null })
     },
   })
 
@@ -229,7 +296,7 @@ export function ChatInterface({
   // ==========================================================================
 
   /**
-   * Trigger deployment canvas when insight contains deploy actions
+   * Trigger deployment or backtest canvas when insight contains actions
    */
   const handleInsightAction = React.useCallback((insight: InsightData, action: InsightActionType) => {
     if (action === 'deploy_paper' || action === 'deploy_live') {
@@ -238,8 +305,15 @@ export function ChatInterface({
       setDeployMode(action === 'deploy_paper' ? 'paper' : 'live')
       setDeployOpen(true)
       onDeployRequest?.(action === 'deploy_paper' ? 'paper' : 'live', strategyId)
+    } else if (action === 'run_backtest') {
+      // Story 2.3: Handle backtest action
+      const strategyId = insight.target?.strategy_id || insight.id
+      setBacktestStrategyId(strategyId)
+      setBacktestInsight(insight)
+      setBacktestOpen(true)
+      onBacktestRequest?.(strategyId)
     }
-  }, [onDeployRequest])
+  }, [onDeployRequest, onBacktestRequest])
 
   /**
    * Handle deploy from DeployCanvas
@@ -262,19 +336,94 @@ export function ChatInterface({
     resetDeployment()
   }, [resetDeployment])
 
+  // ==========================================================================
+  // Story 2.3: Backtest Handlers
+  // ==========================================================================
+
   /**
-   * Check if insight has deploy actions and trigger deploy canvas
+   * Extract backtest config from insight
+   */
+  const extractBacktestConfig = React.useCallback((insight: InsightData): BacktestConfig => {
+    const target = insight.target
+    const params = insight.params || []
+
+    // Extract config from insight params
+    const getParamValue = <T,>(key: string, defaultValue: T): T => {
+      const param = params.find(p => p.key === key)
+      return param ? (param.value as T) : defaultValue
+    }
+
+    return {
+      name: target?.name || '策略回测',
+      symbol: target?.symbol || 'BTC/USDT',
+      strategyType: 'custom',
+      startDate: getParamValue('start_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] || ''),
+      endDate: getParamValue('end_date', new Date().toISOString().split('T')[0] || ''),
+      initialCapital: getParamValue('initial_capital', 10000),
+      feeRate: getParamValue('fee_rate', 0.1),
+      slippage: getParamValue('slippage', 0.05),
+      params: Object.fromEntries(
+        params.map(p => [p.key, p.value])
+      ),
+    }
+  }, [])
+
+  /**
+   * Handle backtest start from BacktestCanvas
+   */
+  const handleBacktestStart = React.useCallback(async () => {
+    if (!backtestInsight) return
+
+    const config = extractBacktestConfig(backtestInsight)
+    try {
+      await startBacktest(config)
+    } catch {
+      // Error handled in useBacktest onError callback
+    }
+  }, [backtestInsight, extractBacktestConfig, startBacktest])
+
+  // Auto-start backtest when canvas opens
+  React.useEffect(() => {
+    if (backtestOpen && backtestInsight && backtestState.phase === 'idle') {
+      handleBacktestStart()
+    }
+  }, [backtestOpen, backtestInsight, backtestState.phase, handleBacktestStart])
+
+  /**
+   * Handle backtest canvas close
+   */
+  const handleBacktestClose = React.useCallback(() => {
+    if (isBacktestRunning) {
+      stopBacktest()
+    }
+    setBacktestOpen(false)
+    setBacktestInsight(null)
+    resetBacktest()
+  }, [isBacktestRunning, stopBacktest, resetBacktest])
+
+  /**
+   * Check if insight has deploy or backtest actions and trigger corresponding canvas
    */
   React.useEffect(() => {
-    // Auto-detect deploy actions from insights
+    // Auto-detect actions from insights
     const lastMessage = messages[messages.length - 1]
     if (lastMessage?.insight?.actions) {
+      // Check for deploy actions
       const deployAction = lastMessage.insight.actions.find(
         (a): a is 'deploy_paper' | 'deploy_live' =>
           a === 'deploy_paper' || a === 'deploy_live'
       )
       if (deployAction) {
         handleInsightAction(lastMessage.insight, deployAction)
+        return
+      }
+
+      // Check for backtest action
+      const backtestAction = lastMessage.insight.actions.find(
+        (a): a is 'run_backtest' => a === 'run_backtest'
+      )
+      if (backtestAction) {
+        handleInsightAction(lastMessage.insight, backtestAction)
       }
     }
   }, [messages, handleInsightAction])
@@ -470,7 +619,7 @@ export function ChatInterface({
   return (
     <div className={cn(
       'flex flex-col h-full transition-all duration-300 ease-out',
-      (canvasOpen || deployOpen) && 'lg:mr-[520px]',
+      (canvasOpen || deployOpen || backtestOpen) && 'lg:mr-[520px]',
     )}>
       {/* Chat Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -605,6 +754,58 @@ export function ChatInterface({
         onCancel={handleDeployCancel}
         isLoading={deployLoading || deployState.phase === 'deploying'}
       />
+
+      {/* Story 2.3: Backtest Canvas */}
+      {backtestInsight && (
+        <BacktestCanvas
+          insight={backtestInsight}
+          isOpen={backtestOpen}
+          onClose={handleBacktestClose}
+          onPause={pauseBacktest}
+          onResume={resumeBacktest}
+          onStop={stopBacktest}
+          progress={backtestState.progress}
+          status={
+            backtestState.phase === 'running'
+              ? 'running'
+              : backtestState.phase === 'completed'
+                ? 'completed'
+                : backtestState.phase === 'failed'
+                  ? 'failed'
+                  : 'running'
+          }
+          metrics={{
+            totalReturn: backtestState.result?.metrics.totalReturn ?? 0,
+            winRate: backtestState.result?.metrics.winRate ?? 0,
+            maxDrawdown: backtestState.result?.metrics.maxDrawdown ?? 0,
+            sharpeRatio: backtestState.result?.metrics.sharpeRatio ?? 0,
+            totalTrades: backtestState.result?.metrics.totalTrades ?? 0,
+            winningTrades: Math.round((backtestState.result?.metrics.winRate ?? 0) * (backtestState.result?.metrics.totalTrades ?? 0) / 100),
+            losingTrades: (backtestState.result?.metrics.totalTrades ?? 0) - Math.round((backtestState.result?.metrics.winRate ?? 0) * (backtestState.result?.metrics.totalTrades ?? 0) / 100),
+            avgProfit: backtestState.result?.metrics.avgWin ?? 0,
+            avgLoss: backtestState.result?.metrics.avgLoss ?? 0,
+          }}
+          trades={
+            backtestState.result?.trades.map((t) => ({
+              id: t.id,
+              timestamp: new Date(t.entryTime).getTime(),
+              type: t.side,
+              symbol: t.symbol,
+              price: t.entryPrice,
+              quantity: t.quantity,
+              pnl: t.pnl,
+              pnlPercent: t.pnlPercent,
+              status: 'closed' as const,
+            })) ?? []
+          }
+          equityCurve={
+            backtestState.result?.equity.map((e) => ({
+              timestamp: new Date(e.date).getTime(),
+              value: e.equity,
+            })) ?? []
+          }
+        />
+      )}
     </div>
   )
 }
