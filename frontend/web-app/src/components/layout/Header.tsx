@@ -80,35 +80,29 @@ export function Header() {
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="ml-auto flex items-center gap-2">
-          {/* Connection Status & Agent Pulse */}
-          <div className="hidden md:flex items-center gap-2">
+        {/* Right Section - 分组布局 */}
+        <div className="ml-auto flex items-center gap-1">
+          {/* 状态指示器组 - 合并显示，降低视觉权重 */}
+          <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/30 mr-2">
             <GlobalAgentStatus />
-            <div className="h-4 w-[1px] bg-border mx-1" />
-            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50">
-              <ConnectionIndicator />
-              <span className="text-xs text-muted-foreground">实时</span>
-            </div>
+            <div className="h-3 w-[1px] bg-border/50" />
+            <ConnectionIndicator />
           </div>
 
-          {/* Kill Switch - Emergency Stop */}
+          {/* 操作按钮组 - 紧急停止突出 */}
           <KillSwitch />
 
-          {/* Notifications */}
+          {/* 分隔线 */}
+          <div className="hidden md:block h-6 w-[1px] bg-border/50 mx-1" />
+
+          {/* 通知 + 主题 */}
           <NotificationCenter />
-
-          {/* Settings */}
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/settings">
-              <Settings className="h-5 w-5" />
-            </Link>
-          </Button>
-
-          {/* Theme Switcher */}
           <ThemeSwitcher />
 
-          {/* User Menu */}
+          {/* 分隔线 */}
+          <div className="hidden md:block h-6 w-[1px] bg-border/50 mx-1" />
+
+          {/* User Menu - 包含设置入口 */}
           <div className="relative">
             <Button
               variant="ghost"
@@ -180,10 +174,10 @@ export function Header() {
         </div>
       </div>
 
-      {/* Market Ticker */}
-      <div className="border-t bg-muted/50">
-        <div className="container px-4 py-2">
-          <div className="flex gap-6 overflow-x-auto scrollbar-thin text-sm">
+      {/* Market Ticker - 紧凑设计 */}
+      <div className="border-t border-border/50 bg-muted/30">
+        <div className="container px-4 py-1.5">
+          <div className="flex gap-4 overflow-x-auto scrollbar-thin text-xs">
             <MarketTicker symbol="BTC/USDT" price="43,256.78" change={2.34} />
             <MarketTicker symbol="ETH/USDT" price="2,289.45" change={-1.23} />
             <MarketTicker symbol="SOL/USDT" price="98.76" change={5.67} />

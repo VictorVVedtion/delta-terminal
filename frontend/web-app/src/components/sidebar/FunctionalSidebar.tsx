@@ -36,7 +36,8 @@ export function FunctionalSidebar({ className }: FunctionalSidebarProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-16 h-[calc(100vh-4rem)]',
+        // Header 高度: 主导航 64px + 行情 Ticker ~30px = ~94px
+        'fixed left-0 top-[94px] h-[calc(100vh-94px)]',
         'w-[260px] bg-background/95 backdrop-blur',
         'border-r border-border',
         'flex flex-col',

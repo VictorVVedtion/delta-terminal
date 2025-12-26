@@ -15,32 +15,20 @@ export function GlobalAgentStatus() {
     const isThinking = activeCount > 0
 
     return (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(var(--rb-cyan))]/5 border border-[hsl(var(--rb-cyan))]/20">
-            <div className="relative flex items-center justify-center w-4 h-4">
+        <div className="flex items-center gap-1.5">
+            <div className="relative flex items-center justify-center w-3.5 h-3.5">
                 {isThinking && (
                     <motion.div
-                        className="absolute inset-0 rounded-full bg-[hsl(var(--rb-cyan))]"
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                        className="absolute inset-0 rounded-full bg-emerald-500"
+                        animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
                         transition={{ duration: 2, repeat: Infinity }}
                     />
                 )}
-                <Sparkles className="w-3.5 h-3.5 text-[hsl(var(--rb-cyan))]" />
+                <Sparkles className="w-3 h-3 text-emerald-500" />
             </div>
-            <span className="text-xs font-medium text-[hsl(var(--rb-cyan))] font-mono">
-                {activeCount} AGENTS ONLINE
+            <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-emerald-500 font-mono">{activeCount}</span> Agent
             </span>
-
-            {/* Mini data stream decoration */}
-            <div className="hidden md:flex gap-0.5 ml-2">
-                {[1, 2, 3].map(i => (
-                    <motion.div
-                        key={i}
-                        className="w-0.5 h-2 bg-[hsl(var(--rb-cyan))]/40"
-                        animate={{ height: ['4px', '12px', '4px'] }}
-                        transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                    />
-                ))}
-            </div>
         </div>
     )
 }
