@@ -17,7 +17,11 @@ export type InsightType =
   | 'strategy_modify'  // Modify an existing strategy
   | 'batch_adjust'     // Batch adjust multiple strategies
   | 'risk_alert'       // Risk alert notification
-  | 'backtest';        // Backtest result (EPIC-007)
+  | 'backtest'         // Backtest result (EPIC-007)
+  | 'clarification'    // AI clarification question (EPIC-010)
+  | 'sensitivity'      // Parameter sensitivity analysis (EPIC-008)
+  | 'attribution'      // PnL attribution analysis (EPIC-008)
+  | 'comparison';      // Strategy comparison (EPIC-008)
 
 // =============================================================================
 // Parameter Types
@@ -157,15 +161,15 @@ export interface ChartData {
   overlays?: ChartOverlay[];
 }
 
-export interface EquityCurvePoint {
+export interface EvidenceEquityCurvePoint {
   timestamp: number;
   value: number;
 }
 
 export interface ComparisonData {
-  original: EquityCurvePoint[];
-  modified: EquityCurvePoint[];
-  baseline?: EquityCurvePoint[];
+  original: EvidenceEquityCurvePoint[];
+  modified: EvidenceEquityCurvePoint[];
+  baseline?: EvidenceEquityCurvePoint[];
 }
 
 export interface InsightEvidence {
@@ -274,6 +278,88 @@ export interface RiskAlertInsight extends InsightData {
   timeout_action?: TimeoutAction;
   timeout_seconds?: number;
   affected_strategies?: string[];
+}
+
+// =============================================================================
+// Clarification Types (EPIC-010 Story 10.2)
+// =============================================================================
+
+/**
+ * 追问选项类型
+ */
+export type ClarificationOptionType = 'single' | 'multiple' | 'text';
+
+/**
+ * 追问选项
+ */
+export interface ClarificationOption {
+  /** 选项唯一标识 */
+  id: string;
+  /** 显示文本 */
+  label: string;
+  /** 选项描述 (可选) */
+  description?: string;
+  /** 选项图标 (可选, emoji 或 lucide icon 名称) */
+  icon?: string;
+  /** 是否为推荐选项 */
+  recommended?: boolean;
+}
+
+/**
+ * 追问分类
+ */
+export type ClarificationCategory =
+  | 'risk_preference'      // 风险偏好
+  | 'trading_pair'         // 交易对选择
+  | 'timeframe'            // 时间周期
+  | 'strategy_type'        // 策略类型
+  | 'capital_allocation'   // 资金配置
+  | 'entry_condition'      // 入场条件
+  | 'exit_condition'       // 出场条件
+  | 'general';             // 一般问题
+
+/**
+ * AI 追问 Insight 数据
+ */
+export interface ClarificationInsight extends InsightData {
+  type: 'clarification';
+  /** 追问问题 */
+  question: string;
+  /** 问题分类 */
+  category: ClarificationCategory;
+  /** 选项类型 */
+  optionType: ClarificationOptionType;
+  /** 可选选项列表 */
+  options: ClarificationOption[];
+  /** 是否允许自定义输入 */
+  allowCustomInput: boolean;
+  /** 自定义输入占位符 */
+  customInputPlaceholder?: string;
+  /** 跳过按钮文本 (如果允许跳过) */
+  skipLabel?: string;
+  /** 问题上下文 (AI 对之前对话的理解) */
+  context?: string;
+}
+
+/**
+ * 追问回答结果
+ */
+export interface ClarificationAnswer {
+  /** 问题 ID (insight.id) */
+  questionId: string;
+  /** 选中的选项 ID 列表 */
+  selectedOptions: string[];
+  /** 自定义输入文本 */
+  customText?: string;
+  /** 是否跳过 */
+  skipped: boolean;
+}
+
+/**
+ * 类型守卫: 判断是否为 ClarificationInsight
+ */
+export function isClarificationInsight(insight: InsightData): insight is ClarificationInsight {
+  return insight.type === 'clarification';
 }
 
 // =============================================================================
@@ -529,4 +615,207 @@ export interface InsightCardProps {
   onApprove?: (params: InsightParam[]) => void;
   onReject?: () => void;
   compact?: boolean;
+}
+
+// =============================================================================
+// Analysis Types (EPIC-008)
+// =============================================================================
+
+/**
+ * 参数敏感度等级
+ */
+export type SensitivityLevel = 'high' | 'medium' | 'low';
+
+/**
+ * 参数影响数据点
+ */
+export interface ParamImpactPoint {
+  paramValue: number;
+  totalReturn: number;
+  winRate: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+}
+
+/**
+ * 参数敏感度矩阵项
+ */
+export interface SensitivityMatrixItem {
+  paramKey: string;
+  paramLabel: string;
+  impacts: ParamImpactPoint[];
+}
+
+/**
+ * 关键参数信息
+ */
+export interface KeyParameter {
+  paramKey: string;
+  paramLabel: string;
+  impactScore: number; // 0-100
+  sensitivity: SensitivityLevel;
+}
+
+/**
+ * 敏感度分析基准数据
+ */
+export interface SensitivityBaseline {
+  totalReturn: number;
+  winRate: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+}
+
+/**
+ * 敏感度分析 Insight 数据 (Story 8.1)
+ */
+export interface SensitivityInsightData extends InsightData {
+  type: 'sensitivity';
+  /** 策略名称 */
+  strategyName: string;
+  /** 交易对 */
+  symbol: string;
+  /** 参数敏感度矩阵 */
+  sensitivityMatrix: SensitivityMatrixItem[];
+  /** 关键参数排序 (按影响程度) */
+  keyParameters: KeyParameter[];
+  /** 基准性能 (未调参) */
+  baseline: SensitivityBaseline;
+  /** AI 分析洞察 */
+  aiInsight: string;
+}
+
+/**
+ * 类型守卫: 判断是否为 SensitivityInsightData
+ */
+export function isSensitivityInsight(insight: InsightData): insight is SensitivityInsightData {
+  return insight.type === 'sensitivity';
+}
+
+// =============================================================================
+// Attribution Types (EPIC-008)
+// =============================================================================
+
+/**
+ * 归因因子分解项
+ */
+export interface AttributionBreakdownItem {
+  factor: string;           // 因子名称 (趋势跟踪, 波段交易, 止损, 手续费等)
+  contribution: number;     // 贡献金额 (USDT)
+  contributionPercent: number; // 贡献百分比
+  color: string;            // 图表颜色
+  description?: string;
+}
+
+/**
+ * 时间序列归因数据点
+ */
+export interface TimeSeriesAttributionPoint {
+  timestamp: number;
+  factors: Record<string, number>; // factor -> 累计贡献
+}
+
+/**
+ * 归因分析 Insight 数据 (Story 8.2)
+ */
+export interface AttributionInsightData extends InsightData {
+  type: 'attribution';
+  /** 策略名称 */
+  strategyName: string;
+  /** 交易对 */
+  symbol: string;
+  /** 盈亏归因分解 */
+  attributionBreakdown: AttributionBreakdownItem[];
+  /** 时间序列因子表现 */
+  timeSeriesAttribution: TimeSeriesAttributionPoint[];
+  /** 总盈亏 */
+  totalPnL: number;
+  /** 分析周期 */
+  period: {
+    start: number;
+    end: number;
+  };
+  /** AI 分析洞察 */
+  aiInsight: string;
+}
+
+/**
+ * 类型守卫: 判断是否为 AttributionInsightData
+ */
+export function isAttributionInsight(insight: InsightData): insight is AttributionInsightData {
+  return insight.type === 'attribution';
+}
+
+// =============================================================================
+// Comparison Types (EPIC-008)
+// =============================================================================
+
+/**
+ * 差异显著性
+ */
+export type DifferenceSignificance = 'high' | 'medium' | 'low';
+
+/**
+ * 策略性能指标
+ */
+export interface StrategyMetrics {
+  totalReturn: number;
+  annualizedReturn: number;
+  winRate: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  sortinoRatio: number;
+  profitFactor: number;
+  totalTrades: number;
+}
+
+/**
+ * 收益曲线数据点
+ */
+export interface EquityCurvePoint {
+  timestamp: number;
+  equity: number;
+}
+
+/**
+ * 对比策略项
+ */
+export interface ComparisonStrategy {
+  id: string;
+  name: string;
+  symbol: string;
+  color: string;
+  metrics: StrategyMetrics;
+  equityCurve: EquityCurvePoint[];
+}
+
+/**
+ * 指标差异分析
+ */
+export interface MetricDifference {
+  metric: string;
+  metricLabel: string;
+  significance: DifferenceSignificance;
+  bestStrategy: string;
+  worstStrategy: string;
+}
+
+/**
+ * 策略对比 Insight 数据 (Story 8.3)
+ */
+export interface ComparisonInsightData extends InsightData {
+  type: 'comparison';
+  /** 对比的策略列表 (2-4个) */
+  strategies: ComparisonStrategy[];
+  /** 差异分析 */
+  differences: MetricDifference[];
+  /** AI 对比总结 */
+  aiSummary: string;
+}
+
+/**
+ * 类型守卫: 判断是否为 ComparisonInsightData
+ */
+export function isComparisonInsight(insight: InsightData): insight is ComparisonInsightData {
+  return insight.type === 'comparison';
 }

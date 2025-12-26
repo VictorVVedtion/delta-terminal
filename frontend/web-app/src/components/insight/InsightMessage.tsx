@@ -3,7 +3,15 @@
 import React from 'react'
 import { Bot } from 'lucide-react'
 import { InsightCard } from './InsightCard'
-import { InsightData, InsightParam, InsightCardStatus } from '@/types/insight'
+import { ClarificationCard } from './ClarificationCard'
+import {
+  InsightData,
+  InsightParam,
+  InsightCardStatus,
+  ClarificationInsight,
+  ClarificationAnswer,
+  isClarificationInsight,
+} from '@/types/insight'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -23,6 +31,8 @@ interface InsightMessageProps {
   onApprove?: ((insight: InsightData, params: InsightParam[]) => void) | undefined
   /** Called when user rejects the insight */
   onReject?: ((insight: InsightData) => void) | undefined
+  /** Called when user answers a clarification question (EPIC-010) */
+  onClarificationAnswer?: ((insight: ClarificationInsight, answer: ClarificationAnswer) => void) | undefined
   /** Whether to show in compact mode */
   compact?: boolean | undefined
   /** Whether to show avatar (default: false, for use within existing message layout) */
@@ -67,6 +77,7 @@ export function InsightMessage({
   onExpand,
   onApprove,
   onReject,
+  onClarificationAnswer,
   compact = false,
   showAvatar = false,
   className,
@@ -83,18 +94,48 @@ export function InsightMessage({
     onReject?.(insight)
   }, [insight, onReject])
 
-  // Without avatar - just render the InsightCard
+  const handleClarificationAnswer = React.useCallback((answer: ClarificationAnswer) => {
+    if (isClarificationInsight(insight)) {
+      onClarificationAnswer?.(insight, answer)
+    }
+  }, [insight, onClarificationAnswer])
+
+  // Determine clarification status from insight status
+  const clarificationStatus: 'pending' | 'answered' | 'skipped' =
+    status === 'approved' ? 'answered' :
+    status === 'rejected' ? 'skipped' :
+    'pending'
+
+  // Render appropriate card based on insight type
+  const renderCard = () => {
+    if (isClarificationInsight(insight)) {
+      return (
+        <ClarificationCard
+          insight={insight}
+          onAnswer={handleClarificationAnswer}
+          status={clarificationStatus}
+          compact={compact}
+        />
+      )
+    }
+
+    return (
+      <InsightCard
+        insight={insight}
+        status={status}
+        onExpand={handleExpand}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        compact={compact}
+      />
+    )
+  }
+
+  // Without avatar - just render the card
   if (!showAvatar) {
     return (
       <div className={cn('max-w-md', className)}>
-        <InsightCard
-          insight={insight}
-          status={status}
-          onExpand={handleExpand}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          compact={compact}
-        />
+        {renderCard()}
       </div>
     )
   }
@@ -109,16 +150,9 @@ export function InsightMessage({
 
       {/* Message Content */}
       <div className="flex-1 space-y-2">
-        {/* InsightCard */}
+        {/* Card */}
         <div className="max-w-md">
-          <InsightCard
-            insight={insight}
-            status={status}
-            onExpand={handleExpand}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            compact={compact}
-          />
+          {renderCard()}
         </div>
 
         {/* Timestamp */}

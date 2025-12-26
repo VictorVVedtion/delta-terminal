@@ -6,6 +6,7 @@
 
 export { InsightCard, default as InsightCardDefault } from './InsightCard'
 export { InsightMessage, MultiInsightMessage } from './InsightMessage'
+export { ClarificationCard } from './ClarificationCard'
 
 // Re-export types
 export type {
@@ -19,4 +20,13 @@ export type {
   ParamConfig,
   InsightImpact,
   InsightEvidence,
+  // Clarification types (EPIC-010 Story 10.2)
+  ClarificationInsight,
+  ClarificationOption,
+  ClarificationAnswer,
+  ClarificationCategory,
+  ClarificationOptionType,
 } from '@/types/insight'
+
+// Re-export type guards
+export { isClarificationInsight } from '@/types/insight'

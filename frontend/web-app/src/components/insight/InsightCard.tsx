@@ -18,6 +18,10 @@ import {
   Percent,
   Target,
   LineChart,
+  MessageSquare,
+  Activity,
+  PieChart,
+  GitCompare,
 } from 'lucide-react'
 import type {
   InsightType,
@@ -316,6 +320,30 @@ function getInsightTypeInfo(type: InsightType) {
       icon: <LineChart className="h-5 w-5 text-cyan-500" />,
       bgColor: 'bg-cyan-500/10',
       borderColor: 'border-l-cyan-500',
+    },
+    clarification: {
+      title: 'AI 追问',
+      icon: <MessageSquare className="h-5 w-5 text-indigo-500" />,
+      bgColor: 'bg-indigo-500/10',
+      borderColor: 'border-l-indigo-500',
+    },
+    sensitivity: {
+      title: '敏感度分析',
+      icon: <Activity className="h-5 w-5 text-amber-500" />,
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-l-amber-500',
+    },
+    attribution: {
+      title: '归因分析',
+      icon: <PieChart className="h-5 w-5 text-emerald-500" />,
+      bgColor: 'bg-emerald-500/10',
+      borderColor: 'border-l-emerald-500',
+    },
+    comparison: {
+      title: '策略对比',
+      icon: <GitCompare className="h-5 w-5 text-orange-500" />,
+      bgColor: 'bg-orange-500/10',
+      borderColor: 'border-l-orange-500',
     },
   }
 
