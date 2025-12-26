@@ -239,7 +239,8 @@ export type CanvasMode =
   | 'explorer'
   | 'monitor'
   | 'config'
-  | 'detail';
+  | 'detail'
+  | 'deploy';
 
 // =============================================================================
 // Main InsightData Structure

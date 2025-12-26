@@ -9,6 +9,7 @@ export { Canvas, default as CanvasDefault } from './Canvas'
 export { CanvasPanel, default as CanvasPanelDefault } from './CanvasPanel'
 export { MonitorCanvas, default as MonitorCanvasDefault } from './MonitorCanvas'
 export { BacktestCanvas, default as BacktestCanvasDefault } from './BacktestCanvas'
+export { DeployCanvas, default as DeployCanvasDefault } from './DeployCanvas'
 
 // Re-export types
 export type {
@@ -37,3 +38,10 @@ export type {
   BacktestMetrics,
   BacktestTrade,
 } from './BacktestCanvas'
+
+// Re-export DeployCanvas types
+export type {
+  DeployConfig,
+  BacktestSummary,
+  PaperPerformance,
+} from './DeployCanvas'

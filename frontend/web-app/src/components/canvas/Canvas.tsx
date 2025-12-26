@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Plus,
   Trash2,
+  Rocket,
 } from 'lucide-react'
 import type {
   InsightData,
@@ -1002,6 +1003,11 @@ function getCanvasModeInfo(mode: CanvasMode) {
       title: '详情查看',
       icon: <Eye className="h-5 w-5 text-cyan-500" />,
       bgColor: 'bg-cyan-500/10',
+    },
+    deploy: {
+      title: '策略部署',
+      icon: <Rocket className="h-5 w-5 text-[hsl(var(--rb-cyan))]" />,
+      bgColor: 'bg-[hsl(var(--rb-cyan))]/10',
     },
   }
 
