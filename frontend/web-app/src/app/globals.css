@@ -359,6 +359,43 @@
   box-shadow: 0 0 25px hsl(var(--rb-cyan) / 0.4);
 }
 
+/* Paper Trading Yellow Glow */
+.glow-yellow {
+  box-shadow: 0 0 20px hsl(var(--rb-yellow) / 0.3);
+}
+
+.hover\:glow-yellow:hover {
+  box-shadow: 0 0 25px hsl(var(--rb-yellow) / 0.4);
+}
+
+/* Subtle Pulse Animation for Paper Trading */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Paper Trading Glow Pulse */
+@keyframes pulse-glow-yellow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--rb-yellow) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px hsl(var(--rb-yellow) / 0);
+  }
+}
+
+.animate-pulse-glow-yellow {
+  animation: pulse-glow-yellow 2s ease-in-out infinite;
+}
+
 /* =============================================================================
    Trading Grid Layout
    ============================================================================= */

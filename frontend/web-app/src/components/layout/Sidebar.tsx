@@ -14,9 +14,18 @@ import {
   Settings,
   BookOpen,
   LifeBuoy,
+  Target,
+  type LucideIcon,
 } from 'lucide-react'
 
-const navigationItems = [
+interface NavigationItem {
+  title: string
+  href: string
+  icon: LucideIcon
+  badge?: string
+}
+
+const navigationItems: NavigationItem[] = [
   {
     title: '仪表盘',
     href: '/dashboard',
@@ -36,6 +45,12 @@ const navigationItems = [
     title: '回测',
     href: '/backtest',
     icon: BarChart3,
+  },
+  {
+    title: 'Paper Trading',
+    href: '/paper-trading',
+    icon: Target,
+    badge: 'NEW',
   },
   {
     title: '资产',
@@ -78,6 +93,7 @@ export function Sidebar() {
           {navigationItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
+            const isPaperTrading = item.href === '/paper-trading'
 
             return (
               <Link
@@ -87,11 +103,20 @@ export function Sidebar() {
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  isPaperTrading && !isActive && 'hover:bg-[hsl(var(--rb-yellow))]/10'
                 )}
               >
-                <Icon className="h-5 w-5" />
-                {item.title}
+                <Icon className={cn(
+                  'h-5 w-5',
+                  isPaperTrading && !isActive && 'text-[hsl(var(--rb-yellow))]'
+                )} />
+                <span className="flex-1">{item.title}</span>
+                {item.badge && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[hsl(var(--rb-yellow))]/20 text-[hsl(var(--rb-yellow))]">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             )
           })}

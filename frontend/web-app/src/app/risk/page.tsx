@@ -7,15 +7,16 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
   Shield,
-  AlertTriangle,
   TrendingDown,
   DollarSign,
   Activity,
   BarChart3,
   Target,
-  Zap,
+  Power,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SentinelAlerts } from '@/components/risk'
+import { KillSwitch } from '@/components/KillSwitch'
 
 // =============================================================================
 // Types
@@ -293,63 +294,6 @@ function PositionRiskTable({ positions }: { positions: PositionRisk[] }) {
   )
 }
 
-function RiskAlerts() {
-  const alerts = [
-    {
-      level: 'warning',
-      title: 'SOL/USDT 杠杆较高',
-      description: '当前杠杆 10x，建议降低至 5x 以下',
-      time: '5分钟前',
-    },
-    {
-      level: 'info',
-      title: '市场波动性上升',
-      description: 'BTC 24h 波动率上升 5.2%，注意控制仓位',
-      time: '15分钟前',
-    },
-  ]
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Zap className="h-5 w-5" />
-          风险提醒
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {alerts.map((alert, index) => (
-            <div
-              key={index}
-              className={cn(
-                'p-3 rounded-lg border-l-4',
-                alert.level === 'warning'
-                  ? 'bg-yellow-500/10 border-yellow-500'
-                  : 'bg-blue-500/10 border-blue-500'
-              )}
-            >
-              <div className="flex items-start gap-2">
-                <AlertTriangle className={cn(
-                  'h-4 w-4 mt-0.5',
-                  alert.level === 'warning' ? 'text-yellow-500' : 'text-blue-500'
-                )} />
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{alert.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {alert.description}
-                  </p>
-                </div>
-                <span className="text-xs text-muted-foreground">{alert.time}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 // =============================================================================
 // Risk Page
 // =============================================================================
@@ -381,45 +325,67 @@ export default function RiskPage() {
           ))}
         </div>
 
-        {/* Position Risks + Alerts */}
+        {/* Position Risks + Sentinel Alerts */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <PositionRiskTable positions={positionRisks} />
           </div>
-          <div>
-            <RiskAlerts />
+          <div className="space-y-4">
+            <SentinelAlerts maxVisible={3} />
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              风险控制
-            </CardTitle>
-            <CardDescription>快速调整风险参数</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="p-4 rounded-lg border bg-muted/30 text-center">
-                <p className="text-sm text-muted-foreground">全局止损</p>
-                <p className="text-2xl font-bold text-orange-500 mt-1">-10%</p>
-                <p className="text-xs text-muted-foreground mt-1">触发后平仓所有持仓</p>
-              </div>
-              <div className="p-4 rounded-lg border bg-muted/30 text-center">
-                <p className="text-sm text-muted-foreground">最大仓位</p>
-                <p className="text-2xl font-bold mt-1">$15,000</p>
-                <p className="text-xs text-muted-foreground mt-1">单策略最大持仓</p>
-              </div>
-              <div className="p-4 rounded-lg border bg-muted/30 text-center">
-                <p className="text-sm text-muted-foreground">日亏损限制</p>
-                <p className="text-2xl font-bold text-red-500 mt-1">-$500</p>
-                <p className="text-xs text-muted-foreground mt-1">达到后停止交易</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Quick Actions + Kill Switch */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  风险控制
+                </CardTitle>
+                <CardDescription>快速调整风险参数</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="p-4 rounded-lg border bg-muted/30 text-center">
+                    <p className="text-sm text-muted-foreground">全局止损</p>
+                    <p className="text-2xl font-bold text-orange-500 mt-1">-10%</p>
+                    <p className="text-xs text-muted-foreground mt-1">触发后平仓所有持仓</p>
+                  </div>
+                  <div className="p-4 rounded-lg border bg-muted/30 text-center">
+                    <p className="text-sm text-muted-foreground">最大仓位</p>
+                    <p className="text-2xl font-bold mt-1">$15,000</p>
+                    <p className="text-xs text-muted-foreground mt-1">单策略最大持仓</p>
+                  </div>
+                  <div className="p-4 rounded-lg border bg-muted/30 text-center">
+                    <p className="text-sm text-muted-foreground">日亏损限制</p>
+                    <p className="text-2xl font-bold text-red-500 mt-1">-$500</p>
+                    <p className="text-xs text-muted-foreground mt-1">达到后停止交易</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Emergency Kill Switch */}
+          <div>
+            <Card className="border-red-500/20 bg-red-500/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-500">
+                  <Power className="h-5 w-5" />
+                  紧急熔断
+                </CardTitle>
+                <CardDescription>
+                  长按激活紧急停止所有交易
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <KillSwitch />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </MainLayout>
   )

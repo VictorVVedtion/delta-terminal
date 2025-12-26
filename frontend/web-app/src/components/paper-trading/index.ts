@@ -6,6 +6,9 @@
 
 // 主要组件
 export { PaperTradingExample } from './PaperTradingExample'
+export { PaperTradingDashboard } from './PaperTradingDashboard'
+export { PaperTradingPanel } from './PaperTradingPanel'
+export { PaperTradingStatusCard, PaperTradingStatusBadge } from './PaperTradingStatusCard'
 export { PositionCard } from './PositionCard'
 export { QuickTradeButtons } from './QuickTradeButtons'
 export { TradeHistory } from './TradeHistory'

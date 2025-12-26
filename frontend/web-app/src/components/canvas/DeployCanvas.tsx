@@ -23,6 +23,8 @@ import {
 import { useRiskValidation } from '@/hooks/useRiskValidation'
 import { notify } from '@/lib/notification'
 import { ApprovalFlow } from '@/components/deployment/ApprovalFlow'
+import { usePaperTradingStore } from '@/store/paperTrading'
+import { useHyperliquidPrice, formatPrice } from '@/hooks/useHyperliquidPrice'
 
 // =============================================================================
 // Types
@@ -78,7 +80,7 @@ interface DeployCanvasProps {
 // =============================================================================
 
 export function DeployCanvas({
-  strategyId: _strategyId,
+  strategyId,
   strategyName = '策略',
   symbol = 'BTC/USDT',
   mode,
@@ -89,13 +91,21 @@ export function DeployCanvas({
   onCancel,
   isLoading = false,
 }: DeployCanvasProps) {
-  // strategyId reserved for future API integration
-  void _strategyId
   // State
   const [capital, setCapital] = React.useState(mode === 'paper' ? 10000 : 5000)
   const [confirmed, setConfirmed] = React.useState(false)
   const [riskSettings, setRiskSettings] = React.useState<RiskSettingsType>(DEFAULT_RISK_SETTINGS)
   const [showApprovalFlow, setShowApprovalFlow] = React.useState(false)
+
+  // Paper Trading integration
+  const initPaperAccount = usePaperTradingStore((state) => state.initAccount)
+  const getAccountByAgentId = usePaperTradingStore((state) => state.getAccountByAgentId)
+
+  // Get real-time price for the symbol (extract base asset from symbol like "BTC/USDT" -> "BTC")
+  const baseAsset = symbol.split('/')[0] || 'BTC'
+  const { prices: livePrices } = useHyperliquidPrice([baseAsset], {
+    enabled: isOpen && mode === 'paper'
+  })
 
   // Risk validation
   const riskValidation = useRiskValidation({
@@ -153,6 +163,26 @@ export function DeployCanvas({
     }
 
     try {
+      // Story 8.2: Paper Trading 集成 - 初始化虚拟账户
+      if (mode === 'paper') {
+        const agentId = `strategy_${strategyId}`
+        const existingAccount = getAccountByAgentId(agentId)
+
+        if (!existingAccount) {
+          // 初始化新的 Paper Trading 账户
+          const accountId = initPaperAccount(agentId, capital)
+          notify('info', 'Paper Trading 账户已创建', {
+            description: `账户 ID: ${accountId.slice(0, 8)}...，虚拟资金: $${capital.toLocaleString()}`,
+            source: 'DeployCanvas',
+          })
+        } else {
+          notify('info', '使用现有 Paper Trading 账户', {
+            description: `当前余额: $${existingAccount.currentBalance.toLocaleString()}`,
+            source: 'DeployCanvas',
+          })
+        }
+      }
+
       await onDeploy(config)
 
       // Story 5.3: 部署成功通知
@@ -170,7 +200,7 @@ export function DeployCanvas({
         source: 'DeployCanvas',
       })
     }
-  }, [mode, capital, riskSettings, onDeploy, strategyName])
+  }, [mode, capital, riskSettings, onDeploy, strategyName, strategyId, initPaperAccount, getAccountByAgentId])
 
   // Handle approval flow completion (S31)
   const handleApprovalComplete = React.useCallback((token: string) => {
@@ -247,6 +277,8 @@ export function DeployCanvas({
                 capital={capital}
                 onCapitalChange={setCapital}
                 isLoading={isLoading}
+                symbol={symbol}
+                livePrice={livePrices.get(baseAsset) ?? null}
               />
             ) : (
               <LiveDeployContent
@@ -416,15 +448,20 @@ function BacktestStatusSection({ result }: { result: BacktestSummary }) {
 
 /**
  * PaperDeployContent - Paper mode deployment configuration
+ * Story 8.2: 集成 Paper Trading 和实时价格
  */
 function PaperDeployContent({
   capital,
   onCapitalChange,
   isLoading,
+  symbol,
+  livePrice,
 }: {
   capital: number
   onCapitalChange: (value: number) => void
   isLoading: boolean
+  symbol: string
+  livePrice: number | null
 }) {
   return (
     <section className="space-y-4">
@@ -434,6 +471,23 @@ function PaperDeployContent({
       </h3>
 
       <div className="space-y-4">
+        {/* Story 8.1: 实时价格显示 */}
+        {livePrice !== null && (
+          <div className="p-3 rounded-lg bg-card/50 border">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {symbol} 实时价格
+              </span>
+              <span className="text-lg font-bold font-mono text-[hsl(var(--rb-green))]">
+                {formatPrice(livePrice)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              数据来源: Hyperliquid DEX
+            </p>
+          </div>
+        )}
+
         <div className="p-3 rounded-lg bg-[hsl(var(--rb-yellow))]/5 border border-[hsl(var(--rb-yellow))]/20">
           <div className="flex items-start gap-2 text-xs text-[hsl(var(--rb-yellow))]">
             <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />

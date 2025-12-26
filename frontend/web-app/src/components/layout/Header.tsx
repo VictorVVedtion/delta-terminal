@@ -24,6 +24,9 @@ import { KillSwitch } from '@/components/KillSwitch'
 import { NotificationCenter } from '@/components/NotificationCenter'
 import { GlobalAgentStatus } from '@/components/system/GlobalAgentStatus'
 import { MarginAlertBadge } from '@/components/safety/MarginAlert'
+import { PaperTradingStatusCard } from '@/components/paper-trading/PaperTradingStatusCard'
+import { PaperTradingPanel } from '@/components/paper-trading/PaperTradingPanel'
+import { usePaperTradingStore } from '@/store/paperTrading'
 
 export function Header() {
   const router = useRouter()
@@ -31,6 +34,13 @@ export function Header() {
   const { disconnect } = useDisconnect()
   const [showUserMenu, setShowUserMenu] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
+  const [showPTPanel, setShowPTPanel] = React.useState(false)
+
+  // Paper Trading 状态
+  const accounts = usePaperTradingStore((s) => s.accounts)
+  const getAccountStats = usePaperTradingStore((s) => s.getAccountStats)
+  const activeAccount = accounts.length > 0 ? accounts[0] : null
+  const ptStats = activeAccount ? getAccountStats(activeAccount.id) : null
 
   // 格式化钱包地址显示
   const formatAddress = (address: string) => {
@@ -79,6 +89,15 @@ export function Header() {
               className="w-full pl-8 pr-4 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
+        </div>
+
+        {/* Paper Trading 状态卡片 - 明显的入口 */}
+        <div className="hidden md:block mx-4">
+          <PaperTradingStatusCard
+            isRunning={!!activeAccount}
+            stats={ptStats}
+            onClick={() => setShowPTPanel(true)}
+          />
         </div>
 
         {/* Right Section - 分组布局 */}
@@ -188,6 +207,17 @@ export function Header() {
           </div>
         </div>
       </div>
+
+      {/* Paper Trading 滑动面板 */}
+      {activeAccount && (
+        <PaperTradingPanel
+          isOpen={showPTPanel}
+          onClose={() => setShowPTPanel(false)}
+          strategyId={activeAccount.agentId}
+          strategyName="Paper Trading"
+          symbol="BTC/USDT"
+        />
+      )}
     </header>
   )
 }
