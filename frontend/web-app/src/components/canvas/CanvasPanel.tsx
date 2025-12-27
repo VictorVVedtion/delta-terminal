@@ -166,7 +166,7 @@ export function CanvasPanel({
     return null
   }
 
-  // Get type label and variant
+  // Get type label and variant - 所有 10 种 InsightType 都需要处理
   const getTypeInfo = (type: InsightData['type']) => {
     switch (type) {
       case 'strategy_create':
@@ -177,6 +177,18 @@ export function CanvasPanel({
         return { label: '批量调整', variant: 'outline' as const }
       case 'risk_alert':
         return { label: '风险警报', variant: 'destructive' as const }
+      case 'trade_signal':
+        return { label: '交易信号', variant: 'warning' as const }
+      case 'backtest':
+        return { label: '回测结果', variant: 'secondary' as const }
+      case 'clarification':
+        return { label: 'AI 追问', variant: 'outline' as const }
+      case 'sensitivity':
+        return { label: '敏感度分析', variant: 'secondary' as const }
+      case 'attribution':
+        return { label: '归因分析', variant: 'secondary' as const }
+      case 'comparison':
+        return { label: '策略对比', variant: 'outline' as const }
       default:
         return { label: '未知', variant: 'outline' as const }
     }

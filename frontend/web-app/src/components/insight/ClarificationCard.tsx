@@ -43,13 +43,15 @@ const CATEGORY_CONFIG: Record<
   ClarificationInsight['category'],
   { icon: string; label: string; color: string }
 > = {
-  risk_preference: { icon: '⚖️', label: '风险偏好', color: 'text-orange-500' },
   trading_pair: { icon: '💱', label: '交易对', color: 'text-blue-500' },
-  timeframe: { icon: '⏱️', label: '时间周期', color: 'text-purple-500' },
   strategy_type: { icon: '🎯', label: '策略类型', color: 'text-green-500' },
-  capital_allocation: { icon: '💰', label: '资金配置', color: 'text-yellow-500' },
+  risk_preference: { icon: '⚖️', label: '风险偏好', color: 'text-orange-500' },
+  timeframe: { icon: '⏱️', label: '时间周期', color: 'text-purple-500' },
   entry_condition: { icon: '📈', label: '入场条件', color: 'text-cyan-500' },
   exit_condition: { icon: '📉', label: '出场条件', color: 'text-pink-500' },
+  position_size: { icon: '📊', label: '仓位大小', color: 'text-indigo-500' },
+  market_context: { icon: '🌍', label: '市场环境', color: 'text-teal-500' },
+  capital_allocation: { icon: '💰', label: '资金配置', color: 'text-yellow-500' },
   general: { icon: '💡', label: '一般问题', color: 'text-muted-foreground' },
 }
 

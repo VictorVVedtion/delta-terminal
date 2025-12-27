@@ -16,7 +16,8 @@ import { ApprovalFlow } from '@/components/deployment/ApprovalFlow'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { formatPrice,useHyperliquidPrice } from '@/hooks/useHyperliquidPrice'
+import { getCapitalLimits, getDefaultCapital } from '@/config/trading'
+import { formatPrice, useHyperliquidPrice } from '@/hooks/useHyperliquidPrice'
 import { useRiskValidation } from '@/hooks/useRiskValidation'
 import { notify } from '@/lib/notification'
 import { cn } from '@/lib/utils'
@@ -94,8 +95,8 @@ export function DeployCanvas({
   onCancel,
   isLoading = false,
 }: DeployCanvasProps) {
-  // State
-  const [capital, setCapital] = React.useState(mode === 'paper' ? 10000 : 5000)
+  // State - 从配置获取默认资本
+  const [capital, setCapital] = React.useState(() => getDefaultCapital(mode))
   const [confirmed, setConfirmed] = React.useState(false)
   const [riskSettings, setRiskSettings] = React.useState<RiskSettingsType>(DEFAULT_RISK_SETTINGS)
   const [showApprovalFlow, setShowApprovalFlow] = React.useState(false)
@@ -120,7 +121,7 @@ export function DeployCanvas({
   // Reset confirmation when mode changes
   React.useEffect(() => {
     setConfirmed(false)
-    setCapital(mode === 'paper' ? 10000 : 5000)
+    setCapital(getDefaultCapital(mode))
   }, [mode])
 
   // ESC key handler
@@ -509,9 +510,7 @@ function PaperDeployContent({
             value: capital,
             level: 1,
             config: {
-              min: 1000,
-              max: 100000,
-              step: 1000,
+              ...getCapitalLimits('paper'),
               unit: '$',
             },
             description: '模拟交易的初始资金',
@@ -628,9 +627,7 @@ function LiveDeployContent({
             value: capital,
             level: 1,
             config: {
-              min: 100,
-              max: 50000,
-              step: 100,
+              ...getCapitalLimits('live'),
               unit: '$',
             },
             description: '实盘交易的初始资金',

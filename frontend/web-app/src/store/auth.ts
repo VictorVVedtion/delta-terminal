@@ -1,5 +1,5 @@
 /**
- * 认证状态管理 (Zustand) - 钱包认证版本
+ * 认证状态管理 (Zustand) - 混合认证版本 (支持钱包 + 邮箱)
  */
 
 import { create } from 'zustand'
@@ -8,11 +8,14 @@ import { devtools, persist } from 'zustand/middleware'
 // 用户角色
 export type UserRole = 'user' | 'admin' | 'moderator'
 
-// 用户类型（钱包为主键）
+// 用户类型
 export interface User {
   id: string
-  walletAddress: string
+  email?: string
+  displayName?: string
+  walletAddress?: string
   role: UserRole
+  avatarUrl?: string
 }
 
 // Token 类型
@@ -48,7 +51,7 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
 
         login: (user, accessToken, refreshToken) =>
-          { set(
+          set(
             {
               user,
               accessToken,
@@ -58,10 +61,10 @@ export const useAuthStore = create<AuthState>()(
             },
             false,
             'auth/login'
-          ); },
+          ),
 
         logout: () =>
-          { set(
+          set(
             {
               user: null,
               accessToken: null,
@@ -71,20 +74,20 @@ export const useAuthStore = create<AuthState>()(
             },
             false,
             'auth/logout'
-          ); },
+          ),
 
         setUser: (user) =>
-          { set({ user }, false, 'auth/setUser'); },
+          set({ user }, false, 'auth/setUser'),
 
         setTokens: (accessToken, refreshToken) =>
-          { set(
+          set(
             { accessToken, refreshToken },
             false,
             'auth/setTokens'
-          ); },
+          ),
 
         setLoading: (isLoading) =>
-          { set({ isLoading }, false, 'auth/setLoading'); },
+          set({ isLoading }, false, 'auth/setLoading'),
       }),
       {
         name: 'delta-auth-storage',

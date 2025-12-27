@@ -40,7 +40,7 @@ export default function LoginPage() {
         {
           id: 'user_123',
           email: formData.email,
-          displayName: formData.email.split('@')[0] ?? formData.email,
+          displayName: formData.email.split('@')[0] || 'User',
           role: 'user',
           avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.email}`,
         },

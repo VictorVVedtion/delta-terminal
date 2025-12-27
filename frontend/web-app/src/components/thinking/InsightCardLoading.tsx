@@ -1,5 +1,6 @@
 'use client'
 
+import { AnimatePresence,motion } from 'framer-motion'
 import React from 'react'
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -108,7 +109,7 @@ function ThinkingPhase({
           {/* Icon + Title with partial data */}
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-[hsl(var(--rb-cyan))]/10 flex items-center justify-center">
-              <span className="text-lg">🎯</span>
+              <span className="text-lg animate-pulse">🎯</span>
             </div>
             <div className="space-y-1">
               <Skeleton className="h-4 w-32" animation="shimmer" />
@@ -116,7 +117,7 @@ function ThinkingPhase({
             </div>
           </div>
           {/* Status badge */}
-          <div className="px-2 py-1 rounded-full bg-[hsl(var(--rb-cyan))]/10 text-[hsl(var(--rb-cyan))] text-xs font-medium">
+          <div className="px-2 py-1 rounded-full bg-[hsl(var(--rb-cyan))]/10 text-[hsl(var(--rb-cyan))] text-xs font-medium animate-pulse">
             生成中
           </div>
         </div>
@@ -127,7 +128,7 @@ function ThinkingPhase({
         <ThinkingIndicator process={defaultProcess} defaultExpanded />
 
         {/* Metrics skeleton with partial shimmer */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 opacity-50">
           {[1, 2, 3].map((i) => (
             <div key={i} className="space-y-1">
               <Skeleton className="h-3 w-12" animation="shimmer" />
@@ -201,7 +202,9 @@ function FillingPhase({
               {metric.loading ? (
                 <Skeleton className="h-5 w-16" animation="shimmer" />
               ) : (
-                <span
+                <motion.span
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   className={cn(
                     'text-lg font-bold block',
                     metric.key === 'return' && 'text-[hsl(var(--rb-green))]',
@@ -211,7 +214,7 @@ function FillingPhase({
                   {metric.key === 'return' && `+${metric.value}%`}
                   {metric.key === 'winRate' && `${metric.value}%`}
                   {metric.key === 'maxDrawdown' && `-${metric.value}%`}
-                </span>
+                </motion.span>
               )}
             </div>
           ))}
@@ -247,23 +250,49 @@ export function InsightCardLoading({ state, className }: InsightCardLoadingProps
   const thinkingProps = state.thinking !== undefined ? { thinking: state.thinking } : {}
   const partialDataProps = state.partial_data !== undefined ? { partialData: state.partial_data } : {}
 
-  switch (state.phase) {
-    case 'skeleton':
-      return <SkeletonPhase {...cnProps} />
-    case 'thinking':
-      return <ThinkingPhase {...thinkingProps} {...cnProps} />
-    case 'filling':
-      return <FillingPhase {...partialDataProps} {...cnProps} />
-    case 'ready':
-      // Ready 状态应该渲染真正的 InsightCard
-      return null
-    default:
-      return <SkeletonPhase {...cnProps} />
-  }
+  return (
+    <AnimatePresence mode="wait">
+      {state.phase === 'skeleton' && (
+        <motion.div
+          key="skeleton"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <SkeletonPhase {...cnProps} />
+        </motion.div>
+      )}
+      
+      {state.phase === 'thinking' && (
+        <motion.div
+          key="thinking"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 1.05 }}
+          transition={{ duration: 0.3 }}
+        >
+          <ThinkingPhase {...thinkingProps} {...cnProps} />
+        </motion.div>
+      )}
+
+      {state.phase === 'filling' && (
+        <motion.div
+          key="filling"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <FillingPhase {...partialDataProps} {...cnProps} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
 }
 
 // =============================================================================
-// Hook: useInsightLoadingState
+// Hook: useInsightLoadingState (Unchanged)
 // =============================================================================
 
 interface UseInsightLoadingStateOptions {

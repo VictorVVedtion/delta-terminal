@@ -3,9 +3,14 @@
  * EPIC-008: 参数敏感度分析、归因分析、策略对比
  *
  * 提供分析数据获取的 hooks，用于支持各种高级分析功能
+ *
+ * ⚠️ 注意：当前使用 Mock 数据
+ * - 开发环境：显示模拟数据用于 UI 开发
+ * - 生产环境：返回 null 并提示功能开发中
+ * - TODO: 后端 API 完成后替换为真实数据
  */
 
-import { useCallback,useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { apiClient as _apiClient } from '@/lib/api'
 import type {
@@ -30,10 +35,23 @@ export interface UseAnalysisState<T> {
 export interface UseAnalysisReturn<T> extends UseAnalysisState<T> {
   /** 重新获取数据 */
   refetch: () => Promise<void>
+  /** 是否为模拟数据 */
+  isMockData: boolean
 }
 
 // =============================================================================
-// Mock Data Generators
+// Configuration
+// =============================================================================
+
+/**
+ * 是否使用 Mock 数据
+ * - 开发环境: 使用 Mock 便于 UI 开发
+ * - 生产环境: 返回空数据并提示功能开发中
+ */
+const USE_MOCK_DATA = process.env.NODE_ENV === 'development'
+
+// =============================================================================
+// Mock Data Generators (仅开发环境使用)
 // =============================================================================
 
 /**
@@ -327,18 +345,26 @@ export function useSensitivityAnalysis(
     setState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // TODO: 连接真实 API
-      // const data = await apiClient.getSensitivityAnalysis(strategyId)
+      if (USE_MOCK_DATA) {
+        // 开发环境：使用 Mock 数据
+        await new Promise((resolve) => setTimeout(resolve, 800))
+        const mockData = generateMockSensitivityData(strategyId)
 
-      // 使用 Mock 数据
-      await new Promise((resolve) => setTimeout(resolve, 800))
-      const mockData = generateMockSensitivityData(strategyId)
-
-      setState({
-        data: mockData,
-        isLoading: false,
-        error: null,
-      })
+        setState({
+          data: mockData,
+          isLoading: false,
+          error: null,
+        })
+      } else {
+        // 生产环境：调用真实 API
+        // TODO: 后端 API 完成后实现
+        // const data = await apiClient.getSensitivityAnalysis(strategyId)
+        setState({
+          data: null,
+          isLoading: false,
+          error: new Error('敏感度分析功能开发中，敬请期待'),
+        })
+      }
     } catch (error) {
       setState({
         data: null,
@@ -358,6 +384,7 @@ export function useSensitivityAnalysis(
   return {
     ...state,
     refetch: fetchData,
+    isMockData: USE_MOCK_DATA,
   }
 }
 
@@ -400,18 +427,26 @@ export function useAttributionAnalysis(
     setState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // TODO: 连接真实 API
-      // const data = await apiClient.getAttributionAnalysis(strategyId)
+      if (USE_MOCK_DATA) {
+        // 开发环境：使用 Mock 数据
+        await new Promise((resolve) => setTimeout(resolve, 800))
+        const mockData = generateMockAttributionData(strategyId)
 
-      // 使用 Mock 数据
-      await new Promise((resolve) => setTimeout(resolve, 800))
-      const mockData = generateMockAttributionData(strategyId)
-
-      setState({
-        data: mockData,
-        isLoading: false,
-        error: null,
-      })
+        setState({
+          data: mockData,
+          isLoading: false,
+          error: null,
+        })
+      } else {
+        // 生产环境：调用真实 API
+        // TODO: 后端 API 完成后实现
+        // const data = await apiClient.getAttributionAnalysis(strategyId)
+        setState({
+          data: null,
+          isLoading: false,
+          error: new Error('归因分析功能开发中，敬请期待'),
+        })
+      }
     } catch (error) {
       setState({
         data: null,
@@ -431,6 +466,7 @@ export function useAttributionAnalysis(
   return {
     ...state,
     refetch: fetchData,
+    isMockData: USE_MOCK_DATA,
   }
 }
 
@@ -486,18 +522,26 @@ export function useComparisonAnalysis(
     setState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // TODO: 连接真实 API
-      // const data = await apiClient.getComparisonAnalysis(strategyIds)
+      if (USE_MOCK_DATA) {
+        // 开发环境：使用 Mock 数据
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        const mockData = generateMockComparisonData(strategyIds)
 
-      // 使用 Mock 数据
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      const mockData = generateMockComparisonData(strategyIds)
-
-      setState({
-        data: mockData,
-        isLoading: false,
-        error: null,
-      })
+        setState({
+          data: mockData,
+          isLoading: false,
+          error: null,
+        })
+      } else {
+        // 生产环境：调用真实 API
+        // TODO: 后端 API 完成后实现
+        // const data = await apiClient.getComparisonAnalysis(strategyIds)
+        setState({
+          data: null,
+          isLoading: false,
+          error: new Error('策略对比功能开发中，敬请期待'),
+        })
+      }
     } catch (error) {
       setState({
         data: null,
@@ -517,6 +561,7 @@ export function useComparisonAnalysis(
   return {
     ...state,
     refetch: fetchData,
+    isMockData: USE_MOCK_DATA,
   }
 }
 

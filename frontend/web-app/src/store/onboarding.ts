@@ -19,12 +19,19 @@ export interface OnboardingStep {
   target: string | null // CSS selector for spotlight, null for modal-only steps
 }
 
+export interface QuestionnaireData {
+  experience: 'new' | 'experienced' | 'pro' | null
+  interests: string[]
+  exchange: string | null
+}
+
 export interface OnboardingState {
   // State
   completed: boolean
   skipped: boolean
   currentStep: number
   lastShownAt: number | null
+  questionnaire: QuestionnaireData
 
   // Actions
   startOnboarding: () => void
@@ -34,6 +41,7 @@ export interface OnboardingState {
   completeOnboarding: () => void
   resetOnboarding: () => void
   setStep: (step: number) => void
+  setQuestionnaireAnswer: (key: keyof QuestionnaireData, value: unknown) => void
 }
 
 // =============================================================================
@@ -45,6 +53,12 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: 'welcome',
     title: '欢迎使用 Delta Terminal',
     description: 'AI 驱动的智能交易终端，让我们用 1 分钟带你了解核心功能',
+    target: null, // Full screen modal
+  },
+  {
+    id: 'questionnaire',
+    title: '定制您的体验',
+    description: '告诉我们要点信息，为您推荐最适合的策略',
     target: null, // Full screen modal
   },
   {
@@ -110,13 +124,18 @@ export const useOnboardingStore = create<OnboardingState>()(
       skipped: false,
       currentStep: 0,
       lastShownAt: null,
+      questionnaire: {
+        experience: null,
+        interests: [],
+        exchange: null,
+      },
 
       // Actions
       startOnboarding: () =>
-        { set({
+        set({
           currentStep: 0,
           lastShownAt: Date.now(),
-        }); },
+        }),
 
       nextStep: () => {
         const { currentStep } = get()
@@ -141,34 +160,48 @@ export const useOnboardingStore = create<OnboardingState>()(
       },
 
       skipOnboarding: () =>
-        { set({
+        set({
           skipped: true,
           lastShownAt: Date.now(),
-        }); },
+        }),
 
       completeOnboarding: () =>
-        { set({
+        set({
           completed: true,
           lastShownAt: Date.now(),
-        }); },
+        }),
 
       resetOnboarding: () =>
-        { set({
+        set({
           completed: false,
           skipped: false,
           currentStep: 0,
           lastShownAt: null,
-        }); },
+          questionnaire: {
+            experience: null,
+            interests: [],
+            exchange: null,
+          },
+        }),
 
       setStep: (step: number) => {
         if (step >= 0 && step < ONBOARDING_STEPS.length) {
           set({ currentStep: step })
         }
       },
+
+      setQuestionnaireAnswer: (key, value) => {
+        set((state) => ({
+          questionnaire: {
+            ...state.questionnaire,
+            [key]: value,
+          },
+        }))
+      },
     }),
     {
       name: 'delta-onboarding',
-      version: 1,
+      version: 2, // Increment version for schema change
     }
   )
 )

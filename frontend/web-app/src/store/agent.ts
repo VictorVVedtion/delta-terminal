@@ -106,11 +106,11 @@ interface AgentState {
   getPaperRunningDays: (agentId: string) => number
 }
 
-// 默认风险概览
+// 默认风险概览 (初始为零，数据将从实际持仓和账户计算)
 const defaultRiskOverview: RiskOverview = {
-  marginRate: 185,
-  totalExposure: 4200,
-  maxDrawdown: 12.5,
+  marginRate: 0,        // 需从交易所账户余额计算
+  totalExposure: 0,     // 需从 Agent 持仓汇总
+  maxDrawdown: 0,       // 需从 Agent 历史盈亏计算
   riskLevel: 'low',
 }
 

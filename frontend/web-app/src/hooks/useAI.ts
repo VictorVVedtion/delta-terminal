@@ -363,6 +363,9 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
                 case 'content':
                   if (chunk.data.content) {
                     fullContent += chunk.data.content
+                    // 直接更新 UI - 这就是真实的 token 速度
+                    // SSE 流按 AI 生成速度推送 token，前端立即显示
+                    // 无需使用 TextAnimator，因为这已经是最真实的速度
                     setStreamContent(fullContent)
                     appendStreamingContent(chunk.data.content)
                   }

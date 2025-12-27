@@ -30,6 +30,7 @@ import { notify, notifyWarning } from '@/lib/notification'
 import { extractInsightData, generateSystemPrompt, validateInsightData } from '@/lib/prompts/strategy-assistant'
 import type { StrategyTemplate } from '@/lib/templates/strategies'
 import { cn } from '@/lib/utils'
+import { useMarketStore } from '@/store'
 import type { Agent } from '@/store/agent'
 import { useAgentStore } from '@/store/agent'
 import { useAIStore } from '@/store/ai'
@@ -38,6 +39,7 @@ import { useAnalysisStore } from '@/store/analysis'
 // Types
 // =============================================================================
 import { useModeStore } from '@/store/mode'
+import { usePaperTradingStore } from '@/store/paperTrading'
 import { SIMPLE_PRESETS, type SimplePreset } from '@/types/ai'
 import type { BacktestConfig } from '@/types/backtest'
 import type {
@@ -152,6 +154,30 @@ export function ChatInterface({
   // Agent Store - 连接 InsightCard 批准 → Agent 创建
   // ==========================================================================
   const { addAgent, agents, updatePnLDashboard } = useAgentStore()
+
+  // ==========================================================================
+  // Market & Paper Trading Store - 真实数据源
+  // ==========================================================================
+  const { getMarket } = useMarketStore()
+  const { accounts: paperAccounts } = usePaperTradingStore()
+
+  // 获取市场数据上下文 (真实数据 + fallback)
+  const getMarketContext = React.useCallback(() => {
+    const btcData = getMarket('BTC/USDT')
+    const ethData = getMarket('ETH/USDT')
+    return {
+      btcPrice: btcData?.price ?? 0, // 0 表示无数据，AI 会忽略
+      ethPrice: ethData?.price ?? 0,
+      btcChange24h: btcData?.change24h ?? 0,
+      ethChange24h: ethData?.change24h ?? 0,
+    }
+  }, [getMarket])
+
+  // 获取总初始资本 (从 paper trading 账户汇总)
+  const getTotalInitialCapital = React.useCallback(() => {
+    if (paperAccounts.length === 0) return 0 // 无账户时返回 0
+    return paperAccounts.reduce((sum, acc) => sum + acc.initialCapital, 0)
+  }, [paperAccounts])
 
   // ==========================================================================
   // State
@@ -507,43 +533,83 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     ))
 
     // =========================================================================
-    // 核心: 从 InsightData 创建真实的 Agent 并添加到 Store
+    // 核心: 根据 InsightType 执行不同的批准逻辑
     // =========================================================================
-    if (insight.type === 'strategy_create' || insight.type === 'strategy_modify') {
-      const now = Date.now()
-      const newAgent: Agent = {
-        id: `agent_${now}`,
-        name: insight.target?.name ?? '新策略',
-        symbol: insight.target?.symbol ?? 'BTC/USDT',
-        status: 'shadow', // 新创建的策略默认为 shadow 模式
-        pnl: 0,
-        pnlPercent: 0,
-        trades: 0,
-        winRate: 0,
-        createdAt: now,
-        updatedAt: now,
-        // 存储回测相关字段以便后续部署
-        backtestId: insight.id, // 用于标记已通过批准
+    const now = Date.now()
+    let confirmContent = ''
+
+    switch (insight.type) {
+      case 'strategy_create':
+      case 'strategy_modify': {
+        // 创建/修改策略 → 添加到 AgentStore
+        const newAgent: Agent = {
+          id: `agent_${now}`,
+          name: insight.target?.name ?? '新策略',
+          symbol: insight.target?.symbol ?? 'BTC/USDT',
+          status: 'shadow', // 新创建的策略默认为 shadow 模式
+          pnl: 0,
+          pnlPercent: 0,
+          trades: 0,
+          winRate: 0,
+          createdAt: now,
+          updatedAt: now,
+          backtestId: insight.id,
+        }
+        addAgent(newAgent)
+
+        // 重新计算 PnL 仪表盘
+        const allAgents = [...agents, newAgent]
+        const totalPnL = allAgents.reduce((sum, a) => sum + a.pnl, 0)
+        const totalCapital = getTotalInitialCapital() || 10000
+        const totalPnLPercent = totalCapital > 0 ? (totalPnL / totalCapital) * 100 : 0
+
+        updatePnLDashboard({
+          totalPnL,
+          totalPnLPercent,
+          todayPnL: allAgents.filter(a => a.updatedAt > now - 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
+          todayPnLPercent: 0,
+          weekPnL: allAgents.filter(a => a.updatedAt > now - 7 * 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
+          monthPnL: totalPnL,
+        })
+
+        confirmContent = `✅ 策略已批准并创建！您可以在左侧边栏查看新创建的 Agent。\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
+        break
       }
 
-      // 添加到 AgentStore
-      addAgent(newAgent)
+      case 'trade_signal': {
+        // 交易信号 → 记录确认（实际下单需要集成交易引擎）
+        const direction = (insight as unknown as { direction?: string }).direction ?? 'unknown'
+        const symbol = insight.target?.symbol ?? 'BTC/USDT'
+        confirmContent = `✅ 交易信号已确认！\n\n• 交易对: ${symbol}\n• 方向: ${direction === 'long' ? '做多' : direction === 'short' ? '做空' : '平仓'}\n\n⚠️ 请在交易面板执行实际下单操作。`
+        notify('success', '交易信号已确认', { description: `${symbol} ${direction}` })
+        break
+      }
 
-      // 重新计算 PnL 仪表盘 (从所有 Agent 汇总)
-      // 注意: 由于 addAgent 是异步更新，这里用当前 agents + 新 agent 计算
-      const allAgents = [...agents, newAgent]
-      const totalPnL = allAgents.reduce((sum, a) => sum + a.pnl, 0)
-      const totalCapital = 10000 // 假设总初始资本
-      const totalPnLPercent = totalCapital > 0 ? (totalPnL / totalCapital) * 100 : 0
+      case 'risk_alert': {
+        // 风险警告 → 确认已知悉
+        const alertType = (insight as unknown as { alertType?: string }).alertType ?? '风险提醒'
+        confirmContent = `✅ 风险警告已确认！\n\n• 类型: ${alertType}\n• 操作: 已记录确认\n\n请根据建议采取相应的风险缓解措施。`
+        notify('warning', '风险警告已确认', { description: alertType })
+        break
+      }
 
-      updatePnLDashboard({
-        totalPnL,
-        totalPnLPercent,
-        todayPnL: allAgents.filter(a => a.updatedAt > now - 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
-        todayPnLPercent: 0,
-        weekPnL: allAgents.filter(a => a.updatedAt > now - 7 * 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
-        monthPnL: totalPnL,
-      })
+      case 'comparison': {
+        // 策略对比 → 记录选择
+        confirmContent = `✅ 策略对比结果已确认！\n\n对比分析已保存，您可以根据结果调整策略配置。`
+        break
+      }
+
+      case 'batch_adjust': {
+        // 批量调整 → 应用到多个策略
+        const affectedCount = params.length
+        confirmContent = `✅ 批量调整已应用！\n\n• 影响参数: ${affectedCount} 个\n• 调整内容:\n${params.map(p => `  • ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
+        notify('success', '批量调整已应用', { description: `${affectedCount} 个参数已更新` })
+        break
+      }
+
+      default:
+        // 其他类型的通用确认
+        confirmContent = `✅ 操作已确认！\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
     }
 
     // Close Canvas and reset loading
@@ -553,16 +619,16 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
     // Add confirmation message
     const confirmMessage: Message = {
-      id: `confirm_${Date.now()}`,
+      id: `confirm_${now}`,
       role: 'assistant',
-      content: `✅ 策略已批准并创建！您可以在左侧边栏查看新创建的 Agent。\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`,
-      timestamp: Date.now(),
+      content: confirmContent,
+      timestamp: now,
     }
     setMessages(prev => [...prev, confirmMessage])
 
     // Notify parent
     onInsightApprove?.(insight, params)
-  }, [canvasOpen, onInsightApprove, addAgent, agents, updatePnLDashboard])
+  }, [canvasOpen, onInsightApprove, addAgent, agents, updatePnLDashboard, getTotalInitialCapital])
 
   // A2UI: Handle insight rejection (from Canvas or InsightCard)
   const handleInsightReject = React.useCallback((insight: InsightData) => {
@@ -630,12 +696,12 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
       // Generate system prompt with context
       const systemPrompt = generateSystemPrompt({
-        marketData: { btcPrice: 42000, ethPrice: 2200 }
+        marketData: getMarketContext()
       })
 
       const finalContent = await sendStream(contextMessage, {
         systemPrompt,
-        context: { marketData: { btcPrice: 42000, ethPrice: 2200 } }
+        context: { marketData: getMarketContext() }
       })
 
       if (finalContent) {
@@ -936,12 +1002,12 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     try {
       // 生成带上下文的 System Prompt
       const systemPrompt = generateSystemPrompt({
-        marketData: { btcPrice: 42000, ethPrice: 2200 }
+        marketData: getMarketContext()
       })
 
       const finalContent = await sendStream(userInput, {
         systemPrompt,
-        context: { marketData: { btcPrice: 42000, ethPrice: 2200 } }
+        context: { marketData: getMarketContext() }
       })
 
       // 检查是否有有效内容

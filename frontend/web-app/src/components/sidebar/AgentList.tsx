@@ -1,6 +1,19 @@
-import { AlertTriangle,BarChart3, GitCompare, History, MoreVertical, Plus, TrendingUp } from 'lucide-react'
+import {
+  AlertTriangle,
+  BarChart3,
+  Edit,
+  GitCompare,
+  History,
+  MoreVertical,
+  Pause,
+  Play,
+  Plus,
+  Trash2,
+  TrendingUp
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React from 'react'
+import { toast } from 'sonner'
 
 import { ThinkingIndicator } from '@/components/thinking/ThinkingIndicator'
 import { cn } from '@/lib/utils'
@@ -32,6 +45,8 @@ interface AgentItemProps {
 }
 
 function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps) {
+  const router = useRouter()
+  const { updateAgent, removeAgent } = useAgentStore()
   const statusConfig = STATUS_CONFIG[agent.status]
   const isPositive = agent.pnl >= 0
   const isShadow = agent.status === 'shadow'
@@ -52,6 +67,23 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
 
     // 根据不同的操作类型创建对应的数据
     switch (action) {
+      case 'edit':
+        router.push(`/chat?agent=${agent.id}`)
+        break
+      
+      case 'toggle_status':
+        const newStatus = (agent.status === 'live' || agent.status === 'paper') ? 'paused' : 'paper'
+        updateAgent(agent.id, { status: newStatus })
+        toast.success(`策略状态已更新为 ${newStatus}`)
+        break
+
+      case 'delete':
+        if (confirm('确定要删除此策略吗？')) {
+          removeAgent(agent.id)
+          toast.success('策略已删除')
+        }
+        break
+
       case 'sensitivity':
         // 创建敏感度分析数据
         const sensitivityData: SensitivityInsightData = {
@@ -187,6 +219,8 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
     }
   }
 
+  const isRunning = agent.status === 'live' || agent.status === 'paper'
+
   return (
     <div className="relative group">
     <div
@@ -280,6 +314,36 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
           />
           {/* 菜单内容 */}
           <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
+            <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase">
+              基本操作
+            </div>
+            <button
+              onClick={(e) => { handleMenuClick(e, 'edit'); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
+            >
+              <Edit className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs">编辑策略</span>
+            </button>
+            <button
+              onClick={(e) => { handleMenuClick(e, 'toggle_status'); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
+            >
+              {isRunning ? <Pause className="h-3.5 w-3.5 text-orange-500" /> : <Play className="h-3.5 w-3.5 text-green-500" />}
+              <span className="text-xs">{isRunning ? '暂停运行' : '启动运行'}</span>
+            </button>
+            <button
+              onClick={(e) => { handleMenuClick(e, 'delete'); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-red-500"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span className="text-xs">删除策略</span>
+            </button>
+
+            <div className="border-t border-border my-1" />
+            <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase">
+              高级分析
+            </div>
+
             <button
               onClick={(e) => { handleMenuClick(e, 'sensitivity'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
@@ -301,7 +365,9 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
               <GitCompare className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">对比分析</span>
             </button>
+            
             <div className="border-t border-border my-1" />
+            
             <button
               onClick={(e) => { handleMenuClick(e, 'version'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
@@ -332,66 +398,57 @@ export function AgentList() {
     router.push('/chat')
   }
 
-  // MOCK: Generate a fake thinking process for the active agent to demonstrate "Glass Box"
-  // In a real app, this would come from a useThinkingStore or agent.thinkingState
-  const mockThinkingProcess: ThinkingProcess | undefined = React.useMemo(() => {
-    return {
-      process_id: 'mock-process-1',
-      user_message: 'Analyze BTC/USDT market conditions',
-      status: 'thinking',
-      todos: [
-        { id: '1', description: 'Analyzing market depth', status: 'completed' },
-        { id: '2', description: 'Calculating RSI divergence', status: 'in_progress' },
-        { id: '3', description: 'Checking risk limits', status: 'pending' },
-      ],
-      tool_history: [],
-      progress: {
-        percentage: 33,
-        current_step: 'Calculating RSI divergence'
-      },
-      started_at: Date.now() - 5000, // Started 5 seconds ago
-    }
-  }, [])
+  // TODO: 连接到真实的 ThinkingStore 获取 Agent 的思考过程
+  // 当前暂不显示 Mock 思考过程，等待后端 API 实现
+  // const thinkingProcess = useThinkingStore((state) => state.getProcessForAgent(activeAgentId))
 
   return (
     <div className="agent-list flex-1 overflow-y-auto p-3">
       {/* 标题 */}
-      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-        Agents
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Agents ({agents.length})
+        </div>
+        <button 
+          onClick={handleNewAgent}
+          className="text-primary hover:bg-primary/10 p-1 rounded transition-colors"
+          title="新建"
+        >
+          <Plus className="h-3 w-3" />
+        </button>
       </div>
 
       {/* Agent 列表 */}
       <div className="space-y-0">
-        {agents.map((agent) => {
-          const showThinking = agent.id === activeAgentId && mockThinkingProcess
-          return (
-            <AgentItem
-              key={agent.id}
-              agent={agent}
-              isActive={agent.id === activeAgentId}
-              onClick={() => { setActiveAgent(agent.id); }}
-              // Only show thinking process for the active agent for demo purposes or if they are 'live'
-              {...(showThinking && { thinkingProcess: mockThinkingProcess })}
-            />
-          )
-        })}
+        {agents.map((agent) => (
+          <AgentItem
+            key={agent.id}
+            agent={agent}
+            isActive={agent.id === activeAgentId}
+            onClick={() => { setActiveAgent(agent.id); }}
+            // TODO: 传入真实的 thinkingProcess 当后端 API 可用时
+            // thinkingProcess={thinkingProcess}
+          />
+        ))}
       </div>
 
-      {/* 新建按钮 */}
-      <button
-        onClick={handleNewAgent}
-        className={cn(
-          'w-full mt-2 p-2.5 rounded-md',
-          'border border-dashed border-primary/50',
-          'bg-primary/5 hover:bg-primary/10',
-          'text-primary text-[11px] font-semibold',
-          'flex items-center justify-center gap-1.5',
-          'transition-colors'
-        )}
-      >
-        <Plus className="h-3.5 w-3.5" />
-        新策略
-      </button>
+      {/* 底部新建按钮 (如果列表为空，或者作为额外入口) */}
+      {agents.length === 0 && (
+        <button
+          onClick={handleNewAgent}
+          className={cn(
+            'w-full mt-2 p-2.5 rounded-md',
+            'border border-dashed border-primary/50',
+            'bg-primary/5 hover:bg-primary/10',
+            'text-primary text-[11px] font-semibold',
+            'flex items-center justify-center gap-1.5',
+            'transition-colors'
+          )}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          创建第一个策略
+        </button>
+      )}
     </div>
   )
 }

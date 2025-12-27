@@ -362,20 +362,25 @@ export interface ClarificationOption {
 }
 
 /**
- * 追问分类
+ * 追问分类 (与后端 ClarificationCategory 同步)
  */
 export type ClarificationCategory =
-  | 'risk_preference'      // 风险偏好
   | 'trading_pair'         // 交易对选择
-  | 'timeframe'            // 时间周期
   | 'strategy_type'        // 策略类型
-  | 'capital_allocation'   // 资金配置
+  | 'risk_preference'      // 风险偏好
+  | 'timeframe'            // 时间周期
   | 'entry_condition'      // 入场条件
   | 'exit_condition'       // 出场条件
+  | 'position_size'        // 仓位大小偏好
+  | 'market_context'       // 市场环境偏好
+  | 'capital_allocation'   // 资金配置 (保留兼容)
   | 'general';             // 一般问题
 
 /**
  * AI 追问 Insight 数据
+ *
+ * This is the core A2UI mechanism for handling vague/incomplete requests.
+ * Instead of guessing, AI asks structured questions with options.
  */
 export interface ClarificationInsight extends InsightData {
   type: 'clarification';
@@ -395,6 +400,12 @@ export interface ClarificationInsight extends InsightData {
   skipLabel?: string;
   /** 问题上下文 (AI 对之前对话的理解) */
   context?: string;
+  /** 上下文提示 (为什么需要这个澄清) */
+  contextHint?: string;
+  /** 已收集的参数 (多步骤流程中) */
+  collectedParams?: Record<string, unknown>;
+  /** 剩余问题数量 (多步骤引导) */
+  remainingQuestions?: number;
 }
 
 /**

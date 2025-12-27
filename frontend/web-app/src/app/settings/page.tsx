@@ -19,6 +19,7 @@ import { AIConfigPanel } from '@/components/ai/AIConfigPanel'
 import {
   AddExchangeModal,
   ExchangeConnectionCard,
+  ExchangeConnectionWizard,
 } from '@/components/exchange'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,10 @@ function ExchangeSettingsSection() {
     syncBalance,
   } = useExchangeStore()
 
+  // State for Wizard (New Connection)
+  const [wizardOpen, setWizardOpen] = React.useState(false)
+
+  // State for Modal (Edit Connection)
   const [modalState, setModalState] = React.useState<{
     isOpen: boolean
     exchangeType: ExchangeType
@@ -61,15 +66,12 @@ function ExchangeSettingsSection() {
     return accounts.find((a) => a.exchange === exchangeType)
   }
 
-  // Handle connect
-  const handleConnect = (exchangeType: ExchangeType) => {
-    setModalState({
-      isOpen: true,
-      exchangeType,
-    })
+  // Handle connect (Open Wizard)
+  const handleConnect = (_exchangeType: ExchangeType) => { // Type arg unused as Wizard selects it
+    setWizardOpen(true)
   }
 
-  // Handle edit
+  // Handle edit (Open Modal)
   const handleEdit = (account: ExchangeAccount) => {
     setModalState({
       isOpen: true,
@@ -108,6 +110,9 @@ function ExchangeSettingsSection() {
             连接您的交易所账户以启用自动交易
           </p>
         </div>
+        <Button onClick={() => setWizardOpen(true)}>
+          添加新账户
+        </Button>
       </div>
 
       {/* CEX Section */}
@@ -166,19 +171,25 @@ function ExchangeSettingsSection() {
         </div>
       </div>
 
-      {/* Add Exchange Modal */}
+      {/* Edit Modal (Legacy for editing) */}
       <AddExchangeModal
         isOpen={modalState.isOpen}
         onClose={() => { setModalState({ ...modalState, isOpen: false }); }}
         exchangeType={modalState.exchangeType}
         {...(modalState.editAccount && { editAccount: modalState.editAccount })}
       />
+
+      {/* New Wizard (For adding) */}
+      <ExchangeConnectionWizard
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+      />
     </div>
   )
 }
 
 // =============================================================================
-// Placeholder Sections
+// Placeholder Sections (Unchanged)
 // =============================================================================
 
 function NotificationSettingsSection() {

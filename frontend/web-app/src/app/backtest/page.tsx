@@ -8,8 +8,9 @@ import { BacktestHistory } from '@/components/backtest/BacktestHistory'
 import { BacktestResults } from '@/components/backtest/BacktestResults'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent,TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { BacktestConfig, BacktestResult, BacktestTrade,EquityPoint } from '@/types/backtest'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useBacktestStore } from '@/store/backtest'
+import type { BacktestConfig } from '@/types/backtest'
 
 // =============================================================================
 // Backtest Page
@@ -17,72 +18,103 @@ import type { BacktestConfig, BacktestResult, BacktestTrade,EquityPoint } from '
 
 export default function BacktestPage() {
   const [activeTab, setActiveTab] = React.useState('new')
-  const [isRunning, setIsRunning] = React.useState(false)
-  const [result, setResult] = React.useState<BacktestResult | null>(null)
 
-  // Handle backtest execution
+  // 从 Store 获取真实数据
+  const {
+    currentResult: result,
+    currentStatus,
+    history,
+    setCurrentBacktest,
+    setResult,
+    updateStatus,
+    setError,
+    removeFromHistory,
+  } = useBacktestStore()
+
+  const isRunning = currentStatus.isRunning
+
+  // 调用真实的回测 API
   const handleRunBacktest = React.useCallback(async (config: BacktestConfig) => {
-    setIsRunning(true)
-    setResult(null)
+    const backtestId = `bt_${Date.now()}`
+    setCurrentBacktest(backtestId, config)
 
-    // Simulate backtest execution
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    try {
+      // 调用真实的回测 API
+      const response = await fetch('/api/backtest/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      })
 
-    // Mock result
-    const mockResult: BacktestResult = {
-      id: `bt_${Date.now()}`,
-      config,
-      metrics: {
-        totalReturn: 45.67,
-        annualizedReturn: 89.34,
-        maxDrawdown: -12.45,
-        sharpeRatio: 2.34,
-        winRate: 68.5,
-        totalTrades: 156,
-        profitFactor: 2.1,
-        avgWin: 3.2,
-        avgLoss: -1.5,
-      },
-      equity: generateMockEquityCurve(config.startDate, config.endDate),
-      trades: generateMockTrades(50),
-      createdAt: new Date().toISOString(),
+      if (!response.ok) {
+        throw new Error(`回测失败: ${response.statusText}`)
+      }
+
+      // 处理 SSE 流式响应
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('无法读取响应流')
+      }
+
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+
+          if (data === '[DONE]') continue
+
+          try {
+            const event = JSON.parse(data)
+
+            switch (event.type) {
+              case 'progress':
+                updateStatus({
+                  progress: event.progress,
+                  stage: event.stage,
+                })
+                break
+              case 'result':
+                setResult(event.result)
+                setActiveTab('results')
+                break
+              case 'error':
+                setError(event.error)
+                break
+            }
+          } catch {
+            // 忽略解析错误
+          }
+        }
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '回测执行失败')
     }
+  }, [setCurrentBacktest, updateStatus, setResult, setError])
 
-    setResult(mockResult)
-    setIsRunning(false)
-    setActiveTab('results')
-  }, [])
+  // 处理历史记录选择
+  const handleSelectHistory = React.useCallback((id: string) => {
+    const item = history.find((h) => h.id === id)
+    if (item) {
+      // TODO: 加载历史回测详情
+      console.log('Selected backtest:', id)
+    }
+  }, [history])
 
-  // Mock history data
-  const historyItems = [
-    {
-      id: 'bt_1',
-      name: 'RSI 策略回测',
-      symbol: 'BTC/USDT',
-      period: '2024-01-01 - 2024-06-01',
-      totalReturn: 34.5,
-      status: 'completed' as const,
-      createdAt: Date.now() - 86400000,
-    },
-    {
-      id: 'bt_2',
-      name: '均线交叉策略',
-      symbol: 'ETH/USDT',
-      period: '2024-03-01 - 2024-06-01',
-      totalReturn: -5.2,
-      status: 'completed' as const,
-      createdAt: Date.now() - 172800000,
-    },
-    {
-      id: 'bt_3',
-      name: '网格策略回测',
-      symbol: 'SOL/USDT',
-      period: '2024-02-01 - 2024-06-01',
-      totalReturn: 22.8,
-      status: 'completed' as const,
-      createdAt: Date.now() - 259200000,
-    },
-  ]
+  // 处理历史记录删除
+  const handleDeleteHistory = React.useCallback((id: string) => {
+    removeFromHistory(id)
+  }, [removeFromHistory])
 
   return (
     <MainLayout>
@@ -108,7 +140,7 @@ export default function BacktestPage() {
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-2">
               <History className="h-4 w-4" />
-              历史记录
+              历史记录 {history.length > 0 && `(${history.length})`}
             </TabsTrigger>
           </TabsList>
 
@@ -166,65 +198,22 @@ export default function BacktestPage() {
 
           {/* History */}
           <TabsContent value="history" className="mt-6">
-            <BacktestHistory
-              items={historyItems}
-              onSelect={(_id) => { /* TODO: Implement backtest selection */ }}
-              onDelete={(_id) => { /* TODO: Implement backtest deletion */ }}
-            />
+            {history.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  暂无回测历史记录
+                </CardContent>
+              </Card>
+            ) : (
+              <BacktestHistory
+                items={history}
+                onSelect={handleSelectHistory}
+                onDelete={handleDeleteHistory}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>
     </MainLayout>
   )
-}
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-function generateMockEquityCurve(startDate: string, endDate: string): EquityPoint[] {
-  const start = new Date(startDate).getTime()
-  const end = new Date(endDate).getTime()
-  const days = Math.floor((end - start) / (24 * 60 * 60 * 1000))
-  const points: EquityPoint[] = []
-
-  let equity = 10000
-  for (let i = 0; i <= days; i++) {
-    const date = new Date(start + i * 24 * 60 * 60 * 1000)
-    equity *= 1 + (Math.random() - 0.45) * 0.03
-    const dateStr = date.toISOString().split('T')[0]
-    points.push({
-      date: dateStr ?? '',
-      equity: Math.round(equity * 100) / 100,
-    })
-  }
-
-  return points
-}
-
-function generateMockTrades(count: number): BacktestTrade[] {
-  const trades: BacktestTrade[] = []
-  const symbols = ['BTC/USDT', 'ETH/USDT'] as const
-  const sides = ['buy', 'sell'] as const
-
-  for (let i = 0; i < count; i++) {
-    const entryPrice = 40000 + Math.random() * 10000
-    const pnlPercent = (Math.random() - 0.4) * 10
-    const symbolIndex = Math.floor(Math.random() * symbols.length)
-    const sideIndex = Math.floor(Math.random() * sides.length)
-    trades.push({
-      id: `trade_${i}`,
-      symbol: symbols[symbolIndex] ?? 'BTC/USDT',
-      side: sides[sideIndex] ?? 'buy',
-      entryPrice,
-      exitPrice: entryPrice * (1 + pnlPercent / 100),
-      quantity: Math.random() * 0.5,
-      pnl: pnlPercent * 100,
-      pnlPercent,
-      entryTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      exitTime: new Date(Date.now() - Math.random() * 15 * 24 * 60 * 60 * 1000).toISOString(),
-    })
-  }
-
-  return trades
 }

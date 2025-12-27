@@ -168,8 +168,19 @@ export function validateInsightData(data: Record<string, unknown>): boolean {
   if (!data.type || typeof data.type !== 'string') return false
   if (!Array.isArray(data.params)) return false
 
-  // 类型检查
-  const validTypes = ['strategy_create', 'strategy_modify', 'batch_adjust', 'risk_alert', 'backtest']
+  // 类型检查 - 所有 10 种 InsightType 都必须在白名单中
+  const validTypes = [
+    'strategy_create',
+    'strategy_modify',
+    'batch_adjust',
+    'risk_alert',
+    'trade_signal',    // 交易信号
+    'backtest',
+    'clarification',   // AI 追问
+    'sensitivity',     // 敏感度分析
+    'attribution',     // 归因分析
+    'comparison',      // 策略对比
+  ]
   if (!validTypes.includes(data.type)) return false
 
   return true

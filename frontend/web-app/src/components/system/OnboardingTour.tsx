@@ -7,7 +7,7 @@
  * 为首次使用的用户提供核心功能引导
  */
 
-import { ChevronLeft, ChevronRight, LayoutList, MessageSquare, Rocket,Sparkles, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, LayoutList, MessageSquare, Rocket, Sparkles, X } from 'lucide-react'
 import React from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -76,6 +76,7 @@ export function OnboardingTour() {
 
   // Determine if this is a spotlight step (has target) or modal step
   const isSpotlightStep = !!step.target
+  const isQuestionnaireStep = step.id === 'questionnaire'
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
@@ -87,16 +88,25 @@ export function OnboardingTour() {
       )}
 
       {/* Content */}
-      {isSpotlightStep ? (
+      {isQuestionnaireStep ? (
+        <QuestionnaireModal
+          step={step}
+          currentStep={currentStep}
+          totalSteps={ONBOARDING_STEPS.length}
+          onNext={handleNext}
+          onPrev={prevStep}
+          onSkip={skipOnboarding}
+        />
+      ) : isSpotlightStep ? (
         <SpotlightTooltip
           step={step}
           currentStep={currentStep}
           totalSteps={ONBOARDING_STEPS.length}
           isLastStep={isLastStep}
+          isFirstStep={isFirstStep}
           onNext={handleNext}
           onPrev={prevStep}
           onSkip={skipOnboarding}
-          isFirstStep={isFirstStep}
         />
       ) : (
         <ModalStep
@@ -276,6 +286,172 @@ function SpotlightTooltip({
             {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// QuestionnaireModal Component
+// =============================================================================
+
+interface QuestionnaireModalProps {
+  step: typeof ONBOARDING_STEPS[0]
+  currentStep: number
+  totalSteps: number
+  onNext: () => void
+  onPrev: () => void
+  onSkip: () => void
+}
+
+function QuestionnaireModal({
+  step: _step,
+  currentStep: _currentStep,
+  totalSteps: _totalSteps,
+  onNext,
+  onPrev,
+  onSkip,
+}: QuestionnaireModalProps) {
+  const { questionnaire, setQuestionnaireAnswer } = useOnboardingStore()
+  const [qStep, setQStep] = React.useState(0) // 0: experience, 1: interests, 2: exchange
+
+  const handleNextQ = () => {
+    if (qStep < 2) {
+      setQStep(qStep + 1)
+    } else {
+      onNext()
+    }
+  }
+
+  const handlePrevQ = () => {
+    if (qStep > 0) {
+      setQStep(qStep - 1)
+    } else {
+      onPrev()
+    }
+  }
+
+  // Render content based on qStep
+  const renderContent = () => {
+    switch (qStep) {
+      case 0:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-center">您的交易经验如何？</h3>
+            <div className="space-y-3">
+              {[
+                { id: 'new', label: '完全新手', desc: '刚接触加密货币' },
+                { id: 'experienced', label: '有一些经验', desc: '买卖过几次，了解基本概念' },
+                { id: 'pro', label: '经验丰富', desc: '经常交易，熟悉各种策略' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setQuestionnaireAnswer('experience', opt.id)}
+                  className={cn(
+                    'w-full text-left p-4 rounded-xl border-2 transition-all hover:border-primary/50',
+                    questionnaire.experience === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                  )}
+                >
+                  <div className="font-medium">{opt.label}</div>
+                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      case 1:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-center">你最感兴趣的交易方式？(多选)</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                '定投', '网格交易', '波段交易', '套利', '趋势跟踪', '风险管理'
+              ].map((opt) => {
+                const selected = questionnaire.interests.includes(opt)
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => {
+                      const newInterests = selected
+                        ? questionnaire.interests.filter(i => i !== opt)
+                        : [...questionnaire.interests, opt]
+                      setQuestionnaireAnswer('interests', newInterests)
+                    }}
+                    className={cn(
+                      'p-3 rounded-lg border-2 text-sm font-medium transition-all',
+                      selected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/30'
+                    )}
+                  >
+                    {selected && <Check className="inline-block w-3 h-3 mr-1" />}
+                    {opt}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      case 2:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-center">您想使用哪个交易所？</h3>
+            <div className="space-y-3">
+              {[
+                { id: 'binance', label: 'Binance (币安)' },
+                { id: 'okx', label: 'OKX (欧易)' },
+                { id: 'coinbase', label: 'Coinbase' },
+                { id: 'other', label: '其他 / 暂不确定' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setQuestionnaireAnswer('exchange', opt.id)}
+                  className={cn(
+                    'w-full text-left p-4 rounded-xl border-2 transition-all hover:border-primary/50 flex items-center justify-between',
+                    questionnaire.exchange === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                  )}
+                >
+                  <span className="font-medium">{opt.label}</span>
+                  {questionnaire.exchange === opt.id && <Check className="w-4 h-4 text-primary" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+      <div className="w-full max-w-md p-8 bg-background border border-border rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-300">
+        <div className="mb-6 text-center">
+          <div className="text-xs font-medium text-primary mb-2">步骤 {qStep + 1}/3</div>
+          {renderContent()}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-8 pt-4 border-t border-border">
+          <Button variant="ghost" onClick={handlePrevQ}>
+            上一步
+          </Button>
+          
+          <div className="flex gap-1">
+            {[0, 1, 2].map(i => (
+              <div key={i} className={cn("w-2 h-2 rounded-full", i === qStep ? "bg-primary" : "bg-muted")} />
+            ))}
+          </div>
+
+          <Button onClick={handleNextQ}>
+            {qStep === 2 ? '完成设置' : '下一步'}
+          </Button>
+        </div>
+        
+        <button
+          onClick={onSkip}
+          className="w-full text-center mt-4 text-xs text-muted-foreground hover:text-foreground"
+        >
+          跳过问卷
+        </button>
       </div>
     </div>
   )

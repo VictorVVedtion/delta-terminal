@@ -354,7 +354,13 @@ export class StreamingParser {
 }
 
 // =============================================================================
-// Text Animator
+// Text Animator (可选的客户端美化层)
+//
+// 注意：当前 A2UI 流式实现直接使用 SSE 更新 UI (useAI.ts)，
+// 这已经是真实的 AI token 生成速度。TextAnimator 是可选的美化层，
+// 可用于需要额外效果（如标点暂停、变速）的场景。
+//
+// 默认 realtime=true 模式下，TextAnimator 等效于直接显示。
 // =============================================================================
 
 export interface TextAnimatorOptions {
