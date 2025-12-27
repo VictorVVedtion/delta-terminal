@@ -260,15 +260,16 @@ export function MonitorCanvas({
     return `${sign}${value.toFixed(decimals)}%`
   }
 
+  // Conditional rendering to prevent scroll issues with fixed position elements
+  if (!isOpen) {
+    return null
+  }
+
   return (
     <>
       {/* Backdrop for mobile */}
       <div
-        className={cn(
-          'fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden',
-          'transition-opacity duration-300',
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        )}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -278,9 +279,7 @@ export function MonitorCanvas({
         className={cn(
           'fixed top-0 right-0 z-40 h-full w-full sm:w-[520px]',
           'bg-card/80 backdrop-blur-sm border-l border-border shadow-2xl',
-          'transform transition-transform duration-300 ease-out',
-          'flex flex-col',
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+          'flex flex-col animate-slide-in-right'
         )}
         role="dialog"
         aria-modal="true"

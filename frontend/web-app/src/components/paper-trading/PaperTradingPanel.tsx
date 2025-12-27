@@ -113,15 +113,16 @@ export function PaperTradingPanel({
   // 获取持仓
   const position = getPositionBySymbol(symbol)
 
+  // Conditional rendering to prevent scroll issues with fixed position elements
+  if (!isOpen) {
+    return null
+  }
+
   return (
     <>
       {/* Backdrop - 点击关闭面板 */}
       <div
-        className={cn(
-          'fixed inset-0 bg-black/50 backdrop-blur-sm z-30',
-          'transition-opacity duration-300',
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        )}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -131,9 +132,7 @@ export function PaperTradingPanel({
         className={cn(
           'fixed top-0 right-0 z-40 h-screen w-full sm:w-[480px]',
           'bg-card/95 backdrop-blur-md border-l border-border shadow-2xl',
-          'transform transition-transform duration-300 ease-out',
-          'flex flex-col',
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+          'flex flex-col animate-slide-in-right'
         )}
         role="dialog"
         aria-modal="true"
