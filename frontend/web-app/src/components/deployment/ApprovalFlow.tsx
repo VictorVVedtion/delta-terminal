@@ -144,7 +144,7 @@ export function ApprovalFlow({
     }
   }
 
-  const handleApprove = async () => {
+  const handleApprove = () => {
     setIsSubmitting(true)
 
     try {

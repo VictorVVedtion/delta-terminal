@@ -133,7 +133,7 @@ export function AddExchangeModal({
   }
 
   // Save
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!validate()) return
 
     const permissions: Permission[] = ['read', 'trade'] // 默认权限

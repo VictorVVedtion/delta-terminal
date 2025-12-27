@@ -63,7 +63,7 @@ export function QuickTradeButtons({
     : 0
 
   // 处理买入
-  const handleBuy = async (size: number) => {
+  const handleBuy = (size: number) => {
     if (disabled || !currentPrice) return
 
     const key = `buy_${size}`
@@ -77,7 +77,7 @@ export function QuickTradeButtons({
   }
 
   // 处理卖出
-  const handleSell = async (size: number) => {
+  const handleSell = (size: number) => {
     if (disabled || !currentPrice) return
 
     const key = `sell_${size}`

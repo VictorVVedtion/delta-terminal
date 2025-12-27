@@ -110,20 +110,12 @@
     "out/",
     "coverage/",
     "*.config.js",
-    "*.config.mjs"
+    "*.config.mjs",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ],
-  "overrides": [
-    {
-      "files": ["**/__tests__/**/*", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
-      "rules": {
-        "@typescript-eslint/no-unsafe-assignment": "off",
-        "@typescript-eslint/no-unsafe-call": "off",
-        "@typescript-eslint/no-unsafe-member-access": "off",
-        "@typescript-eslint/no-unsafe-argument": "off",
-        "@typescript-eslint/no-unsafe-return": "off",
-        "@typescript-eslint/no-explicit-any": "off",
-        "@typescript-eslint/unbound-method": "off"
-      }
-    }
-  ]
+  "overrides": []
 }

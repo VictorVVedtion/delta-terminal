@@ -83,11 +83,11 @@ export interface UseBacktestReturn {
   /** 开始回测 */
   startBacktest: (config: BacktestConfig) => Promise<void>
   /** 暂停回测 */
-  pauseBacktest: () => Promise<void>
+  pauseBacktest: () => void
   /** 恢复回测 */
-  resumeBacktest: () => Promise<void>
+  resumeBacktest: () => void
   /** 取消回测 */
-  cancelBacktest: () => Promise<void>
+  cancelBacktest: () => void
   /** 重置状态 */
   reset: () => void
 }
@@ -211,7 +211,7 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
 
   // Note: 当前实现是同步的，不需要轮询
   // 保留 pollStatus 作为空操作，未来可扩展为异步模式
-  const pollStatus = useCallback(async () => {
+  const pollStatus = useCallback(() => {
     // 同步模式下不需要轮询，回测结果在 startBacktest 中直接返回
     if (!backtestId || isPaused) return
   }, [backtestId, isPaused])
@@ -386,7 +386,7 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
   // Pause Backtest
   // ==========================================================================
 
-  const pauseBacktest = useCallback(async (): Promise<void> => {
+  const pauseBacktest = useCallback(() => {
     if (!backtestId || state.phase !== 'running') return
 
     // 同步模式下，暂停只更新本地状态
@@ -402,7 +402,7 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
   // Resume Backtest
   // ==========================================================================
 
-  const resumeBacktest = useCallback(async (): Promise<void> => {
+  const resumeBacktest = useCallback(() => {
     if (!backtestId || state.phase !== 'running' || !isPaused) return
 
     // 同步模式下，恢复只更新本地状态
@@ -418,7 +418,7 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
   // Cancel Backtest
   // ==========================================================================
 
-  const cancelBacktest = useCallback(async (): Promise<void> => {
+  const cancelBacktest = useCallback(() => {
     if (!backtestId) return
 
     // 同步模式下，取消只中止本地请求

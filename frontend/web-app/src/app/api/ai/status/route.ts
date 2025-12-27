@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server'
 import type { AIUserStatus } from '@/types/ai'
 
 // GET /api/ai/status - 获取 AI 服务状态
-export async function GET() {
+export function GET() {
   // 简化版：返回企业版无限制状态
   const status: AIUserStatus = {
     subscription: {

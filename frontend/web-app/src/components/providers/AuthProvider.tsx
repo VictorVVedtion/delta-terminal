@@ -67,7 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Paper Trading 模式：始终允许
     // Live Trading 模式：将来需要检查钱包连接
     if (!isAuthenticated) {
-      console.log(`[Paper Trading] ${action || '操作'} - 无需钱包连接`)
+      console.info(`[Paper Trading] ${action || '操作'} - 无需钱包连接`)
     }
     return true
   }

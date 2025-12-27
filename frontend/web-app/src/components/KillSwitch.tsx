@@ -264,7 +264,7 @@ function KillSwitchModal({
     }, 16)
 
     pressTimerRef.current = setTimeout(() => {
-      void handleExecute()
+      handleExecute()
     }, CONFIRM_DURATION)
   }, [step])
 
@@ -281,7 +281,7 @@ function KillSwitchModal({
     setPressProgress(0)
   }, [])
 
-  const handleExecute = async () => {
+  const handleExecute = () => {
     handlePressEnd()
     setStep('executing')
     onStatusChange('triggered')

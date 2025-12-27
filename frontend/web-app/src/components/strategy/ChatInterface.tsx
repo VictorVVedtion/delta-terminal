@@ -498,72 +498,70 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       setCanvasLoading(true)
     }
 
-    // Simulate async approval process
-    setTimeout(() => {
-      // Update the message status
-      setMessages(prev => prev.map(msg =>
-        msg.insight?.id === insight.id
-          ? { ...msg, insightStatus: 'approved' as InsightCardStatus }
-          : msg
-      ))
+    // 立即执行批准逻辑（无模拟延迟）
+    // Update the message status
+    setMessages(prev => prev.map(msg =>
+      msg.insight?.id === insight.id
+        ? { ...msg, insightStatus: 'approved' as InsightCardStatus }
+        : msg
+    ))
 
-      // =========================================================================
-      // 核心: 从 InsightData 创建真实的 Agent 并添加到 Store
-      // =========================================================================
-      if (insight.type === 'strategy_create' || insight.type === 'strategy_modify') {
-        const now = Date.now()
-        const newAgent: Agent = {
-          id: `agent_${now}`,
-          name: insight.target?.name ?? '新策略',
-          symbol: insight.target?.symbol ?? 'BTC/USDT',
-          status: 'shadow', // 新创建的策略默认为 shadow 模式
-          pnl: 0,
-          pnlPercent: 0,
-          trades: 0,
-          winRate: 0,
-          createdAt: now,
-          updatedAt: now,
-          // 存储回测相关字段以便后续部署
-          backtestId: insight.id, // 用于标记已通过批准
-        }
-
-        // 添加到 AgentStore
-        addAgent(newAgent)
-
-        // 重新计算 PnL 仪表盘 (从所有 Agent 汇总)
-        // 注意: 由于 addAgent 是异步更新，这里用当前 agents + 新 agent 计算
-        const allAgents = [...agents, newAgent]
-        const totalPnL = allAgents.reduce((sum, a) => sum + a.pnl, 0)
-        const totalCapital = 10000 // 假设总初始资本
-        const totalPnLPercent = totalCapital > 0 ? (totalPnL / totalCapital) * 100 : 0
-
-        updatePnLDashboard({
-          totalPnL,
-          totalPnLPercent,
-          todayPnL: allAgents.filter(a => a.updatedAt > now - 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
-          todayPnLPercent: 0,
-          weekPnL: allAgents.filter(a => a.updatedAt > now - 7 * 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
-          monthPnL: totalPnL,
-        })
+    // =========================================================================
+    // 核心: 从 InsightData 创建真实的 Agent 并添加到 Store
+    // =========================================================================
+    if (insight.type === 'strategy_create' || insight.type === 'strategy_modify') {
+      const now = Date.now()
+      const newAgent: Agent = {
+        id: `agent_${now}`,
+        name: insight.target?.name ?? '新策略',
+        symbol: insight.target?.symbol ?? 'BTC/USDT',
+        status: 'shadow', // 新创建的策略默认为 shadow 模式
+        pnl: 0,
+        pnlPercent: 0,
+        trades: 0,
+        winRate: 0,
+        createdAt: now,
+        updatedAt: now,
+        // 存储回测相关字段以便后续部署
+        backtestId: insight.id, // 用于标记已通过批准
       }
 
-      // Close Canvas and reset loading
-      setCanvasLoading(false)
-      setCanvasOpen(false)
-      setCanvasInsight(null)
+      // 添加到 AgentStore
+      addAgent(newAgent)
 
-      // Add confirmation message
-      const confirmMessage: Message = {
-        id: `confirm_${Date.now()}`,
-        role: 'assistant',
-        content: `✅ 策略已批准并创建！您可以在左侧边栏查看新创建的 Agent。\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`,
-        timestamp: Date.now(),
-      }
-      setMessages(prev => [...prev, confirmMessage])
+      // 重新计算 PnL 仪表盘 (从所有 Agent 汇总)
+      // 注意: 由于 addAgent 是异步更新，这里用当前 agents + 新 agent 计算
+      const allAgents = [...agents, newAgent]
+      const totalPnL = allAgents.reduce((sum, a) => sum + a.pnl, 0)
+      const totalCapital = 10000 // 假设总初始资本
+      const totalPnLPercent = totalCapital > 0 ? (totalPnL / totalCapital) * 100 : 0
 
-      // Notify parent
-      onInsightApprove?.(insight, params)
-    }, 800)
+      updatePnLDashboard({
+        totalPnL,
+        totalPnLPercent,
+        todayPnL: allAgents.filter(a => a.updatedAt > now - 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
+        todayPnLPercent: 0,
+        weekPnL: allAgents.filter(a => a.updatedAt > now - 7 * 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
+        monthPnL: totalPnL,
+      })
+    }
+
+    // Close Canvas and reset loading
+    setCanvasLoading(false)
+    setCanvasOpen(false)
+    setCanvasInsight(null)
+
+    // Add confirmation message
+    const confirmMessage: Message = {
+      id: `confirm_${Date.now()}`,
+      role: 'assistant',
+      content: `✅ 策略已批准并创建！您可以在左侧边栏查看新创建的 Agent。\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`,
+      timestamp: Date.now(),
+    }
+    setMessages(prev => [...prev, confirmMessage])
+
+    // Notify parent
+    onInsightApprove?.(insight, params)
   }, [canvasOpen, onInsightApprove, addAgent, agents, updatePnLDashboard])
 
   // A2UI: Handle insight rejection (from Canvas or InsightCard)
@@ -819,7 +817,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
    */
   const handleBacktestClose = React.useCallback(() => {
     if (isBacktestRunning) {
-      void stopBacktest()
+      stopBacktest()
     }
     setBacktestOpen(false)
     setBacktestInsight(null)

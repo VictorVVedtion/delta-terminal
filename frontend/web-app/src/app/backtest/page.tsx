@@ -168,8 +168,8 @@ export default function BacktestPage() {
           <TabsContent value="history" className="mt-6">
             <BacktestHistory
               items={historyItems}
-              onSelect={(id) => { console.log('Selected backtest:', id); }}
-              onDelete={(id) => { console.log('Delete backtest:', id); }}
+              onSelect={(_id) => { /* TODO: Implement backtest selection */ }}
+              onDelete={(_id) => { /* TODO: Implement backtest deletion */ }}
             />
           </TabsContent>
         </Tabs>

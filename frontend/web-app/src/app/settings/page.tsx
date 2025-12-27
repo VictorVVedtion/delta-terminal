@@ -79,7 +79,7 @@ function ExchangeSettingsSection() {
   }
 
   // Handle disconnect
-  const handleDisconnect = async (account: ExchangeAccount) => {
+  const handleDisconnect = (account: ExchangeAccount) => {
     if (confirm(`确定要断开 ${account.name} 吗？`)) {
       removeAccount(account.id)
       notify('info', '账户已断开', {
