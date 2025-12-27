@@ -5,8 +5,21 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import jwt from 'jsonwebtoken'
 import { orchestrator, type OrchestrateRequest } from '../services/orchestrator.js'
 import { ChatRequestSchema } from '../types/index.js'
+
+// JWT 密钥（应与 auth-service 一致）
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-change-this-in-production-minimum-32-chars'
+
+interface JwtPayload {
+  userId: string
+  walletAddress: string
+  role: string
+  type: 'access' | 'refresh'
+  iat: number
+  exp: number
+}
 
 // =============================================================================
 // 请求类型
@@ -135,14 +148,33 @@ export async function chatRoutes(fastify: FastifyInstance) {
 
 /**
  * 从请求中提取用户 ID
- * 实际应用中应该从 JWT token 中解析
+ * 从 JWT token 中解析真实用户身份
  */
 function getUserId(request: FastifyRequest): string {
-  // TODO: 从 JWT 中解析用户 ID
-  // const token = request.headers.authorization?.replace('Bearer ', '')
-  // const payload = jwt.verify(token, JWT_SECRET)
-  // return payload.userId
+  const authHeader = request.headers.authorization
 
-  // 开发阶段使用默认用户
-  return 'dev_user_001'
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 未提供 token，使用匿名用户（开发阶段兼容）
+    request.log.warn('No JWT token provided, using anonymous user')
+    return 'anonymous_user'
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload
+
+    // 验证 token 类型必须是 access token
+    if (payload.type !== 'access') {
+      request.log.warn('Invalid token type, expected access token')
+      return 'anonymous_user'
+    }
+
+    request.log.info({ userId: payload.userId, walletAddress: payload.walletAddress }, 'User authenticated')
+    return payload.userId
+  } catch (error) {
+    // Token 验证失败（过期、签名无效等）
+    request.log.warn({ error }, 'JWT verification failed')
+    return 'anonymous_user'
+  }
 }

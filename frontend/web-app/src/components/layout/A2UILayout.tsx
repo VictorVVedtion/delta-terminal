@@ -1,13 +1,12 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { Header } from './Header'
 import { FunctionalSidebar } from '@/components/sidebar'
 import { MobileBottomNav } from './MobileBottomNav'
 import { CanvasPanel } from '@/components/canvas/CanvasPanel'
 import { useInsightStore } from '@/store/insight'
-import type { InsightData } from '@/types/insight'
 
 /**
  * A2UI 布局组件
@@ -28,6 +27,8 @@ import type { InsightData } from '@/types/insight'
  * ┌─────────────────────────────────────────────────┐
  * │  Mobile Bottom Nav (仅移动端)                   │
  * └─────────────────────────────────────────────────┘
+ *
+ * Canvas 状态由全局 useInsightStore 管理，子组件通过 store.openCanvas() 触发
  */
 
 interface A2UILayoutProps {
@@ -37,35 +38,34 @@ interface A2UILayoutProps {
 }
 
 export function A2UILayout({ children, showSidebar = true }: A2UILayoutProps) {
-  const [selectedInsight, setSelectedInsight] = useState<InsightData | null>(null)
-  const [canvasOpen, setCanvasOpen] = useState(false)
-  const { setInsightStatus } = useInsightStore()
+  // 使用全局 store 管理 Canvas 状态
+  const {
+    activeInsight,
+    canvasOpen,
+    closeCanvas,
+    setInsightStatus,
+  } = useInsightStore()
 
-  // Canvas 处理函数
-  const handleExpandInsight = useCallback((insight: InsightData) => {
-    setSelectedInsight(insight)
-    setCanvasOpen(true)
-  }, [])
-
+  // Canvas 关闭处理
   const handleCloseCanvas = useCallback(() => {
-    setCanvasOpen(false)
-    // 延迟清除数据，等待动画完成
-    setTimeout(() => setSelectedInsight(null), 300)
-  }, [])
+    closeCanvas()
+  }, [closeCanvas])
 
+  // 批准处理
   const handleApprove = useCallback(() => {
-    if (selectedInsight) {
-      setInsightStatus(selectedInsight.id, 'approved')
+    if (activeInsight) {
+      setInsightStatus(activeInsight.id, 'approved')
       handleCloseCanvas()
     }
-  }, [selectedInsight, setInsightStatus, handleCloseCanvas])
+  }, [activeInsight, setInsightStatus, handleCloseCanvas])
 
+  // 拒绝处理
   const handleReject = useCallback(() => {
-    if (selectedInsight) {
-      setInsightStatus(selectedInsight.id, 'rejected')
+    if (activeInsight) {
+      setInsightStatus(activeInsight.id, 'rejected')
       handleCloseCanvas()
     }
-  }, [selectedInsight, setInsightStatus, handleCloseCanvas])
+  }, [activeInsight, setInsightStatus, handleCloseCanvas])
 
   // ESC 键关闭 Canvas
   React.useEffect(() => {
@@ -103,17 +103,13 @@ export function A2UILayout({ children, showSidebar = true }: A2UILayoutProps) {
             canvasOpen && 'lg:mr-[480px]'
           )}
         >
-          {/* 传递 Canvas 控制函数给子组件 */}
-          {React.isValidElement(children)
-            ? React.cloneElement(children as React.ReactElement<{ onExpandInsight?: (insight: InsightData) => void }>, {
-                onExpandInsight: handleExpandInsight,
-              })
-            : children}
+          {/* 子组件直接渲染，Canvas 通过 store.openCanvas() 触发 */}
+          {children}
         </main>
 
-        {/* Canvas Panel - 滑出面板 */}
+        {/* Canvas Panel - 滑出面板，监听 store 状态 */}
         <CanvasPanel
-          insight={selectedInsight}
+          insight={activeInsight}
           isOpen={canvasOpen}
           onClose={handleCloseCanvas}
           onApprove={handleApprove}

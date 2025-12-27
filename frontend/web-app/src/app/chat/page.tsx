@@ -326,9 +326,11 @@ export default function ChatPage({ onExpandInsight }: ChatPageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastModeRef = useRef(currentMode)
+  const isInitializedRef = useRef(false)
 
-  // Initialize messages based on mode
+  // Initialize messages based on mode - Fixed: removed messages.length dependency
   useEffect(() => {
+    // Mode change: reset messages
     if (lastModeRef.current !== currentMode) {
       setMessages([
         {
@@ -339,7 +341,12 @@ export default function ChatPage({ onExpandInsight }: ChatPageProps) {
         },
       ])
       lastModeRef.current = currentMode
-    } else if (messages.length === 0) {
+      isInitializedRef.current = true
+      return
+    }
+
+    // Initial load: set welcome message only once
+    if (!isInitializedRef.current) {
       setMessages([
         {
           id: 'welcome',
@@ -348,8 +355,9 @@ export default function ChatPage({ onExpandInsight }: ChatPageProps) {
           timestamp: Date.now() - 60000,
         },
       ])
+      isInitializedRef.current = true
     }
-  }, [currentMode, persona.greeting, messages.length])
+  }, [currentMode, persona.greeting]) // Removed messages.length from dependencies
 
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -492,7 +500,8 @@ export default function ChatPage({ onExpandInsight }: ChatPageProps) {
         input.toLowerCase().includes('买入') ||
         input.toLowerCase().includes('做多') ||
         input.toLowerCase().includes('rsi') ||
-        input.toLowerCase().includes('macd')
+        input.toLowerCase().includes('macd') ||
+        input.toLowerCase().includes('均线')  // 支持均线关键词
 
       if (shouldGenerateBatch) {
         const insights = [

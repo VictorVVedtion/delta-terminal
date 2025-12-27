@@ -38,6 +38,8 @@ import type {
   SensitivityInsightData,
   AttributionInsightData,
   ComparisonInsightData,
+  ClarificationInsight,
+  ClarificationAnswer,
 } from '@/types/insight'
 import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import type { BacktestConfig } from '@/types/backtest'
@@ -494,6 +496,93 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   }, [onInsightReject])
 
   // ==========================================================================
+  // EPIC-010 S10.2: Clarification Answer Handler
+  // ==========================================================================
+  const handleClarificationAnswer = React.useCallback(async (
+    insight: ClarificationInsight,
+    answer: ClarificationAnswer
+  ) => {
+    // Update message status to answered
+    setMessages(prev => prev.map(msg =>
+      msg.insight?.id === insight.id
+        ? { ...msg, insightStatus: 'approved' as InsightCardStatus }
+        : msg
+    ))
+
+    // Build answer text for display
+    // selectedOptions is string[] of option IDs, we need to find their labels
+    const answerText = answer.customText
+      ? answer.customText
+      : answer.selectedOptions
+          .map(optId => insight.options.find(opt => opt.id === optId)?.label || optId)
+          .join('、')
+
+    // Add user's answer as a message
+    const answerMessage: Message = {
+      id: `clarification_answer_${Date.now()}`,
+      role: 'user',
+      content: answerText,
+      timestamp: Date.now(),
+    }
+    setMessages(prev => [...prev, answerMessage])
+
+    // Send answer to backend and continue the conversation
+    try {
+      setIsLoading(true)
+
+      // Include context about the clarification being answered
+      const contextMessage = `[回答追问] 类别: ${insight.category}, 问题: ${insight.question}, 回答: ${answerText}`
+
+      // Generate system prompt with context
+      const systemPrompt = generateSystemPrompt({
+        marketData: { btcPrice: 42000, ethPrice: 2200 }
+      })
+
+      const finalContent = await sendStream(contextMessage, {
+        systemPrompt,
+        context: { marketData: { btcPrice: 42000, ethPrice: 2200 } }
+      })
+
+      if (finalContent) {
+        // Extract InsightData from response
+        const { textContent, insightData } = extractInsightData(finalContent)
+        let responseInsight: InsightData | undefined = undefined
+
+        if (insightData && validateInsightData(insightData)) {
+          responseInsight = {
+            id: `insight_${Date.now()}`,
+            type: insightData.type as InsightData['type'],
+            params: (insightData.params as InsightParam[]) || [],
+            explanation: textContent,
+            created_at: new Date().toISOString(),
+          }
+          if (insightData.target) Object.assign(responseInsight, { target: insightData.target })
+          if (insightData.impact) Object.assign(responseInsight, { impact: insightData.impact })
+          if (insightData.actions) Object.assign(responseInsight, { actions: insightData.actions })
+        }
+
+        const aiMessage: Message = {
+          id: `ai_response_${Date.now()}`,
+          role: 'assistant',
+          content: textContent,
+          timestamp: Date.now(),
+          insight: responseInsight,
+          insightStatus: responseInsight ? 'pending' : undefined,
+        }
+        setMessages(prev => [...prev, aiMessage])
+      }
+    } catch (error) {
+      console.error('[ChatInterface] Failed to send clarification answer:', error)
+      notify('error', '发送回答失败', {
+        description: '请稍后重试',
+        source: 'ChatInterface',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [sendStream])
+
+  // ==========================================================================
   // EPIC-010 S10.3: Template Selection Handler
   // ==========================================================================
   const handleTemplateSelect = React.useCallback((template: StrategyTemplate, insight: InsightData) => {
@@ -939,6 +1028,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 onExpand={handleInsightExpand}
                 onApprove={handleInsightApprove}
                 onReject={handleInsightReject}
+                onClarificationAnswer={handleClarificationAnswer}
               />
             ) : (
               <ChatMessage key={message.id} message={message} />

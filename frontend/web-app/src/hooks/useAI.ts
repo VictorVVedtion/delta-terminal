@@ -7,6 +7,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useAIStore } from '@/store/ai'
+import { useAuthStore } from '@/store/auth'
 import {
   AIMessage,
   AIRequest,
@@ -110,6 +111,9 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
     recordUsage
   } = useAIStore()
 
+  // Auth Store - 获取 JWT token
+  const { accessToken } = useAuthStore()
+
   // Local state
   const [isLoading, setIsLoadingLocal] = useState(false)
   const [messages, setMessages] = useState<AIMessage[]>([])
@@ -195,10 +199,15 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
         // Add user message to history
         setMessages(prev => [...prev, { role: 'user', content }])
 
-        // 调用后端 API
+        // 调用后端 API (携带 JWT token)
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`
+        }
+
         const response = await fetch('/api/ai/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(request)
         })
 
@@ -241,6 +250,7 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
       }
     },
     [
+      accessToken,
       buildMessages,
       canUseAI,
       config.settings.maxTokens,
@@ -303,10 +313,15 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
         // Create abort controller
         abortControllerRef.current = new AbortController()
 
-        // 调用后端流式 API
+        // 调用后端流式 API (携带 JWT token)
+        const streamHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (accessToken) {
+          streamHeaders['Authorization'] = `Bearer ${accessToken}`
+        }
+
         const response = await fetch('/api/ai/chat/stream', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: streamHeaders,
           body: JSON.stringify(request),
           signal: abortControllerRef.current.signal
         })
@@ -462,6 +477,7 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
       }
     },
     [
+      accessToken,
       addThinkingStep,
       appendStreamingContent,
       buildMessages,

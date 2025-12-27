@@ -32,14 +32,23 @@ const DEFAULT_MODEL = SIMPLE_PRESETS.balanced.defaultModel
  * 代理请求到后端 AI Orchestrator 服务
  * 使用预解析的 body 避免重复读取 request.json()
  */
-async function proxyToOrchestratorWithBody(orchestratorUrl: string, body: AIRequest): Promise<Response> {
+async function proxyToOrchestratorWithBody(
+  orchestratorUrl: string,
+  body: AIRequest,
+  authHeader: string | null
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  // 转发 JWT token 进行身份验证
+  if (authHeader) {
+    headers['Authorization'] = authHeader
+  }
+
   const orchestratorResponse = await fetch(`${orchestratorUrl}/api/ai/chat/stream`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      // TODO: 转发 JWT token 进行身份验证
-      // 'Authorization': request.headers.get('Authorization') || '',
-    },
+    headers,
     body: JSON.stringify({
       messages: body.messages,
       model: body.model,
@@ -278,10 +287,10 @@ export async function POST(request: NextRequest) {
   // ==========================================================================
   if (orchestratorUrl) {
     try {
-      console.log('[AI Stream] Using AI Orchestrator backend:', orchestratorUrl)
-      return await proxyToOrchestratorWithBody(orchestratorUrl, body)
+      const authHeader = request.headers.get('Authorization')
+      return await proxyToOrchestratorWithBody(orchestratorUrl, body, authHeader)
     } catch (error) {
-      console.warn('[AI Stream] Orchestrator failed, falling back to direct OpenRouter:', error)
+      console.warn('[AI Stream] Orchestrator failed, falling back to OpenRouter:', error)
       // 降级到直接调用模式
     }
   }

@@ -21,11 +21,13 @@
     "dotenv": "^16.3.1",
     "fastify": "^4.28.1",
     "ioredis": "^5.3.2",
+    "jsonwebtoken": "^9.0.2",
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.12.7",
     "eventsource-parser": "^2.0.1",
     "tsx": "^4.21.0",
