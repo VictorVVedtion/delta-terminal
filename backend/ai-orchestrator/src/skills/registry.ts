@@ -355,3 +355,135 @@ skillRegistry.register({
     }
   },
 })
+
+// =============================================================================
+// 新增 AI 增强技能
+// =============================================================================
+
+// 策略优化建议
+skillRegistry.register({
+  id: 'optimize_strategy',
+  name: '策略优化',
+  category: 'intelligence',
+  description: '分析策略表现并提供优化建议，包括参数调整、风险管理改进等',
+  parameters: z.object({
+    strategyId: z.string().describe('要优化的策略 ID'),
+    optimizationFocus: z.enum(['params', 'risk', 'entry', 'exit', 'all']).optional().describe('优化重点'),
+    context: z.record(z.unknown()).optional().describe('额外上下文（如市场数据、表现数据）'),
+  }),
+  execute: async (params, context) => {
+    // TODO: 调用 NLP Processor 的优化服务
+    return {
+      success: true,
+      data: {
+        insightType: 'strategy_optimize',
+        suggestions: [
+          { param: 'rsiPeriod', oldValue: 14, newValue: 12, reason: '缩短周期提高响应速度' },
+          { param: 'stopLoss', oldValue: 3.0, newValue: 2.5, reason: '收紧止损减少单次亏损' },
+        ],
+        expectedImprovement: {
+          sharpeRatio: { from: 1.42, to: 1.85 },
+          maxDrawdown: { from: -12.5, to: -8.2 },
+        },
+        confidence: 0.75,
+      },
+    }
+  },
+})
+
+// 回测建议
+skillRegistry.register({
+  id: 'suggest_backtest',
+  name: '回测建议',
+  category: 'intelligence',
+  description: '根据策略配置推荐回测参数，并解读回测结果',
+  parameters: z.object({
+    strategyId: z.string().optional().describe('策略 ID'),
+    strategyConfig: z.record(z.unknown()).optional().describe('策略配置'),
+    backtestMode: z.enum(['setup', 'analyze']).optional().describe('模式：setup=配置回测，analyze=分析结果'),
+    backtestResults: z.record(z.unknown()).optional().describe('回测结果（analyze 模式需要）'),
+  }),
+  execute: async (params, context) => {
+    // TODO: 调用 NLP Processor 的回测建议服务
+    return {
+      success: true,
+      data: {
+        insightType: 'backtest_suggest',
+        recommendedConfig: {
+          period: '6m',
+          initialCapital: 10000,
+          commission: 0.1,
+          slippage: 0.05,
+        },
+        interpretation: '建议使用 6 个月的历史数据进行回测，涵盖多个市场周期...',
+      },
+    }
+  },
+})
+
+// 风险分析
+skillRegistry.register({
+  id: 'analyze_risk',
+  name: '风险分析',
+  category: 'intelligence',
+  description: '分析投资组合和策略的风险状况，提供风险管理建议',
+  parameters: z.object({
+    portfolioId: z.string().optional().describe('投资组合 ID'),
+    strategyIds: z.array(z.string()).optional().describe('要分析的策略 ID 列表'),
+    analysisType: z.enum(['portfolio', 'strategy', 'market', 'comprehensive']).optional().describe('分析类型'),
+  }),
+  execute: async (params, context) => {
+    // TODO: 调用 NLP Processor 的风险分析服务
+    return {
+      success: true,
+      data: {
+        insightType: 'risk_analysis',
+        riskLevel: 'medium',
+        riskScore: 65,
+        metrics: {
+          var95: -3.2,
+          volatility: 42.5,
+          maxDrawdown: -18.5,
+          beta: 0.85,
+        },
+        recommendations: [
+          '建议降低单策略最大仓位至 20%',
+          '考虑添加对冲策略减少系统性风险',
+          '设置每日止损限额 5%',
+        ],
+        confidence: 0.88,
+      },
+    }
+  },
+})
+
+// 市场情绪分析
+skillRegistry.register({
+  id: 'analyze_sentiment',
+  name: '市场情绪分析',
+  category: 'intelligence',
+  description: '分析市场情绪和趋势，辅助交易决策',
+  parameters: z.object({
+    symbol: z.string().describe('交易对'),
+    timeframe: z.string().optional().describe('时间周期'),
+    sources: z.array(z.enum(['price', 'volume', 'social', 'news'])).optional().describe('数据来源'),
+  }),
+  execute: async (params, context) => {
+    // TODO: 调用市场分析服务
+    return {
+      success: true,
+      data: {
+        symbol: params.symbol,
+        sentiment: 'bullish',
+        fearGreedIndex: 65,
+        trendStrength: 0.72,
+        signals: [
+          { indicator: 'RSI', value: 42, signal: 'neutral' },
+          { indicator: 'MACD', value: 0.5, signal: 'bullish' },
+          { indicator: 'Volume', value: 1.2, signal: 'increasing' },
+        ],
+        summary: '市场整体呈现看涨情绪，成交量温和放大...',
+      },
+    }
+  },
+})
