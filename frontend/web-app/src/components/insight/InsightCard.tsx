@@ -18,6 +18,7 @@ import {
   TrendingDown,
   TrendingUp,
   X,
+  Zap,
 } from 'lucide-react'
 import React from 'react'
 
@@ -315,6 +316,12 @@ function getInsightTypeInfo(type: InsightType) {
       icon: <AlertTriangle className="h-5 w-5 text-red-500" />,
       bgColor: 'bg-red-500/10',
       borderColor: 'border-l-red-500',
+    },
+    trade_signal: {
+      title: '交易信号',
+      icon: <Zap className="h-5 w-5 text-yellow-500" />,
+      bgColor: 'bg-yellow-500/10',
+      borderColor: 'border-l-yellow-500',
     },
     backtest: {
       title: '回测结果',

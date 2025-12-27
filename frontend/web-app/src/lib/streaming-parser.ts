@@ -358,12 +358,18 @@ export class StreamingParser {
 // =============================================================================
 
 export interface TextAnimatorOptions {
-  /** Characters per second */
+  /** Characters per second (ignored in realtime mode) */
   speed?: number
-  /** Vary speed for natural effect */
+  /** Vary speed for natural effect (ignored in realtime mode) */
   variableSpeed?: boolean
-  /** Pause at punctuation */
+  /** Pause at punctuation (ignored in realtime mode) */
   pauseAtPunctuation?: boolean
+  /**
+   * Realtime mode - display characters immediately as they arrive from SSE stream.
+   * When true, characters are shown instantly without animation delay,
+   * making the typing effect follow the actual AI token generation speed.
+   */
+  realtime?: boolean
   /** Callback for each character */
   onChar?: (char: string, index: number) => void
   /** Callback on complete */
@@ -379,9 +385,10 @@ export class TextAnimator {
 
   constructor(options: TextAnimatorOptions = {}) {
     this.options = {
-      speed: 60, // 60 chars/sec
+      speed: 60, // 60 chars/sec (fallback for non-realtime mode)
       variableSpeed: true,
       pauseAtPunctuation: true,
+      realtime: true, // 默认使用 realtime 模式，跟随真实 SSE 流速度
       onChar: () => {},
       onComplete: () => {},
       ...options,
@@ -394,8 +401,15 @@ export class TextAnimator {
   public animate(text: string): void {
     this.text = text
     this.position = 0
-    this.lastTime = performance.now()
-    this.tick()
+
+    if (this.options.realtime) {
+      // Realtime 模式：立即输出所有字符，跟随真实 AI token 速度
+      this.emitAllPending()
+    } else {
+      // Legacy 模式：使用固定速度动画
+      this.lastTime = performance.now()
+      this.tick()
+    }
   }
 
   /**
@@ -403,8 +417,28 @@ export class TextAnimator {
    */
   public append(text: string): void {
     this.text += text
-    if (!this.animationFrame) {
-      this.tick()
+
+    if (this.options.realtime) {
+      // Realtime 模式：立即输出新到达的字符
+      this.emitAllPending()
+    } else {
+      // Legacy 模式：调度动画帧
+      if (!this.animationFrame) {
+        this.tick()
+      }
+    }
+  }
+
+  /**
+   * Emit all pending characters immediately (for realtime mode)
+   */
+  private emitAllPending(): void {
+    while (this.position < this.text.length) {
+      const char = this.text[this.position]
+      if (char !== undefined) {
+        this.options.onChar(char, this.position)
+      }
+      this.position++
     }
   }
 

@@ -17,6 +17,7 @@ export type InsightType =
   | 'strategy_modify'  // Modify an existing strategy
   | 'batch_adjust'     // Batch adjust multiple strategies
   | 'risk_alert'       // Risk alert notification
+  | 'trade_signal'     // Trade signal recommendation
   | 'backtest'         // Backtest result (EPIC-007)
   | 'clarification'    // AI clarification question (EPIC-010)
   | 'sensitivity'      // Parameter sensitivity analysis (EPIC-008)
@@ -278,6 +279,61 @@ export interface RiskAlertInsight extends InsightData {
   timeout_action?: TimeoutAction;
   timeout_seconds?: number;
   affected_strategies?: string[];
+}
+
+/**
+ * 类型守卫: 判断是否为 RiskAlertInsight
+ */
+export function isRiskAlertInsight(insight: InsightData): insight is RiskAlertInsight {
+  return insight.type === 'risk_alert';
+}
+
+// =============================================================================
+// Trade Signal Types
+// =============================================================================
+
+/**
+ * 交易信号方向
+ */
+export type SignalDirection = 'long' | 'short' | 'close';
+
+/**
+ * 交易信号强度
+ */
+export type SignalStrength = 'strong' | 'moderate' | 'weak';
+
+/**
+ * 交易信号 Insight 数据
+ */
+export interface TradeSignalInsight extends InsightData {
+  type: 'trade_signal';
+  /** 交易对 */
+  symbol: string;
+  /** 信号方向 */
+  direction: SignalDirection;
+  /** 信号强度 */
+  strength: SignalStrength;
+  /** 建议入场价 */
+  entryPrice: number;
+  /** 止损价 */
+  stopLoss: number;
+  /** 止盈价 */
+  takeProfit: number;
+  /** 风险收益比 */
+  riskRewardRatio: number;
+  /** 信号触发原因 */
+  triggers: string[];
+  /** 建议仓位百分比 */
+  positionSize?: number;
+  /** 有效期 (毫秒) */
+  validUntil?: number;
+}
+
+/**
+ * 类型守卫: 判断是否为 TradeSignalInsight
+ */
+export function isTradeSignalInsight(insight: InsightData): insight is TradeSignalInsight {
+  return insight.type === 'trade_signal';
 }
 
 // =============================================================================
