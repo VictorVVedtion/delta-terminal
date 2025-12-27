@@ -5,6 +5,7 @@
 
 import json
 import logging
+import time
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
@@ -14,8 +15,30 @@ from ..config import settings
 logger = logging.getLogger(__name__)
 
 
+class LLMError(Exception):
+    """LLM 服务基础异常"""
+    pass
+
+
+class LLMRateLimitError(LLMError):
+    """速率限制错误"""
+    pass
+
+
+class LLMAPIError(LLMError):
+    """API 调用错误"""
+    def __init__(self, status_code: int, message: str):
+        self.status_code = status_code
+        super().__init__(f"API Error ({status_code}): {message}")
+
+
 class LLMService:
     """LLM 服务类 - OpenRouter 实现"""
+
+    # 重试配置
+    MAX_RETRIES = 3
+    RETRY_DELAY_BASE = 1.0  # 基础延迟秒数
+    RETRY_STATUS_CODES = {429, 500, 502, 503, 504}  # 需要重试的状态码
 
     def __init__(self) -> None:
         """初始化 LLM 服务"""
@@ -24,6 +47,7 @@ class LLMService:
         self.model = settings.llm_model
         self.max_tokens = settings.llm_max_tokens
         self.temperature = settings.llm_temperature
+        self.timeout = 120.0  # 默认超时秒数
 
         # HTTP 客户端配置
         self.headers = {
@@ -38,7 +62,73 @@ class LLMService:
             logger.error("OpenRouter API Key 未配置")
             raise ValueError("OPENROUTER_API_KEY 环境变量未设置")
 
-        logger.info(f"LLM 服务初始化完成: model={self.model}")
+        logger.info(f"LLM 服务初始化完成: model={self.model}, timeout={self.timeout}s")
+
+    async def _request_with_retry(
+        self,
+        client: httpx.AsyncClient,
+        method: str,
+        url: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """带重试的 HTTP 请求"""
+        last_error: Optional[Exception] = None
+
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                start_time = time.time()
+                response = await client.request(method, url, **kwargs)
+                elapsed = time.time() - start_time
+
+                # 记录请求信息
+                logger.debug(
+                    f"API 请求完成: {method} {url} -> {response.status_code} ({elapsed:.2f}s)"
+                )
+
+                # 处理速率限制
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get("Retry-After", "5"))
+                    logger.warning(f"速率限制触发，等待 {retry_after}s 后重试 (尝试 {attempt + 1}/{self.MAX_RETRIES})")
+                    if attempt < self.MAX_RETRIES - 1:
+                        await self._async_sleep(retry_after)
+                        continue
+                    raise LLMRateLimitError(f"速率限制: 重试 {self.MAX_RETRIES} 次后仍失败")
+
+                # 处理可重试错误
+                if response.status_code in self.RETRY_STATUS_CODES:
+                    delay = self.RETRY_DELAY_BASE * (2 ** attempt)
+                    logger.warning(
+                        f"服务器错误 {response.status_code}，{delay:.1f}s 后重试 (尝试 {attempt + 1}/{self.MAX_RETRIES})"
+                    )
+                    if attempt < self.MAX_RETRIES - 1:
+                        await self._async_sleep(delay)
+                        continue
+
+                response.raise_for_status()
+                return response
+
+            except httpx.TimeoutException as e:
+                delay = self.RETRY_DELAY_BASE * (2 ** attempt)
+                logger.warning(f"请求超时，{delay:.1f}s 后重试 (尝试 {attempt + 1}/{self.MAX_RETRIES})")
+                last_error = e
+                if attempt < self.MAX_RETRIES - 1:
+                    await self._async_sleep(delay)
+                    continue
+
+            except httpx.HTTPStatusError as e:
+                last_error = e
+                error_body = e.response.text[:500] if e.response.text else "无响应内容"
+                logger.error(f"HTTP 错误: {e.response.status_code} - {error_body}")
+                raise LLMAPIError(e.response.status_code, error_body)
+
+        # 所有重试都失败
+        raise LLMError(f"请求失败，已重试 {self.MAX_RETRIES} 次: {last_error}")
+
+    @staticmethod
+    async def _async_sleep(seconds: float) -> None:
+        """异步等待"""
+        import asyncio
+        await asyncio.sleep(seconds)
 
     async def generate_response(
         self,
@@ -58,25 +148,36 @@ class LLMService:
 
         Returns:
             生成的响应文本
+
+        Raises:
+            LLMError: LLM 调用失败
+            LLMRateLimitError: 速率限制
+            LLMAPIError: API 错误
         """
+        start_time = time.time()
         try:
-            logger.info(f"Generating response with {len(messages)} messages")
+            logger.info(f"生成响应: {len(messages)} 条消息, model={self.model}")
 
             # 构建请求体 (OpenAI 兼容格式)
+            built_messages = self._build_messages(messages, system)
             request_body: Dict[str, Any] = {
                 "model": self.model,
-                "messages": self._build_messages(messages, system),
+                "messages": built_messages,
                 "max_tokens": max_tokens or self.max_tokens,
                 "temperature": temperature if temperature is not None else self.temperature,
             }
 
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
+            # 记录请求详情（debug 级别）
+            logger.debug(f"请求体: model={self.model}, messages={len(built_messages)}, max_tokens={request_body['max_tokens']}")
+
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await self._request_with_retry(
+                    client,
+                    "POST",
                     f"{self.api_url}/chat/completions",
                     headers=self.headers,
                     json=request_body,
                 )
-                response.raise_for_status()
                 data = response.json()
 
             # 提取响应内容
@@ -84,18 +185,25 @@ class LLMService:
                 choice = data["choices"][0]
                 if choice.get("message") and choice["message"].get("content"):
                     result = choice["message"]["content"]
-                    logger.info(f"Generated response length: {len(result)}")
+                    elapsed = time.time() - start_time
+                    # 记录使用情况
+                    usage = data.get("usage", {})
+                    logger.info(
+                        f"响应完成: {len(result)} 字符, "
+                        f"tokens(in={usage.get('prompt_tokens', '?')}, out={usage.get('completion_tokens', '?')}), "
+                        f"耗时 {elapsed:.2f}s"
+                    )
                     return result
 
-            logger.warning("Empty response from OpenRouter API")
+            logger.warning("OpenRouter API 返回空响应")
             return ""
 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error from OpenRouter: {e.response.status_code} - {e.response.text}")
+        except (LLMError, LLMRateLimitError, LLMAPIError):
             raise
         except Exception as e:
-            logger.error(f"Error generating response: {e}")
-            raise
+            elapsed = time.time() - start_time
+            logger.error(f"生成响应失败 (耗时 {elapsed:.2f}s): {type(e).__name__}: {e}")
+            raise LLMError(f"生成响应失败: {e}") from e
 
     async def generate_json_response(
         self,
@@ -161,27 +269,39 @@ class LLMService:
 
         Yields:
             文本片段
+
+        Raises:
+            LLMError: LLM 调用失败
         """
+        start_time = time.time()
+        char_count = 0
+
         try:
-            logger.info("Starting streaming response")
+            logger.info(f"开始流式响应: {len(messages)} 条消息, model={self.model}")
 
             # 构建请求体
+            built_messages = self._build_messages(messages, system)
             request_body: Dict[str, Any] = {
                 "model": self.model,
-                "messages": self._build_messages(messages, system),
+                "messages": built_messages,
                 "max_tokens": self.max_tokens,
                 "temperature": temperature if temperature is not None else self.temperature,
                 "stream": True,
             }
 
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
                 async with client.stream(
                     "POST",
                     f"{self.api_url}/chat/completions",
                     headers=self.headers,
                     json=request_body,
                 ) as response:
-                    response.raise_for_status()
+                    # 检查状态码
+                    if response.status_code == 429:
+                        raise LLMRateLimitError("流式请求被速率限制")
+                    if response.status_code >= 400:
+                        error_text = await response.aread()
+                        raise LLMAPIError(response.status_code, error_text.decode()[:500])
 
                     async for line in response.aiter_lines():
                         if not line:
@@ -196,19 +316,25 @@ class LLMService:
                                     delta = data["choices"][0].get("delta", {})
                                     content = delta.get("content", "")
                                     if content:
+                                        char_count += len(content)
                                         yield content
                             except json.JSONDecodeError:
-                                logger.warning(f"Failed to parse streaming data: {data_str}")
+                                logger.debug(f"跳过无效流数据: {data_str[:100]}")
                                 continue
 
-            logger.info("Streaming response completed")
+            elapsed = time.time() - start_time
+            logger.info(f"流式响应完成: {char_count} 字符, 耗时 {elapsed:.2f}s")
 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error in streaming: {e.response.status_code}")
+        except (LLMError, LLMRateLimitError, LLMAPIError):
             raise
+        except httpx.TimeoutException as e:
+            elapsed = time.time() - start_time
+            logger.error(f"流式请求超时 (耗时 {elapsed:.2f}s)")
+            raise LLMError(f"流式请求超时: {e}") from e
         except Exception as e:
-            logger.error(f"Error in streaming response: {e}")
-            raise
+            elapsed = time.time() - start_time
+            logger.error(f"流式响应失败 (耗时 {elapsed:.2f}s): {type(e).__name__}: {e}")
+            raise LLMError(f"流式响应失败: {e}") from e
 
     def _build_messages(
         self, messages: List[Dict[str, str]], system: Optional[str]
@@ -307,3 +433,14 @@ async def get_llm_service_async() -> LLMService:
 
 # 向后兼容别名
 llm_service = None  # 将在首次调用 get_llm_service() 时初始化
+
+
+# 导出列表
+__all__ = [
+    "LLMService",
+    "LLMError",
+    "LLMRateLimitError",
+    "LLMAPIError",
+    "get_llm_service",
+    "get_llm_service_async",
+]
