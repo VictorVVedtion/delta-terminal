@@ -312,7 +312,15 @@ function QuestionnaireModal({
   onPrev,
   onSkip,
 }: QuestionnaireModalProps) {
-  const { questionnaire, setQuestionnaireAnswer } = useOnboardingStore()
+  // Local questionnaire state (not persisted as this step is currently unused)
+  const [questionnaire, setQuestionnaire] = React.useState({
+    experience: '',
+    interests: [] as string[],
+    exchange: '',
+  })
+  const setQuestionnaireAnswer = (key: string, value: string | string[]) => {
+    setQuestionnaire(prev => ({ ...prev, [key]: value }))
+  }
   const [qStep, setQStep] = React.useState(0) // 0: experience, 1: interests, 2: exchange
 
   const handleNextQ = () => {
@@ -373,7 +381,7 @@ function QuestionnaireModal({
                     key={opt}
                     onClick={() => {
                       const newInterests = selected
-                        ? questionnaire.interests.filter(i => i !== opt)
+                        ? questionnaire.interests.filter((i: string) => i !== opt)
                         : [...questionnaire.interests, opt]
                       setQuestionnaireAnswer('interests', newInterests)
                     }}
