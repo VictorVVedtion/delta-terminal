@@ -13,6 +13,10 @@ from typing import Any, Dict, List, Optional
 
 from ..models.insight_schemas import (
     CanvasMode,
+    ClarificationCategory,
+    ClarificationInsight,
+    ClarificationOption,
+    ClarificationOptionType,
     ComparisonOperator,
     Constraint,
     ConstraintType,
@@ -33,6 +37,7 @@ from ..models.insight_schemas import (
     RiskAlertSeverity,
     RiskAlertType,
     TimeoutAction,
+    create_clarification_insight,
     create_insight_id,
 )
 from ..models.schemas import IntentType, Message
@@ -59,6 +64,27 @@ class InsightGeneratorService:
     that can be rendered as interactive UI controls.
     """
 
+    # Keywords that indicate abstract/vague requests requiring clarification
+    ABSTRACT_KEYWORDS = [
+        # 哲学/概念性
+        "哲学", "思考", "理念", "概念", "思想", "智慧",
+        # 模糊风险描述
+        "稳定", "保守", "激进", "稳健", "安全", "波动",
+        # 模糊收益描述
+        "赚钱", "盈利", "收益", "躺赚", "被动收入",
+        # 非具体描述
+        "好的", "简单", "容易", "自动", "智能", "最好",
+        # 新手描述
+        "入门", "初学", "不懂", "新手", "小白",
+    ]
+
+    # Required parameters for strategy creation
+    REQUIRED_STRATEGY_PARAMS = {
+        "symbol": ["交易对", "币种", "BTC", "ETH", "SOL", "DOGE", "USDT"],
+        "timeframe": ["周期", "小时", "分钟", "日线", "1h", "4h", "1d", "15m"],
+        "strategy_type": ["策略", "网格", "RSI", "MACD", "趋势", "均线", "布林", "定投"],
+    }
+
     def __init__(self, llm_service: LLMService):
         """
         Initialize the service
@@ -67,6 +93,57 @@ class InsightGeneratorService:
             llm_service: LLM service instance
         """
         self.llm_service = llm_service
+
+    def _assess_intent_completeness(
+        self,
+        user_input: str,
+        intent: IntentType,
+        entities: Dict[str, Any],
+    ) -> tuple[bool, List[str], bool]:
+        """
+        Assess whether user input has sufficient information for intent execution
+
+        Args:
+            user_input: User's raw input text
+            intent: Detected intent type
+            entities: Extracted entities from intent recognition
+
+        Returns:
+            Tuple of (is_complete, missing_params, has_abstract_concepts)
+        """
+        if intent != IntentType.CREATE_STRATEGY:
+            # Only apply completeness check to strategy creation for now
+            return (True, [], False)
+
+        user_input_lower = user_input.lower()
+
+        # Check for abstract/vague keywords
+        has_abstract = any(
+            keyword in user_input for keyword in self.ABSTRACT_KEYWORDS
+        )
+
+        # Check for required parameters
+        missing_params = []
+        for param_key, keywords in self.REQUIRED_STRATEGY_PARAMS.items():
+            # Check if parameter is in entities
+            if param_key in entities and entities[param_key]:
+                continue
+
+            # Check if any keyword appears in input
+            found = any(kw.lower() in user_input_lower for kw in keywords)
+            if not found:
+                missing_params.append(param_key)
+
+        # Determine if request is complete
+        # Incomplete if: has abstract concepts OR missing 2+ required params
+        is_complete = not has_abstract and len(missing_params) < 2
+
+        logger.debug(
+            f"Intent completeness check: complete={is_complete}, "
+            f"missing={missing_params}, abstract={has_abstract}"
+        )
+
+        return (is_complete, missing_params, has_abstract)
 
     async def generate_insight(
         self,
@@ -93,6 +170,28 @@ class InsightGeneratorService:
         """
         try:
             logger.info(f"Generating insight for user {user_id}, intent: {intent}")
+
+            # Extract entities from context
+            entities = (context or {}).get("entities", {})
+
+            # A2UI Core: Check intent completeness before proceeding
+            is_complete, missing_params, has_abstract = self._assess_intent_completeness(
+                user_input, intent, entities
+            )
+
+            # If request is incomplete, generate clarification instead
+            if not is_complete and intent == IntentType.CREATE_STRATEGY:
+                logger.info(
+                    f"Request incomplete (missing={missing_params}, abstract={has_abstract}), "
+                    "generating clarification insight"
+                )
+                return await self._generate_clarification_insight(
+                    user_input,
+                    chat_history,
+                    context or {},
+                    missing_params=missing_params,
+                    has_abstract=has_abstract,
+                )
 
             # Select prompt based on intent
             if intent == IntentType.CREATE_STRATEGY:
@@ -445,13 +544,35 @@ class InsightGeneratorService:
         user_input: str,
         chat_history: List[Message],
         context: Dict[str, Any],
-    ) -> InsightData:
-        """Generate insight with clarification questions"""
-        formatted_history = self._format_chat_history(chat_history)
+        missing_params: Optional[List[str]] = None,
+        has_abstract: bool = False,
+    ) -> ClarificationInsight:
+        """
+        Generate ClarificationInsight for vague/incomplete requests
 
+        This is the core A2UI mechanism for handling unclear user intent.
+        Instead of guessing, we ask structured questions with options.
+
+        Args:
+            user_input: User's raw input
+            chat_history: Conversation history
+            context: Additional context
+            missing_params: List of missing required parameters
+            has_abstract: Whether the request contains abstract concepts
+
+        Returns:
+            ClarificationInsight with structured question and options
+        """
+        formatted_history = self._format_chat_history(chat_history)
+        missing_params = missing_params or []
+        collected_params = context.get("collected_params", {})
+
+        # Prepare prompt with missing params info
         prompt_value = CLARIFICATION_PROMPT.format_messages(
             chat_history=formatted_history,
             user_input=user_input,
+            collected_params=json.dumps(collected_params, ensure_ascii=False),
+            missing_params=json.dumps(missing_params, ensure_ascii=False),
             context=json.dumps(context, ensure_ascii=False),
         )
 
@@ -461,17 +582,124 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                # LangChain 使用 "human"，OpenAI API 需要 "user"
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
+        # Call LLM to generate clarification
         response = await self.llm_service.generate_json_response(
             messages=messages,
             system=system_msg,
             temperature=0.5,
         )
 
-        return self._parse_insight_response(response, InsightType.STRATEGY_CREATE)
+        # Parse the clarification response
+        return self._parse_clarification_response(
+            response,
+            collected_params=collected_params,
+            remaining_count=len(missing_params),
+        )
+
+    def _parse_clarification_response(
+        self,
+        response: Dict[str, Any],
+        collected_params: Optional[Dict[str, Any]] = None,
+        remaining_count: int = 0,
+    ) -> ClarificationInsight:
+        """
+        Parse LLM response into ClarificationInsight
+
+        Args:
+            response: LLM JSON response
+            collected_params: Already collected parameters
+            remaining_count: Estimated remaining questions
+
+        Returns:
+            ClarificationInsight
+        """
+        try:
+            # Parse category
+            category_str = response.get("category", "general")
+            try:
+                category = ClarificationCategory(category_str)
+            except ValueError:
+                category = ClarificationCategory.GENERAL
+
+            # Parse option type
+            option_type_str = response.get("option_type", "single")
+            try:
+                option_type = ClarificationOptionType(option_type_str)
+            except ValueError:
+                option_type = ClarificationOptionType.SINGLE
+
+            # Parse options
+            options = []
+            for opt in response.get("options", []):
+                options.append(
+                    ClarificationOption(
+                        id=opt.get("id", ""),
+                        label=opt.get("label", ""),
+                        description=opt.get("description"),
+                        icon=opt.get("icon"),
+                        recommended=opt.get("recommended", False),
+                    )
+                )
+
+            # Build ClarificationInsight
+            return ClarificationInsight(
+                id=create_insight_id(),
+                type=InsightType.CLARIFICATION,
+                params=[],  # Clarification uses options, not params
+                question=response.get("question", "请提供更多信息"),
+                category=category,
+                option_type=option_type,
+                options=options,
+                allow_custom_input=response.get("allow_custom_input", True),
+                custom_input_placeholder=response.get("custom_input_placeholder"),
+                context_hint=response.get("context_hint"),
+                collected_params=collected_params or {},
+                remaining_questions=response.get("remaining_questions", remaining_count),
+                explanation=response.get("explanation", ""),
+                created_at=datetime.now().isoformat(),
+            )
+
+        except Exception as e:
+            logger.error(f"Error parsing clarification response: {e}")
+            # Return a fallback clarification
+            return ClarificationInsight(
+                id=create_insight_id(),
+                type=InsightType.CLARIFICATION,
+                params=[],
+                question="您希望交易什么币种？",
+                category=ClarificationCategory.TRADING_PAIR,
+                option_type=ClarificationOptionType.SINGLE,
+                options=[
+                    ClarificationOption(
+                        id="btc",
+                        label="BTC/USDT",
+                        description="比特币，市值最大的加密货币",
+                        recommended=True,
+                    ),
+                    ClarificationOption(
+                        id="eth",
+                        label="ETH/USDT",
+                        description="以太坊，最大的智能合约平台",
+                        recommended=False,
+                    ),
+                    ClarificationOption(
+                        id="sol",
+                        label="SOL/USDT",
+                        description="Solana，高性能公链",
+                        recommended=False,
+                    ),
+                ],
+                allow_custom_input=True,
+                custom_input_placeholder="或输入其他交易对...",
+                context_hint="选择交易对是创建策略的第一步",
+                collected_params=collected_params or {},
+                remaining_questions=remaining_count,
+                explanation="让我们从选择交易对开始，这将帮助我为您定制最合适的策略。",
+                created_at=datetime.now().isoformat(),
+            )
 
     async def generate_risk_alert(
         self,

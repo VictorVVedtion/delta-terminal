@@ -30,6 +30,7 @@ class InsightType(str, Enum):
     STRATEGY_OPTIMIZE = "strategy_optimize"  # Strategy optimization suggestions
     BACKTEST_SUGGEST = "backtest_suggest"  # Backtest suggestions and results
     RISK_ANALYSIS = "risk_analysis"  # Portfolio risk analysis
+    CLARIFICATION = "clarification"  # Request clarification from user (A2UI core)
 
 
 # =============================================================================
@@ -419,6 +420,85 @@ class RiskAlertInsight(InsightData):
 
 
 # =============================================================================
+# Clarification Types (A2UI Core Feature)
+# =============================================================================
+
+
+class ClarificationCategory(str, Enum):
+    """Categories for clarification questions"""
+
+    TRADING_PAIR = "trading_pair"  # Which trading pair?
+    STRATEGY_TYPE = "strategy_type"  # What type of strategy?
+    RISK_PREFERENCE = "risk_preference"  # Risk tolerance level
+    TIMEFRAME = "timeframe"  # Trading timeframe
+    ENTRY_CONDITION = "entry_condition"  # Entry logic clarification
+    EXIT_CONDITION = "exit_condition"  # Exit logic clarification
+    POSITION_SIZE = "position_size"  # Position sizing preference
+    MARKET_CONTEXT = "market_context"  # Market conditions preference
+    GENERAL = "general"  # General clarification
+
+
+class ClarificationOptionType(str, Enum):
+    """How user can respond to clarification"""
+
+    SINGLE = "single"  # Single selection
+    MULTI = "multi"  # Multiple selection
+    TEXT = "text"  # Free text input
+    HYBRID = "hybrid"  # Options + custom input
+
+
+class ClarificationOption(BaseModel):
+    """Single option for clarification question"""
+
+    id: str = Field(description="Option identifier")
+    label: str = Field(description="Display label")
+    description: Optional[str] = Field(default=None, description="Detailed description")
+    icon: Optional[str] = Field(default=None, description="Optional icon name")
+    recommended: bool = Field(default=False, description="Whether this is the recommended option")
+
+
+class ClarificationInsight(InsightData):
+    """
+    Clarification insight - asks user for more information
+
+    This is the core A2UI mechanism for handling vague/incomplete requests.
+    Instead of guessing, AI asks structured questions with options.
+    """
+
+    type: Literal[InsightType.CLARIFICATION] = InsightType.CLARIFICATION
+    question: str = Field(description="The clarification question to ask")
+    category: ClarificationCategory = Field(description="Category of clarification")
+    option_type: ClarificationOptionType = Field(
+        default=ClarificationOptionType.SINGLE,
+        description="How user can respond"
+    )
+    options: List[ClarificationOption] = Field(
+        default_factory=list,
+        description="Available options for user to choose from"
+    )
+    allow_custom_input: bool = Field(
+        default=True,
+        description="Whether user can provide custom text input"
+    )
+    custom_input_placeholder: Optional[str] = Field(
+        default=None,
+        description="Placeholder for custom input field"
+    )
+    context_hint: Optional[str] = Field(
+        default=None,
+        description="Additional context about why this clarification is needed"
+    )
+    collected_params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Parameters already collected in this multi-step flow"
+    )
+    remaining_questions: int = Field(
+        default=0,
+        description="Estimated remaining questions in this flow"
+    )
+
+
+# =============================================================================
 # Helper Types
 # =============================================================================
 
@@ -506,3 +586,65 @@ def create_risk_alert(
         alert.affected_strategies = affected_strategies
 
     return alert
+
+
+def create_clarification_insight(
+    question: str,
+    category: "ClarificationCategory",
+    options: List["ClarificationOption"],
+    explanation: str,
+    option_type: "ClarificationOptionType" = None,
+    allow_custom_input: bool = True,
+    custom_input_placeholder: Optional[str] = None,
+    context_hint: Optional[str] = None,
+    collected_params: Optional[Dict[str, Any]] = None,
+    remaining_questions: int = 0,
+) -> "ClarificationInsight":
+    """
+    Creates a clarification insight for A2UI
+
+    This is the core mechanism for handling vague/incomplete user requests.
+    Instead of guessing, AI asks structured questions with options.
+
+    Args:
+        question: The clarification question to ask
+        category: Category of clarification (trading_pair, strategy_type, etc.)
+        options: List of options for user to choose from
+        explanation: Natural language explanation of why this clarification is needed
+        option_type: How user can respond (single, multi, text, hybrid)
+        allow_custom_input: Whether to allow free text input
+        custom_input_placeholder: Placeholder for custom input field
+        context_hint: Additional context hint
+        collected_params: Parameters already collected in multi-step flow
+        remaining_questions: Estimated remaining questions
+
+    Returns:
+        ClarificationInsight
+    """
+    # Import here to avoid circular imports
+    from .insight_schemas import (
+        ClarificationCategory,
+        ClarificationInsight,
+        ClarificationOption,
+        ClarificationOptionType,
+    )
+
+    if option_type is None:
+        option_type = ClarificationOptionType.SINGLE
+
+    return ClarificationInsight(
+        id=create_insight_id(),
+        type=InsightType.CLARIFICATION,
+        params=[],  # Clarification doesn't have params, it has options
+        question=question,
+        category=category,
+        option_type=option_type,
+        options=options,
+        allow_custom_input=allow_custom_input,
+        custom_input_placeholder=custom_input_placeholder,
+        context_hint=context_hint,
+        collected_params=collected_params or {},
+        remaining_questions=remaining_questions,
+        explanation=explanation,
+        created_at=datetime.now().isoformat(),
+    )
