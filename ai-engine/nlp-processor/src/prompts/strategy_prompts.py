@@ -15,7 +15,7 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
    关键词：创建、制定、设计、新策略、帮我写个策略等
 
 2. MODIFY_STRATEGY - 用户想要修改现有策略
-   关键词：修改、调整、更新、改变、优化等
+   关键词：修改、调整、更新、改变等
 
 3. DELETE_STRATEGY - 用户想要删除策略
    关键词：删除、移除、取消、停止等
@@ -24,20 +24,30 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
    关键词：查看、显示、列出、有哪些策略等
 
 5. ANALYZE_MARKET - 用户想要分析市场
-   关键词：分析、市场、趋势、行情、价格等
+   关键词：分析市场、趋势分析、行情分析、价格分析等
 
 6. BACKTEST - 用户想要进行回测
    关键词：回测、测试、历史数据、效果如何等
 
-7. GENERAL_CHAT - 一般对话
-   关键词：问候、感谢、闲聊等
+7. OPTIMIZE_STRATEGY - 用户想要优化策略
+   关键词：优化、改进、提升、提高收益、降低风险、调优、优化参数等
 
-8. UNKNOWN - 无法识别的意图
+8. BACKTEST_SUGGEST - 用户想要回测建议或回测配置
+   关键词：怎么回测、回测建议、回测配置、推荐回测参数、回测多久等
+
+9. RISK_ANALYSIS - 用户想要风险分析
+   关键词：风险分析、风险评估、风险检查、投资组合风险、仓位风险、VaR、最大回撤等
+
+10. GENERAL_CHAT - 一般对话
+    关键词：问候、感谢、闲聊等
+
+11. UNKNOWN - 无法识别的意图
 
 分析时请考虑：
 - 用户的明确表述
 - 上下文信息
 - 隐含的需求
+- 区分"优化"（改进现有策略）和"修改"（改变策略配置）
 
 输出格式要求：
 返回 JSON 格式，包含：
@@ -48,6 +58,7 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
     "symbol": "交易对（如果提到）",
     "timeframe": "时间周期（如果提到）",
     "strategy_type": "策略类型（如果提到）",
+    "strategy_id": "策略 ID（如果提到）",
     "other_params": {{}}
   }},
   "reasoning": "简要说明识别理由"

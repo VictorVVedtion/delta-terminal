@@ -37,10 +37,13 @@ from ..models.insight_schemas import (
 )
 from ..models.schemas import IntentType, Message
 from ..prompts.insight_prompts import (
+    BACKTEST_INSIGHT_PROMPT,
     CLARIFICATION_PROMPT,
     GENERAL_CHAT_PROMPT,
     MODIFY_INSIGHT_PROMPT,
+    OPTIMIZE_INSIGHT_PROMPT,
     RISK_ALERT_PROMPT,
+    RISK_ANALYSIS_PROMPT,
     STRATEGY_INSIGHT_PROMPT,
 )
 from .llm_service import LLMService, get_llm_service
@@ -100,6 +103,21 @@ class InsightGeneratorService:
                 return await self._generate_modify_insight(
                     user_input, chat_history, context or {}, target_strategy
                 )
+            elif intent == IntentType.OPTIMIZE_STRATEGY:
+                # 策略优化建议
+                return await self._generate_optimize_insight(
+                    user_input, chat_history, context or {}, target_strategy
+                )
+            elif intent == IntentType.BACKTEST_SUGGEST:
+                # 回测建议
+                return await self._generate_backtest_insight(
+                    user_input, chat_history, context or {}, target_strategy
+                )
+            elif intent == IntentType.RISK_ANALYSIS:
+                # 风险分析
+                return await self._generate_risk_analysis_insight(
+                    user_input, chat_history, context or {}
+                )
             elif intent in [IntentType.ANALYZE_MARKET, IntentType.BACKTEST]:
                 # For analysis requests, still generate strategy insight with analysis focus
                 return await self._generate_analysis_insight(
@@ -144,7 +162,9 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                messages.append({"role": msg.type, "content": str(msg.content)})
+                # LangChain 使用 "human"，OpenAI API 需要 "user"
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
 
         # Call LLM for JSON response
         response = await self.llm_service.generate_json_response(
@@ -179,7 +199,9 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                messages.append({"role": msg.type, "content": str(msg.content)})
+                # LangChain 使用 "human"，OpenAI API 需要 "user"
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
 
         response = await self.llm_service.generate_json_response(
             messages=messages,
@@ -210,6 +232,174 @@ class InsightGeneratorService:
         context["analysis_mode"] = True
         return await self._generate_strategy_insight(user_input, chat_history, context)
 
+    async def _generate_optimize_insight(
+        self,
+        user_input: str,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+        target_strategy: Optional[Dict[str, Any]],
+    ) -> InsightData:
+        """Generate InsightData for strategy optimization suggestions"""
+        formatted_history = self._format_chat_history(chat_history)
+
+        # 准备策略配置和表现数据
+        strategy_config = json.dumps(target_strategy or {}, ensure_ascii=False)
+        performance_data = json.dumps(context.get("performance", {
+            "totalReturn": 12.3,
+            "sharpeRatio": 1.42,
+            "maxDrawdown": -12.5,
+            "winRate": 58.2,
+            "totalTrades": 156
+        }), ensure_ascii=False)
+        market_context = json.dumps(context.get("market", {
+            "trend": "bullish",
+            "volatility": "medium",
+            "btcPrice": 87000
+        }), ensure_ascii=False)
+
+        prompt_value = OPTIMIZE_INSIGHT_PROMPT.format_messages(
+            chat_history=formatted_history,
+            user_input=user_input,
+            strategy_config=strategy_config,
+            performance_data=performance_data,
+            market_context=market_context,
+        )
+
+        messages = []
+        system_msg = None
+        for msg in prompt_value:
+            if msg.type == "system":
+                system_msg = str(msg.content)
+            else:
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
+
+        response = await self.llm_service.generate_json_response(
+            messages=messages,
+            system=system_msg,
+            temperature=0.3,
+        )
+
+        insight = self._parse_insight_response(response, InsightType.STRATEGY_OPTIMIZE)
+
+        # Add target information if available
+        if target_strategy and insight.target is None:
+            insight.target = InsightTarget(
+                strategy_id=target_strategy.get("id", ""),
+                name=target_strategy.get("name", ""),
+                symbol=target_strategy.get("symbol", ""),
+            )
+
+        return insight
+
+    async def _generate_backtest_insight(
+        self,
+        user_input: str,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+        target_strategy: Optional[Dict[str, Any]],
+    ) -> InsightData:
+        """Generate InsightData for backtest suggestions"""
+        formatted_history = self._format_chat_history(chat_history)
+
+        strategy_config = json.dumps(target_strategy or {}, ensure_ascii=False)
+        data_range = json.dumps(context.get("dataRange", {
+            "start": "2024-01-01",
+            "end": "2024-12-26",
+            "symbols": ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
+            "timeframes": ["1h", "4h", "1d"]
+        }), ensure_ascii=False)
+
+        prompt_value = BACKTEST_INSIGHT_PROMPT.format_messages(
+            chat_history=formatted_history,
+            user_input=user_input,
+            strategy_config=strategy_config,
+            data_range=data_range,
+        )
+
+        messages = []
+        system_msg = None
+        for msg in prompt_value:
+            if msg.type == "system":
+                system_msg = str(msg.content)
+            else:
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
+
+        response = await self.llm_service.generate_json_response(
+            messages=messages,
+            system=system_msg,
+            temperature=0.3,
+        )
+
+        insight = self._parse_insight_response(response, InsightType.BACKTEST_SUGGEST)
+
+        # Add target information if available
+        if target_strategy and insight.target is None:
+            insight.target = InsightTarget(
+                strategy_id=target_strategy.get("id", ""),
+                name=target_strategy.get("name", ""),
+                symbol=target_strategy.get("symbol", ""),
+            )
+
+        return insight
+
+    async def _generate_risk_analysis_insight(
+        self,
+        user_input: str,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+    ) -> InsightData:
+        """Generate InsightData for portfolio risk analysis"""
+        formatted_history = self._format_chat_history(chat_history)
+
+        # 准备投资组合和策略数据
+        portfolio = json.dumps(context.get("portfolio", {
+            "totalValue": 50000,
+            "positions": [
+                {"symbol": "BTC/USDT", "value": 25000, "percentage": 50},
+                {"symbol": "ETH/USDT", "value": 15000, "percentage": 30},
+                {"symbol": "SOL/USDT", "value": 10000, "percentage": 20}
+            ]
+        }), ensure_ascii=False)
+
+        active_strategies = json.dumps(context.get("strategies", [
+            {"id": "strategy_1", "name": "RSI 反弹", "symbol": "BTC/USDT", "status": "running"},
+            {"id": "strategy_2", "name": "网格交易", "symbol": "ETH/USDT", "status": "running"}
+        ]), ensure_ascii=False)
+
+        market_data = json.dumps(context.get("market", {
+            "btcPrice": 87000,
+            "volatilityIndex": 45,
+            "fearGreedIndex": 65,
+            "trend": "bullish"
+        }), ensure_ascii=False)
+
+        prompt_value = RISK_ANALYSIS_PROMPT.format_messages(
+            chat_history=formatted_history,
+            user_input=user_input,
+            portfolio=portfolio,
+            active_strategies=active_strategies,
+            market_data=market_data,
+        )
+
+        messages = []
+        system_msg = None
+        for msg in prompt_value:
+            if msg.type == "system":
+                system_msg = str(msg.content)
+            else:
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
+
+        response = await self.llm_service.generate_json_response(
+            messages=messages,
+            system=system_msg,
+            temperature=0.3,
+        )
+
+        return self._parse_insight_response(response, InsightType.RISK_ANALYSIS)
+
     async def _generate_general_insight(
         self,
         user_input: str,
@@ -230,7 +420,9 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                messages.append({"role": msg.type, "content": str(msg.content)})
+                # LangChain 使用 "human"，OpenAI API 需要 "user"
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
 
         # For general chat, we may get plain text response
         response_text = await self.llm_service.generate_response(
@@ -269,7 +461,9 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                messages.append({"role": msg.type, "content": str(msg.content)})
+                # LangChain 使用 "human"，OpenAI API 需要 "user"
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
 
         response = await self.llm_service.generate_json_response(
             messages=messages,
@@ -308,7 +502,9 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                messages.append({"role": msg.type, "content": str(msg.content)})
+                # LangChain 使用 "human"，OpenAI API 需要 "user"
+                role = "user" if msg.type == "human" else msg.type
+                messages.append({"role": role, "content": str(msg.content)})
 
         response = await self.llm_service.generate_json_response(
             messages=messages,

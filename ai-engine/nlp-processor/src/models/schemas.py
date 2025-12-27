@@ -23,6 +23,10 @@ class IntentType(str, Enum):
     BACKTEST = "backtest"
     GENERAL_CHAT = "general_chat"
     UNKNOWN = "unknown"
+    # 新增 AI 功能意图
+    OPTIMIZE_STRATEGY = "optimize_strategy"  # 策略优化
+    BACKTEST_SUGGEST = "backtest_suggest"  # 回测建议
+    RISK_ANALYSIS = "risk_analysis"  # 风险分析
 
 
 class MessageRole(str, Enum):

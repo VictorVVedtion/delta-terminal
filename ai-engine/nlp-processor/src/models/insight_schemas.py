@@ -27,6 +27,9 @@ class InsightType(str, Enum):
     STRATEGY_MODIFY = "strategy_modify"  # Modify an existing strategy
     BATCH_ADJUST = "batch_adjust"  # Batch adjust multiple strategies
     RISK_ALERT = "risk_alert"  # Risk alert notification
+    STRATEGY_OPTIMIZE = "strategy_optimize"  # Strategy optimization suggestions
+    BACKTEST_SUGGEST = "backtest_suggest"  # Backtest suggestions and results
+    RISK_ANALYSIS = "risk_analysis"  # Portfolio risk analysis
 
 
 # =============================================================================
