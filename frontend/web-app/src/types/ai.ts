@@ -370,16 +370,16 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     preset: 'economy',
     name: '经济型',
     description: '成本最低，适合高频调用',
-    defaultModel: 'deepseek/deepseek-v3.2',
-    estimatedCostPerCall: 0.002,
+    defaultModel: 'anthropic/claude-sonnet-4',
+    estimatedCostPerCall: 0.003,
     icon: '💰'
   },
   balanced: {
     preset: 'balanced',
     name: '平衡型',
     description: '性能与成本平衡，大多数场景推荐',
-    defaultModel: 'deepseek/deepseek-v3.2',
-    estimatedCostPerCall: 0.002,
+    defaultModel: 'anthropic/claude-sonnet-4',
+    estimatedCostPerCall: 0.003,
     icon: '⚖️'
   },
   performance: {

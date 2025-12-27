@@ -98,10 +98,10 @@ export function PaperTradingPanel({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - 点击关闭面板 */}
       <div
         className={cn(
-          'fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden',
+          'fixed inset-0 bg-black/50 backdrop-blur-sm z-30',
           'transition-opacity duration-300',
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
