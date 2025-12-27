@@ -5,17 +5,18 @@
 
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
+
 import type {
-  PaperAccount,
-  PaperPosition,
-  PaperTrade,
-  PaperAccountStats,
-  PlaceOrderParams,
-  PlaceOrderResult,
   ClosePositionParams,
   ClosePositionResult,
-  TradeSide,
+  PaperAccount,
+  PaperAccountStats,
+  PaperPosition,
+  PaperTrade,
+  PlaceOrderParams,
+  PlaceOrderResult,
   PositionSide,
+  TradeSide,
 } from '@/types/paperTrading'
 
 // =============================================================================
@@ -265,7 +266,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
             const accounts = state.accounts.map((acc) => {
               if (acc.id !== accountId) return acc
 
-              let newBalance = acc.currentBalance + total
+              const newBalance = acc.currentBalance + total
               let newPositions = [...acc.positions]
 
               if (side === 'buy') {

@@ -1,18 +1,19 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence,motion } from 'framer-motion'
 import {
-  StopCircle,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Loader2,
   Square,
+  StopCircle,
+  XCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import React, { useCallback, useEffect,useRef, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
 import { useAgentStore } from '@/store/agent'
 import { useNotificationStore } from '@/store/notification'
 
@@ -193,7 +194,7 @@ export function KillSwitch() {
       {/* Confirmation Modal */}
       <KillSwitchModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); }}
         activeStrategies={activeAgents}
         pendingOrders={0}
         onStatusChange={setStatus}
@@ -263,7 +264,7 @@ function KillSwitchModal({
     }, 16)
 
     pressTimerRef.current = setTimeout(() => {
-      handleExecute()
+      void handleExecute()
     }, CONFIRM_DURATION)
   }, [step])
 
@@ -410,7 +411,7 @@ function KillSwitchModal({
                   <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer transition-colors">
                     <Checkbox
                       checked={closePositions}
-                      onCheckedChange={(checked) => setClosePositions(!!checked)}
+                      onCheckedChange={(checked) => { setClosePositions(!!checked); }}
                     />
                     <div>
                       <p className="text-sm font-medium text-foreground">
@@ -529,7 +530,7 @@ function KillSwitchModal({
                     <Button
                       variant="destructive"
                       className="flex-1"
-                      onClick={() => setStep('confirm')}
+                      onClick={() => { setStep('confirm'); }}
                     >
                       重试
                     </Button>

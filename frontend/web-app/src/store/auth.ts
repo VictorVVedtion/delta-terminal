@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
 
         login: (user, accessToken, refreshToken) =>
-          set(
+          { set(
             {
               user,
               accessToken,
@@ -58,10 +58,10 @@ export const useAuthStore = create<AuthState>()(
             },
             false,
             'auth/login'
-          ),
+          ); },
 
         logout: () =>
-          set(
+          { set(
             {
               user: null,
               accessToken: null,
@@ -71,20 +71,20 @@ export const useAuthStore = create<AuthState>()(
             },
             false,
             'auth/logout'
-          ),
+          ); },
 
         setUser: (user) =>
-          set({ user }, false, 'auth/setUser'),
+          { set({ user }, false, 'auth/setUser'); },
 
         setTokens: (accessToken, refreshToken) =>
-          set(
+          { set(
             { accessToken, refreshToken },
             false,
             'auth/setTokens'
-          ),
+          ); },
 
         setLoading: (isLoading) =>
-          set({ isLoading }, false, 'auth/setLoading'),
+          { set({ isLoading }, false, 'auth/setLoading'); },
       }),
       {
         name: 'delta-auth-storage',

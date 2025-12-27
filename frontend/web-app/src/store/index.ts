@@ -29,13 +29,13 @@ export const useAuthStore = create<AuthState>()(
         token: null,
         isAuthenticated: false,
         login: (user, token) =>
-          set({ user, token, isAuthenticated: true }, false, 'auth/login'),
+          { set({ user, token, isAuthenticated: true }, false, 'auth/login'); },
         logout: () =>
-          set(
+          { set(
             { user: null, token: null, isAuthenticated: false },
             false,
             'auth/logout'
-          ),
+          ); },
       }),
       {
         name: 'auth-storage',
@@ -66,9 +66,9 @@ export const useMarketStore = create<MarketState>()(
     markets: new Map(),
     activeSymbol: 'BTC/USDT',
     setActiveSymbol: (symbol) =>
-      set({ activeSymbol: symbol }, false, 'market/setActiveSymbol'),
+      { set({ activeSymbol: symbol }, false, 'market/setActiveSymbol'); },
     updateMarket: (symbol, data) =>
-      set(
+      { set(
         (state) => {
           const newMarkets = new Map(state.markets)
           newMarkets.set(symbol, data)
@@ -76,7 +76,7 @@ export const useMarketStore = create<MarketState>()(
         },
         false,
         'market/updateMarket'
-      ),
+      ); },
     getMarket: (symbol) => get().markets.get(symbol),
   }))
 )
@@ -108,15 +108,15 @@ export const useStrategyStore = create<StrategyState>()(
     strategies: [],
     activeStrategyId: null,
     setStrategies: (strategies) =>
-      set({ strategies }, false, 'strategy/setStrategies'),
+      { set({ strategies }, false, 'strategy/setStrategies'); },
     addStrategy: (strategy) =>
-      set(
+      { set(
         (state) => ({ strategies: [...state.strategies, strategy] }),
         false,
         'strategy/addStrategy'
-      ),
+      ); },
     updateStrategy: (id, updates) =>
-      set(
+      { set(
         (state) => ({
           strategies: state.strategies.map((s) =>
             s.id === id ? { ...s, ...updates } : s
@@ -124,9 +124,9 @@ export const useStrategyStore = create<StrategyState>()(
         }),
         false,
         'strategy/updateStrategy'
-      ),
+      ); },
     removeStrategy: (id) =>
-      set(
+      { set(
         (state) => ({
           strategies: state.strategies.filter((s) => s.id !== id),
           activeStrategyId:
@@ -134,9 +134,9 @@ export const useStrategyStore = create<StrategyState>()(
         }),
         false,
         'strategy/removeStrategy'
-      ),
+      ); },
     setActiveStrategy: (id) =>
-      set({ activeStrategyId: id }, false, 'strategy/setActiveStrategy'),
+      { set({ activeStrategyId: id }, false, 'strategy/setActiveStrategy'); },
   }))
 )
 
@@ -165,26 +165,26 @@ export const useOrderStore = create<OrderState>()(
   devtools((set) => ({
     orders: [],
     addOrder: (order) =>
-      set(
+      { set(
         (state) => ({ orders: [...state.orders, order] }),
         false,
         'order/addOrder'
-      ),
+      ); },
     updateOrder: (id, updates) =>
-      set(
+      { set(
         (state) => ({
           orders: state.orders.map((o) => (o.id === id ? { ...o, ...updates } : o)),
         }),
         false,
         'order/updateOrder'
-      ),
+      ); },
     removeOrder: (id) =>
-      set(
+      { set(
         (state) => ({ orders: state.orders.filter((o) => o.id !== id) }),
         false,
         'order/removeOrder'
-      ),
-    clearOrders: () => set({ orders: [] }, false, 'order/clearOrders'),
+      ); },
+    clearOrders: () => { set({ orders: [] }, false, 'order/clearOrders'); },
   }))
 )
 
@@ -204,14 +204,14 @@ export const useUIStore = create<UIState>()(
         sidebarOpen: true,
         theme: 'dark',
         toggleSidebar: () =>
-          set(
+          { set(
             (state) => ({ sidebarOpen: !state.sidebarOpen }),
             false,
             'ui/toggleSidebar'
-          ),
+          ); },
         setSidebarOpen: (open) =>
-          set({ sidebarOpen: open }, false, 'ui/setSidebarOpen'),
-        setTheme: (theme) => set({ theme }, false, 'ui/setTheme'),
+          { set({ sidebarOpen: open }, false, 'ui/setSidebarOpen'); },
+        setTheme: (theme) => { set({ theme }, false, 'ui/setTheme'); },
       }),
       {
         name: 'ui-storage',

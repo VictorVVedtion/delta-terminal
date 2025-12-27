@@ -1,23 +1,24 @@
 'use client'
 
+import {
+  Activity,
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  Download,
+  ListOrdered,
+  Share2,
+  Target,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react'
 import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent,TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import {
-  TrendingUp,
-  TrendingDown,
-  Activity,
-  Target,
-  BarChart3,
-  ListOrdered,
-  Download,
-  Share2,
-  ArrowUpRight,
-  ArrowDownRight,
-} from 'lucide-react'
 import type { BacktestResult, BacktestTrade } from '@/types/backtest'
 
 // =============================================================================
@@ -406,32 +407,32 @@ function TradeTable({ trades }: TradeTableProps) {
           <tr className="border-b border-border">
             <th
               className="text-left py-3 px-2 font-medium cursor-pointer hover:text-foreground"
-              onClick={() => handleSort('entryTime')}
+              onClick={() => { handleSort('entryTime'); }}
             >
               时间
             </th>
             <th className="text-left py-3 px-2 font-medium">方向</th>
             <th
               className="text-right py-3 px-2 font-medium cursor-pointer hover:text-foreground"
-              onClick={() => handleSort('entryPrice')}
+              onClick={() => { handleSort('entryPrice'); }}
             >
               入场价
             </th>
             <th
               className="text-right py-3 px-2 font-medium cursor-pointer hover:text-foreground"
-              onClick={() => handleSort('exitPrice')}
+              onClick={() => { handleSort('exitPrice'); }}
             >
               出场价
             </th>
             <th
               className="text-right py-3 px-2 font-medium cursor-pointer hover:text-foreground"
-              onClick={() => handleSort('quantity')}
+              onClick={() => { handleSort('quantity'); }}
             >
               数量
             </th>
             <th
               className="text-right py-3 px-2 font-medium cursor-pointer hover:text-foreground"
-              onClick={() => handleSort('pnlPercent')}
+              onClick={() => { handleSort('pnlPercent'); }}
             >
               盈亏
             </th>

@@ -7,26 +7,27 @@
  * 展示所有 Live 部署的审批记录，支持查看详情、搜索筛选
  */
 
-import React from 'react'
 import {
-  ClipboardCheck,
-  Search,
-  ArrowUpDown,
-  Clock,
-  CheckCircle2,
-  XCircle,
   AlertCircle,
+  ArrowUpDown,
+  CheckCircle2,
   ChevronRight,
-  X,
-  FileText,
+  ClipboardCheck,
+  Clock,
   DollarSign,
+  FileText,
+  Search,
   Shield,
+  X,
+  XCircle,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { useSafetyStore, selectSafetyConfig } from '@/store/safety'
+import { selectSafetyConfig,useSafetyStore } from '@/store/safety'
 import type { ApprovalRecord } from '@/types/safety'
 
 // =============================================================================
@@ -122,7 +123,7 @@ export function ApprovalHistory({
                 type="text"
                 placeholder="搜索策略名..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); }}
                 className={cn(
                   'w-full pl-9 pr-3 py-2 text-sm rounded-lg',
                   'bg-muted border border-border',
@@ -132,7 +133,7 @@ export function ApprovalHistory({
               />
               {searchQuery && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => { setSearchQuery(''); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
                 >
                   <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
@@ -142,7 +143,7 @@ export function ApprovalHistory({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              onClick={() => { setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc'); }}
               className="gap-1.5"
             >
               <ArrowUpDown className="h-4 w-4" />
@@ -167,7 +168,7 @@ export function ApprovalHistory({
                 return (
                   <button
                     key={record.id}
-                    onClick={() => setSelectedRecord(record)}
+                    onClick={() => { setSelectedRecord(record); }}
                     className={cn(
                       'w-full p-3 rounded-lg border text-left',
                       'bg-card hover:bg-muted/50 transition-colors',
@@ -233,7 +234,7 @@ export function ApprovalHistory({
         <ApprovalDetailModal
           record={selectedRecord}
           isOpen={!!selectedRecord}
-          onClose={() => setSelectedRecord(null)}
+          onClose={() => { setSelectedRecord(null); }}
           onRevoke={showActions ? handleRevoke : undefined}
         />
       )}
@@ -364,7 +365,7 @@ function ApprovalDetailModal({
           {onRevoke && tokenValid && (
             <Button
               variant="destructive"
-              onClick={() => onRevoke(record.id)}
+              onClick={() => { onRevoke(record.id); }}
             >
               <XCircle className="h-4 w-4 mr-2" />
               撤销审批

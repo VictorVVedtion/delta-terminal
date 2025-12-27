@@ -6,7 +6,8 @@
  * 提供完整的回测状态管理和进度跟踪。
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef,useState } from 'react'
+
 import { useBacktestStore } from '@/store/backtest'
 import type {
   BacktestConfig,
@@ -120,7 +121,7 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
     strategyId: _strategyId, // Reserved for future use
     onSuccess,
     onError,
-    pollingInterval = 2000,
+    pollingInterval: _pollingInterval = 2000,
     timeout = 300000, // 5 分钟超时
   } = options
 
@@ -299,7 +300,7 @@ export function useBacktest(options: UseBacktestOptions): UseBacktestReturn {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(apiRequest),
-          signal: abortControllerRef.current?.signal,
+          signal: abortControllerRef.current.signal,
         })
 
         if (!response.ok) {

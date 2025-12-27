@@ -233,5 +233,5 @@ export function isDeploymentError(error: unknown): error is DeploymentError {
  * 检查部署结果是否成功
  */
 export function isDeploymentSuccess(result: DeploymentResult): boolean {
-  return result.success === true
+  return result.success
 }

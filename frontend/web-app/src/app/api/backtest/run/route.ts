@@ -5,16 +5,18 @@
  * 实际环境会调用 Python 回测引擎，这里先返回模拟数据
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
+
 import type {
-  BacktestInsightData,
   BacktestEquityPoint,
-  BacktestTrade,
-  BacktestStats,
-  ChartData,
-  Candle,
-  ChartSignal,
+  BacktestInsightData,
   BacktestParameter,
+  BacktestStats,
+  BacktestTrade,
+  Candle,
+  ChartData,
+  ChartSignal,
 } from '@/types/insight'
 
 // 模拟回测计算延迟

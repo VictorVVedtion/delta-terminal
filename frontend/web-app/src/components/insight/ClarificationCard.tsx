@@ -7,14 +7,15 @@
  * 当 AI 需要更多信息来完善策略时显示的交互式追问卡片
  */
 
-import React from 'react'
 import { Check, HelpCircle, MessageCircleQuestion, Sparkles, X } from 'lucide-react'
+import React from 'react'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type {
+  ClarificationAnswer,
   ClarificationInsight,
   ClarificationOption,
-  ClarificationAnswer,
 } from '@/types/insight'
 
 // =============================================================================
@@ -134,7 +135,7 @@ export function ClarificationCard({
           skipped: false,
         })
       }, 300)
-      return () => clearTimeout(timer)
+      return () => { clearTimeout(timer); }
     }
   }, [selectedOptions, isSingleSelect, insight.allowCustomInput, insight.id, isPending, disabled, onAnswer])
 
@@ -216,7 +217,7 @@ export function ClarificationCard({
                 key={option.id}
                 option={option}
                 selected={selectedOptions.includes(option.id)}
-                onClick={() => handleOptionClick(option.id)}
+                onClick={() => { handleOptionClick(option.id); }}
                 disabled={!isPending || disabled}
                 compact={compact}
               />
@@ -230,7 +231,7 @@ export function ClarificationCard({
         <div className="px-4 pb-4">
           {!showCustomInput ? (
             <button
-              onClick={() => setShowCustomInput(true)}
+              onClick={() => { setShowCustomInput(true); }}
               disabled={!isPending || disabled}
               className={cn(
                 'w-full p-3 rounded-lg border border-dashed border-muted-foreground/30',
@@ -245,7 +246,7 @@ export function ClarificationCard({
             <div className="space-y-2">
               <textarea
                 value={customText}
-                onChange={(e) => setCustomText(e.target.value)}
+                onChange={(e) => { setCustomText(e.target.value); }}
                 placeholder={insight.customInputPlaceholder || '输入您的回答...'}
                 disabled={!isPending || disabled}
                 className={cn(

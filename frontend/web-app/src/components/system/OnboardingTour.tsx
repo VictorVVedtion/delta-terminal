@@ -7,14 +7,15 @@
  * 为首次使用的用户提供核心功能引导
  */
 
+import { ChevronLeft, ChevronRight, LayoutList, MessageSquare, Rocket,Sparkles, X } from 'lucide-react'
 import React from 'react'
-import { X, ChevronLeft, ChevronRight, Sparkles, MessageSquare, LayoutList, Rocket } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
-  useOnboardingStore,
   ONBOARDING_STEPS,
   shouldShowOnboarding,
+  useOnboardingStore,
 } from '@/store/onboarding'
 
 // =============================================================================
@@ -47,7 +48,7 @@ export function OnboardingTour() {
       }
     }, 500)
 
-    return () => clearTimeout(timer)
+    return () => { clearTimeout(timer); }
   }, [completed, skipped, currentStep, lastShownAt, startOnboarding])
 
   // Handle completion
@@ -134,7 +135,7 @@ function SpotlightOverlay({ target }: SpotlightOverlayProps) {
 
       // Update on resize
       window.addEventListener('resize', updateRect)
-      return () => window.removeEventListener('resize', updateRect)
+      return () => { window.removeEventListener('resize', updateRect); }
     }
   }, [target])
 

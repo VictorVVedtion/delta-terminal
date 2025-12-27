@@ -1,4 +1,5 @@
 import * as React from "react"
+
 import { cn } from "@/lib/utils"
 
 interface TabsContextValue {
@@ -85,7 +86,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
             : "text-muted-foreground hover:text-foreground",
           className
         )}
-        onClick={() => setActiveTab(value)}
+        onClick={() => { setActiveTab(value); }}
         {...props}
       />
     )
@@ -119,4 +120,4 @@ const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
 )
 TabsContent.displayName = "TabsContent"
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsContent,TabsList, TabsTrigger }

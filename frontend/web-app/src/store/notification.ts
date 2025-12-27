@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand'
-import { persist, devtools } from 'zustand/middleware'
+import { devtools,persist } from 'zustand/middleware'
 
 // =============================================================================
 // Types
@@ -80,7 +80,7 @@ export const useNotificationStore = create<NotificationState>()(
         notifications: [],
 
         addNotification: (notification) =>
-          set(
+          { set(
             (state) => ({
               notifications: [
                 {
@@ -94,10 +94,10 @@ export const useNotificationStore = create<NotificationState>()(
             }),
             false,
             'notification/add'
-          ),
+          ); },
 
         markAsRead: (id) =>
-          set(
+          { set(
             (state) => ({
               notifications: state.notifications.map((n) =>
                 n.id === id ? { ...n, read: true } : n
@@ -105,10 +105,10 @@ export const useNotificationStore = create<NotificationState>()(
             }),
             false,
             'notification/markAsRead'
-          ),
+          ); },
 
         markAllAsRead: () =>
-          set(
+          { set(
             (state) => ({
               notifications: state.notifications.map((n) => ({
                 ...n,
@@ -117,19 +117,19 @@ export const useNotificationStore = create<NotificationState>()(
             }),
             false,
             'notification/markAllAsRead'
-          ),
+          ); },
 
         removeNotification: (id) =>
-          set(
+          { set(
             (state) => ({
               notifications: state.notifications.filter((n) => n.id !== id),
             }),
             false,
             'notification/remove'
-          ),
+          ); },
 
         clearAll: () =>
-          set({ notifications: [] }, false, 'notification/clearAll'),
+          { set({ notifications: [] }, false, 'notification/clearAll'); },
 
         getUnreadCount: () => {
           return get().notifications.filter((n) => !n.read).length

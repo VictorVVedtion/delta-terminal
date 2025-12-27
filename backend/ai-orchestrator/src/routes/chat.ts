@@ -2,11 +2,13 @@
  * Chat API 路由
  *
  * 处理 AI 对话请求，包括流式和非流式
+ * 支持 A2UI 模式：返回结构化 InsightData
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import jwt from 'jsonwebtoken'
 import { orchestrator, type OrchestrateRequest } from '../services/orchestrator.js'
+import { nlpClient } from '../services/nlp-client.js'
 import { ChatRequestSchema } from '../types/index.js'
 
 // JWT 密钥（应与 auth-service 一致）
@@ -35,6 +37,12 @@ interface ChatBody {
   preferChinese?: boolean
   preferSpeed?: boolean
   preferCost?: boolean
+}
+
+interface A2UIBody {
+  message: string
+  conversationId?: string
+  context?: Record<string, unknown>
 }
 
 // =============================================================================
@@ -139,6 +147,54 @@ export async function chatRoutes(fastify: FastifyInstance) {
     } finally {
       reply.raw.end()
     }
+  })
+
+  /**
+   * POST /chat/a2ui - A2UI 对话模式
+   *
+   * 调用 NLP Processor 返回结构化 InsightData
+   * 用于前端渲染交互式 UI 控件
+   */
+  fastify.post<{ Body: A2UIBody }>('/chat/a2ui', async (request, reply) => {
+    const userId = getUserId(request)
+
+    const { message, conversationId, context } = request.body
+
+    if (!message || typeof message !== 'string') {
+      return reply.status(400).send({
+        success: false,
+        error: 'message 是必填字段',
+      })
+    }
+
+    // 调用 NLP Processor
+    const nlpResponse = await nlpClient.chat({
+      message,
+      user_id: userId,
+      conversation_id: conversationId,
+      context,
+    })
+
+    if (!nlpResponse) {
+      return reply.status(502).send({
+        success: false,
+        error: 'NLP Processor 服务不可用',
+      })
+    }
+
+    return reply.send({
+      success: true,
+      data: {
+        message: nlpResponse.message,
+        conversationId: nlpResponse.conversation_id,
+        intent: nlpResponse.intent,
+        confidence: nlpResponse.confidence,
+        extractedParams: nlpResponse.extracted_params,
+        suggestedActions: nlpResponse.suggested_actions,
+        insight: nlpResponse.insight,
+        timestamp: nlpResponse.timestamp,
+      },
+    })
   })
 }
 

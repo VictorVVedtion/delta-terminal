@@ -1,7 +1,8 @@
 'use client'
 
+import { AlertTriangle, Bug,Home, RefreshCw } from 'lucide-react'
 import React from 'react'
-import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -176,7 +177,7 @@ export function ErrorFallback({
         {showDetails && errorInfo && (
           <div className="pt-4 border-t">
             <button
-              onClick={() => setShowStack(!showStack)}
+              onClick={() => { setShowStack(!showStack); }}
               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mx-auto"
             >
               <Bug className="w-3 h-3" />
@@ -214,7 +215,7 @@ export function PageErrorBoundary({ children, onError }: PageErrorBoundaryProps)
         <div className="min-h-screen bg-background flex items-center justify-center">
           <ErrorFallback
             error={null}
-            onReload={() => window.location.reload()}
+            onReload={() => { window.location.reload(); }}
             onGoHome={() => window.location.href = '/dashboard'}
           />
         </div>

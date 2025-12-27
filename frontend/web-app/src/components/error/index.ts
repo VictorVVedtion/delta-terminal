@@ -2,11 +2,10 @@
  * Error handling components
  */
 
+export { ApiError, useApiError } from './ApiError'
 export {
+  ComponentErrorBoundary,
   ErrorBoundary,
   ErrorFallback,
   PageErrorBoundary,
-  ComponentErrorBoundary,
 } from './ErrorBoundary'
-
-export { ApiError, useApiError } from './ApiError'

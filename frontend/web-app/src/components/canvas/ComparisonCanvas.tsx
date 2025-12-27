@@ -7,17 +7,18 @@
  * 支持 2-4 个策略的并排性能对比
  */
 
-import React from 'react'
 import {
-  BarChart3,
-  X,
-  Trophy,
   AlertTriangle,
-  TrendingUp,
+  BarChart3,
   TrendingDown,
+  TrendingUp,
+  Trophy,
+  X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { ComparisonInsightData, ComparisonStrategy, MetricDifference } from '@/types/insight'
 
@@ -74,7 +75,7 @@ function MetricRow({ metricKey, strategies, differences }: MetricRowProps) {
   // 找出最佳和最差
   const values = strategies.map(s => ({
     id: s.id,
-    value: s.metrics[metricKey as keyof typeof s.metrics] as number,
+    value: s.metrics[metricKey as keyof typeof s.metrics],
   }))
 
   const sortedValues = [...values].sort((a, b) =>
@@ -97,7 +98,7 @@ function MetricRow({ metricKey, strategies, differences }: MetricRowProps) {
         )}
       </td>
       {strategies.map(strategy => {
-        const value = strategy.metrics[metricKey as keyof typeof strategy.metrics] as number
+        const value = strategy.metrics[metricKey as keyof typeof strategy.metrics]
         const isBest = strategy.id === bestId
         const isWorst = strategy.id === worstId
 
@@ -230,9 +231,9 @@ export function ComparisonCanvas({
     mainMetrics.forEach(key => {
       const config = METRIC_LABELS[key]
       if (!config) return
-      const values = data.strategies.map(s => s.metrics[key as keyof typeof s.metrics] as number)
+      const values = data.strategies.map(s => s.metrics[key as keyof typeof s.metrics])
       const sorted = [...values].sort((a, b) => config.higherBetter ? b - a : a - b)
-      const value = strategy.metrics[key as keyof typeof strategy.metrics] as number
+      const value = strategy.metrics[key as keyof typeof strategy.metrics]
       const rank = sorted.indexOf(value)
       score += (data.strategies.length - rank) * 10
     })

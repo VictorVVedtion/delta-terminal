@@ -8,10 +8,11 @@
  * - conditional: Validation applies only when condition is met
  */
 
-import { useMemo, useCallback } from 'react'
+import { useCallback,useMemo } from 'react'
+
 import type {
-  InsightParam,
   Constraint,
+  InsightParam,
   ParamValidationResult,
   ParamValue,
 } from '@/types/insight'
@@ -130,7 +131,7 @@ const validators: Record<string, ValidationFn> = {
     // Apply the rule
     if (typeof value === 'number') {
       const match = constraint.rule.match(/(\d+)\s*-\s*(\d+)/)
-      if (match && match[1] && match[2]) {
+      if (match?.[1] && match[2]) {
         const min = parseFloat(match[1])
         const max = parseFloat(match[2])
         if (value < min || value > max) {

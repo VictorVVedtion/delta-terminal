@@ -1,11 +1,13 @@
 'use client'
 
-import React from 'react'
-import { useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { useAgentStore, ChatHistory } from '@/store/agent'
 import { MessageSquare, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import React from 'react'
+
 import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
+import type { ChatHistory} from '@/store/agent';
+import {useAgentStore } from '@/store/agent'
 
 /**
  * 历史对话组件
@@ -114,8 +116,8 @@ export function ChatHistoryPanel() {
           <ChatItem
             key={chat.id}
             chat={chat}
-            onClick={() => handleChatClick(chat)}
-            onDelete={() => removeChatHistory(chat.id)}
+            onClick={() => { handleChatClick(chat); }}
+            onDelete={() => { removeChatHistory(chat.id); }}
           />
         ))}
       </div>

@@ -4,19 +4,20 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react'
+
 import {
-  usePaperTradingStore,
+  selectAccountByAgentId as _selectAccountByAgentId,
   selectActiveAccount,
-  selectAccountByAgentId,
+  usePaperTradingStore,
 } from '@/store/paperTrading'
 import type {
+  ClosePositionParams,
+  ClosePositionResult,
   PaperAccount,
   PaperAccountStats,
   PlaceOrderParams,
   PlaceOrderResult,
-  ClosePositionParams,
-  ClosePositionResult,
-  TradeSide,
+  TradeSide as _TradeSide,
 } from '@/types/paperTrading'
 
 // =============================================================================
@@ -333,7 +334,7 @@ export function usePaperTrading(
       updateAllPrices(priceMap)
     }, priceUpdateInterval)
 
-    return () => clearInterval(interval)
+    return () => { clearInterval(interval); }
   }, [autoUpdatePrices, accountId, account, priceUpdateInterval, updateAllPrices])
 
   // ===== 返回值 =====

@@ -1,30 +1,33 @@
 'use client'
 
-import React from 'react'
 import {
-  X,
-  Check,
   AlertTriangle,
-  Rocket,
+  Check,
   DollarSign,
-  TrendingUp,
+  Rocket,
   Shield,
+  TrendingUp,
+  X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
+import React from 'react'
+
 import { ParamSlider } from '@/components/a2ui/controls/ParamSlider'
-import { cn } from '@/lib/utils'
-import { RiskSettings } from './RiskSettings'
-import {
-  RiskSettings as RiskSettingsType,
-  DEFAULT_RISK_SETTINGS,
-} from '@/types/risk'
+import { ApprovalFlow } from '@/components/deployment/ApprovalFlow'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { formatPrice,useHyperliquidPrice } from '@/hooks/useHyperliquidPrice'
 import { useRiskValidation } from '@/hooks/useRiskValidation'
 import { notify } from '@/lib/notification'
-import { ApprovalFlow } from '@/components/deployment/ApprovalFlow'
+import { cn } from '@/lib/utils'
 import { usePaperTradingStore } from '@/store/paperTrading'
-import { useHyperliquidPrice, formatPrice } from '@/hooks/useHyperliquidPrice'
+import type {
+  RiskSettings as RiskSettingsType} from '@/types/risk';
+import {
+  DEFAULT_RISK_SETTINGS
+} from '@/types/risk'
+
+import { RiskSettings } from './RiskSettings'
 
 // =============================================================================
 // Types
@@ -128,7 +131,7 @@ export function DeployCanvas({
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [isOpen, onCancel])
 
   // Check if Live deploy is allowed
@@ -149,7 +152,7 @@ export function DeployCanvas({
       setShowApprovalFlow(true)
     } else {
       // For Paper mode, deploy directly
-      handleDeploy()
+      void handleDeploy()
     }
   }, [mode, riskValidation.valid, canDeployLive])
 
@@ -204,7 +207,7 @@ export function DeployCanvas({
 
   // Handle approval flow completion (S31)
   const handleApprovalComplete = React.useCallback((token: string) => {
-    handleDeploy(token)
+    void handleDeploy(token)
   }, [handleDeploy])
 
   // Deploy button disabled state
@@ -355,7 +358,7 @@ export function DeployCanvas({
       {/* S31: Approval Flow for Live deployment */}
       <ApprovalFlow
         isOpen={showApprovalFlow}
-        onClose={() => setShowApprovalFlow(false)}
+        onClose={() => { setShowApprovalFlow(false); }}
         onApprove={handleApprovalComplete}
         strategyName={strategyName}
         capital={capital}
@@ -514,7 +517,7 @@ function PaperDeployContent({
             description: '模拟交易的初始资金',
           }}
           value={capital}
-          onChange={(v) => onCapitalChange(v as number)}
+          onChange={(v) => { onCapitalChange(v); }}
           disabled={isLoading}
         />
       </div>
@@ -633,7 +636,7 @@ function LiveDeployContent({
             description: '实盘交易的初始资金',
           }}
           value={capital}
-          onChange={(v) => onCapitalChange(v as number)}
+          onChange={(v) => { onCapitalChange(v); }}
           disabled={isLoading}
         />
       </div>
@@ -801,7 +804,7 @@ function LiveConfirmationSection({
         <Checkbox
           id="confirm-live"
           checked={confirmed}
-          onCheckedChange={(checked) => onConfirmedChange(checked === true)}
+          onCheckedChange={(checked) => { onConfirmedChange(checked === true); }}
           disabled={!canDeploy}
           className="data-[state=checked]:bg-[hsl(var(--rb-green))] data-[state=checked]:border-[hsl(var(--rb-green))]"
         />

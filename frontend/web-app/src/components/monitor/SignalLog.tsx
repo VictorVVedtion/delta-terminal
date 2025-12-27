@@ -12,29 +12,28 @@
  * - Export and analysis capabilities
  */
 
-import React from 'react'
 import {
   Activity,
-  TrendingUp,
-  TrendingDown,
-  Circle,
-  CheckCircle,
-  XCircle,
-  Clock,
   AlertTriangle,
-  Filter,
-  Download,
+  ArrowDownRight,
+  ArrowUpRight,
+  CheckCircle,
   ChevronDown,
   ChevronUp,
-  Zap,
-  ArrowUpRight,
-  ArrowDownRight,
-  Pause,
-  Target,
+  Circle,
+  Clock,
+  Download,
+  Filter,
   RefreshCw,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  XCircle,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -289,7 +288,7 @@ export function SignalLog({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowFiltersPanel(!showFiltersPanel)}
+              onClick={() => { setShowFiltersPanel(!showFiltersPanel); }}
               className={cn(showFiltersPanel && 'bg-muted')}
             >
               <Filter className="h-4 w-4" />
@@ -314,7 +313,7 @@ export function SignalLog({
             <div className="flex flex-wrap gap-1">
               <FilterButton
                 active={typeFilter === 'all'}
-                onClick={() => setTypeFilter('all')}
+                onClick={() => { setTypeFilter('all'); }}
               >
                 全部
               </FilterButton>
@@ -322,7 +321,7 @@ export function SignalLog({
                 <FilterButton
                   key={type}
                   active={typeFilter === type}
-                  onClick={() => setTypeFilter(type as SignalType)}
+                  onClick={() => { setTypeFilter(type as SignalType); }}
                 >
                   {config.label}
                 </FilterButton>
@@ -336,7 +335,7 @@ export function SignalLog({
             <div className="flex flex-wrap gap-1">
               <FilterButton
                 active={statusFilter === 'all'}
-                onClick={() => setStatusFilter('all')}
+                onClick={() => { setStatusFilter('all'); }}
               >
                 全部
               </FilterButton>
@@ -344,7 +343,7 @@ export function SignalLog({
                 <FilterButton
                   key={status}
                   active={statusFilter === status}
-                  onClick={() => setStatusFilter(status as SignalStatus)}
+                  onClick={() => { setStatusFilter(status as SignalStatus); }}
                 >
                   {config.label}
                 </FilterButton>
@@ -358,20 +357,20 @@ export function SignalLog({
             <div className="flex gap-1">
               <FilterButton
                 active={directionFilter === 'all'}
-                onClick={() => setDirectionFilter('all')}
+                onClick={() => { setDirectionFilter('all'); }}
               >
                 全部
               </FilterButton>
               <FilterButton
                 active={directionFilter === 'long'}
-                onClick={() => setDirectionFilter('long')}
+                onClick={() => { setDirectionFilter('long'); }}
               >
                 <TrendingUp className="h-3 w-3 mr-1" />
                 做多
               </FilterButton>
               <FilterButton
                 active={directionFilter === 'short'}
-                onClick={() => setDirectionFilter('short')}
+                onClick={() => { setDirectionFilter('short'); }}
               >
                 <TrendingDown className="h-3 w-3 mr-1" />
                 做空

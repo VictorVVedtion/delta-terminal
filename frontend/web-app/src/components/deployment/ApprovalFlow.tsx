@@ -1,27 +1,29 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence,motion } from 'framer-motion'
 import {
   AlertTriangle,
-  Shield,
-  DollarSign,
   CheckCircle2,
-  ChevronRight,
   ChevronLeft,
+  ChevronRight,
   Clock,
+  DollarSign,
   FileCheck,
   Loader2,
+  Shield,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import React, { useEffect,useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
 import { useSafetyStore } from '@/store/safety'
-import {
+import type {
   ApprovalStep,
-  RISK_DISCLOSURES,
-  RiskDisclosure,
+  RiskDisclosure} from '@/types/safety';
+import {
   generateApprovalToken,
+  RISK_DISCLOSURES
 } from '@/types/safety'
 
 interface ApprovalFlowProps {
@@ -87,7 +89,7 @@ export function ApprovalFlow({
       setCoolingCountdown((prev) => (prev !== null ? prev - 1 : null))
     }, 1000)
 
-    return () => clearInterval(timer)
+    return () => { clearInterval(timer); }
   }, [coolingCountdown])
 
   const toggleRiskAcknowledgment = (riskId: string) => {
@@ -290,7 +292,7 @@ export function ApprovalFlow({
                           key={risk.id}
                           risk={risk}
                           acknowledged={acknowledgedRisks.has(risk.id)}
-                          onToggle={() => toggleRiskAcknowledgment(risk.id)}
+                          onToggle={() => { toggleRiskAcknowledgment(risk.id); }}
                         />
                       ))}
                     </div>
@@ -376,7 +378,7 @@ export function ApprovalFlow({
                     <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer transition-colors">
                       <Checkbox
                         checked={capitalConfirmed}
-                        onCheckedChange={(checked) => setCapitalConfirmed(!!checked)}
+                        onCheckedChange={(checked) => { setCapitalConfirmed(!!checked); }}
                         className="mt-0.5"
                       />
                       <div>
@@ -457,7 +459,7 @@ export function ApprovalFlow({
                     <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer transition-colors">
                       <Checkbox
                         checked={finalConfirmed}
-                        onCheckedChange={(checked) => setFinalConfirmed(!!checked)}
+                        onCheckedChange={(checked) => { setFinalConfirmed(!!checked); }}
                         className="mt-0.5"
                       />
                       <div>

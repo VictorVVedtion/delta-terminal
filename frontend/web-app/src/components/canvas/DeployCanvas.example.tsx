@@ -7,8 +7,11 @@
  */
 
 import React from 'react'
-import { DeployCanvas, DeployConfig, BacktestSummary, PaperPerformance } from './DeployCanvas'
+
 import { Button } from '@/components/ui/button'
+
+import type { BacktestSummary, DeployConfig, PaperPerformance } from './DeployCanvas';
+import { DeployCanvas } from './DeployCanvas'
 
 // =============================================================================
 // Mock Data
@@ -86,7 +89,7 @@ export function DeployCanvasExample() {
         paperPerformance={mode === 'live' ? mockPaperPerformance : undefined}
         isOpen={isOpen}
         onDeploy={handleDeploy}
-        onCancel={() => setIsOpen(false)}
+        onCancel={() => { setIsOpen(false); }}
         isLoading={isLoading}
       />
     </div>

@@ -4,12 +4,12 @@
  * These components render interactive controls for InsightParams.
  */
 
-export { ParamSlider } from './ParamSlider'
 export { HeatmapSlider } from './HeatmapSlider'
-export { ParamControl } from './ParamControl'
-export { ParamToggle } from './ParamToggle'
-export { ParamButtonGroup } from './ParamButtonGroup'
 export { LogicBuilder } from './LogicBuilder'
+export { ParamButtonGroup } from './ParamButtonGroup'
+export { ParamControl } from './ParamControl'
+export { ParamSlider } from './ParamSlider'
+export { ParamToggle } from './ParamToggle'
 
 // Re-export types
-export type { InsightParam, ParamType, ParamConfig } from '@/types/insight'
+export type { InsightParam, ParamConfig,ParamType } from '@/types/insight'

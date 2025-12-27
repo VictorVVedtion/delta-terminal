@@ -1,36 +1,37 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { MainLayout } from '@/components/layout/MainLayout'
 import {
-  Settings,
-  Link2,
-  Bell,
-  Shield,
-  User,
-  Palette,
   AlertTriangle,
+  Bell,
   Brain,
   HelpCircle,
+  Link2,
+  Palette,
   RotateCcw,
+  Settings,
+  Shield,
+  User,
 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import React, { useEffect, useState } from 'react'
+
+import { AIConfigPanel } from '@/components/ai/AIConfigPanel'
+import {
+  AddExchangeModal,
+  ExchangeConnectionCard,
+} from '@/components/exchange'
+import { MainLayout } from '@/components/layout/MainLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  ExchangeConnectionCard,
-  AddExchangeModal,
-} from '@/components/exchange'
-import {
-  useExchangeStore,
-  CEX_EXCHANGES,
-  PERP_DEX_EXCHANGES,
-  type ExchangeType,
-  type ExchangeAccount,
-} from '@/store/exchange'
 import { notify } from '@/lib/notification'
-import { AIConfigPanel } from '@/components/ai/AIConfigPanel'
+import {
+  CEX_EXCHANGES,
+  type ExchangeAccount,
+  type ExchangeType,
+  PERP_DEX_EXCHANGES,
+  useExchangeStore,
+} from '@/store/exchange'
 import { useOnboardingStore } from '@/store/onboarding'
 
 // =============================================================================
@@ -126,7 +127,7 @@ function ExchangeSettingsSection() {
                 key={exchange.id}
                 exchangeType={exchange.id}
                 {...(account && { account })}
-                onConnect={() => handleConnect(exchange.id)}
+                onConnect={() => { handleConnect(exchange.id); }}
                 onEdit={handleEdit}
                 onDisconnect={handleDisconnect}
                 onRefresh={handleRefresh}
@@ -154,7 +155,7 @@ function ExchangeSettingsSection() {
                 key={exchange.id}
                 exchangeType={exchange.id}
                 {...(account && { account })}
-                onConnect={() => handleConnect(exchange.id)}
+                onConnect={() => { handleConnect(exchange.id); }}
                 onEdit={handleEdit}
                 onDisconnect={handleDisconnect}
                 onRefresh={handleRefresh}
@@ -168,7 +169,7 @@ function ExchangeSettingsSection() {
       {/* Add Exchange Modal */}
       <AddExchangeModal
         isOpen={modalState.isOpen}
-        onClose={() => setModalState({ ...modalState, isOpen: false })}
+        onClose={() => { setModalState({ ...modalState, isOpen: false }); }}
         exchangeType={modalState.exchangeType}
         {...(modalState.editAccount && { editAccount: modalState.editAccount })}
       />
@@ -227,7 +228,7 @@ function NotificationSettingsSection() {
                 <p className="text-xs text-muted-foreground">{option.description}</p>
               </div>
               <button
-                onClick={() => toggleSetting(option.key)}
+                onClick={() => { toggleSetting(option.key); }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   settings[option.key] ? 'bg-primary' : 'bg-muted'
                 }`}
@@ -257,7 +258,7 @@ function NotificationSettingsSection() {
                 <p className="text-xs text-muted-foreground">{option.description}</p>
               </div>
               <button
-                onClick={() => toggleSetting(option.key)}
+                onClick={() => { toggleSetting(option.key); }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   settings[option.key] ? 'bg-primary' : 'bg-muted'
                 }`}
@@ -305,7 +306,7 @@ function SecuritySettingsSection() {
               </p>
             </div>
             <button
-              onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+              onClick={() => { setTwoFactorEnabled(!twoFactorEnabled); }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 twoFactorEnabled ? 'bg-primary' : 'bg-muted'
               }`}
@@ -334,7 +335,7 @@ function SecuritySettingsSection() {
             </div>
             <select
               value={sessionTimeout}
-              onChange={(e) => setSessionTimeout(e.target.value)}
+              onChange={(e) => { setSessionTimeout(e.target.value); }}
               className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
             >
               <option value="15">15 分钟</option>
@@ -414,7 +415,7 @@ function ProfileSettingsSection() {
             <input
               type="text"
               value={profile.displayName}
-              onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+              onChange={(e) => { setProfile({ ...profile, displayName: e.target.value }); }}
               className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm"
             />
           </div>
@@ -425,7 +426,7 @@ function ProfileSettingsSection() {
             <input
               type="email"
               value={profile.email}
-              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+              onChange={(e) => { setProfile({ ...profile, email: e.target.value }); }}
               className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm"
             />
           </div>
@@ -445,7 +446,7 @@ function ProfileSettingsSection() {
             </div>
             <select
               value={profile.timezone}
-              onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+              onChange={(e) => { setProfile({ ...profile, timezone: e.target.value }); }}
               className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
             >
               <option value="Asia/Shanghai">中国标准时间 (UTC+8)</option>
@@ -462,7 +463,7 @@ function ProfileSettingsSection() {
             </div>
             <select
               value={profile.language}
-              onChange={(e) => setProfile({ ...profile, language: e.target.value })}
+              onChange={(e) => { setProfile({ ...profile, language: e.target.value }); }}
               className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
             >
               <option value="zh-CN">简体中文</option>
@@ -521,7 +522,7 @@ function AppearanceSettingsSection() {
             {themeOptions.map(option => (
               <button
                 key={option.value}
-                onClick={() => setTheme(option.value as typeof theme)}
+                onClick={() => { setTheme(option.value as typeof theme); }}
                 className={`p-4 rounded-lg border-2 text-center transition-colors ${
                   theme === option.value
                     ? 'border-primary bg-primary/10'
@@ -550,7 +551,7 @@ function AppearanceSettingsSection() {
             </div>
             <select
               value={chartStyle}
-              onChange={(e) => setChartStyle(e.target.value)}
+              onChange={(e) => { setChartStyle(e.target.value); }}
               className="bg-muted border border-border rounded-md px-3 py-1.5 text-sm"
             >
               <option value="candle">蜡烛图</option>
@@ -575,7 +576,7 @@ function AppearanceSettingsSection() {
               <p className="text-xs text-muted-foreground">减少间距，显示更多内容</p>
             </div>
             <button
-              onClick={() => setCompactMode(!compactMode)}
+              onClick={() => { setCompactMode(!compactMode); }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 compactMode ? 'bg-primary' : 'bg-muted'
               }`}

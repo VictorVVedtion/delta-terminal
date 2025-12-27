@@ -10,10 +10,11 @@
  * - Auto-reconnect on connection loss
  */
 
-import { useEffect, useRef, useCallback } from 'react'
-import { useSafetyStore, selectMarginStatus, selectSafetyConfig } from '@/store/safety'
+import { useCallback,useEffect, useRef } from 'react'
+
 import { notify } from '@/lib/notification'
-import type { MarginStatus, MarginAlertLevel } from '@/types/safety'
+import { selectMarginStatus, selectSafetyConfig,useSafetyStore } from '@/store/safety'
+import type { MarginAlertLevel,MarginStatus } from '@/types/safety'
 
 // =============================================================================
 // Type Definitions
@@ -152,7 +153,6 @@ export function useMarginMonitor(options: UseMarginMonitorOptions = {}): MarginM
       wsRef.current.onopen = () => {
         connectionStatusRef.current = 'connected'
         errorRef.current = null
-        console.log('[MarginMonitor] WebSocket connected')
       }
 
       wsRef.current.onmessage = (event) => {
@@ -196,7 +196,6 @@ export function useMarginMonitor(options: UseMarginMonitorOptions = {}): MarginM
 
       wsRef.current.onclose = () => {
         connectionStatusRef.current = 'disconnected'
-        console.log('[MarginMonitor] WebSocket disconnected')
 
         // Auto-reconnect after delay if still monitoring
         if (isMonitoringRef.current) {
@@ -258,12 +257,12 @@ export function useMarginMonitor(options: UseMarginMonitorOptions = {}): MarginM
 
     pollingTimerRef.current = setInterval(() => {
       if (isMonitoringRef.current) {
-        fetchMarginData()
+        void fetchMarginData()
       }
     }, pollingInterval)
 
     // Initial fetch
-    fetchMarginData()
+    void fetchMarginData()
   }, [fetchMarginData, pollingInterval])
 
   const stopPolling = useCallback(() => {
@@ -381,7 +380,7 @@ export function useMarginSimulator(enabled = false) {
       })
     }, 3000)
 
-    return () => clearInterval(interval)
+    return () => { clearInterval(interval); }
   }, [enabled, updateMarginStatus])
 }
 

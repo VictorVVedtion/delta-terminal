@@ -1,11 +1,12 @@
 'use client'
 
 import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
 
 interface OrderFormProps {
   symbol: string
@@ -48,7 +49,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Order submitted:', { orderType, side, price, amount, total })
+    // TODO: Submit order to API
   }
 
   return (
@@ -62,7 +63,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Order Type Tabs */}
-          <Tabs defaultValue="buy" value={side} onValueChange={(v) => setSide(v as 'buy' | 'sell')}>
+          <Tabs defaultValue="buy" value={side} onValueChange={(v) => { setSide(v as 'buy' | 'sell'); }}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="buy" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
                 买入
@@ -79,7 +80,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
               type="button"
               variant={orderType === 'market' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setOrderType('market')}
+              onClick={() => { setOrderType('market'); }}
               className="flex-1"
             >
               市价
@@ -88,7 +89,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
               type="button"
               variant={orderType === 'limit' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setOrderType('limit')}
+              onClick={() => { setOrderType('limit'); }}
               className="flex-1"
             >
               限价
@@ -103,7 +104,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
                 <Input
                   type="number"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => { setPrice(e.target.value); }}
                   placeholder="0.00"
                   step="0.01"
                 />
@@ -121,7 +122,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
               <Input
                 type="number"
                 value={amount}
-                onChange={(e) => handleAmountChange(e.target.value)}
+                onChange={(e) => { handleAmountChange(e.target.value); }}
                 placeholder="0.00"
                 step="0.000001"
               />
@@ -138,7 +139,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePercentClick(percent)}
+                  onClick={() => { handlePercentClick(percent); }}
                   className="flex-1"
                 >
                   {percent}%
@@ -154,7 +155,7 @@ export function OrderForm({ symbol, currentPrice, balance }: OrderFormProps) {
               <Input
                 type="number"
                 value={total}
-                onChange={(e) => handleTotalChange(e.target.value)}
+                onChange={(e) => { handleTotalChange(e.target.value); }}
                 placeholder="0.00"
                 step="0.01"
               />

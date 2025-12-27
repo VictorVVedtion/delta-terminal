@@ -1,6 +1,5 @@
-import { ChatSkeleton } from '@/components/ui/skeleton'
 import { MainLayout } from '@/components/layout/MainLayout'
-import { Skeleton } from '@/components/ui/skeleton'
+import { ChatSkeleton , Skeleton } from '@/components/ui/skeleton'
 
 export default function StrategiesLoading() {
   return (

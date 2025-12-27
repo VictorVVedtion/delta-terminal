@@ -7,21 +7,22 @@
  * 支持实时修改运行中策略的参数
  */
 
-import React from 'react'
 import {
-  Settings2,
   AlertTriangle,
-  RotateCcw,
-  Eye,
   Check,
   ChevronDown,
   ChevronUp,
+  Eye,
+  RotateCcw,
+  Settings2,
 } from 'lucide-react'
+import React from 'react'
+
+import { ParamControl } from '@/components/a2ui/controls/ParamControl'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { ParamControl } from '@/components/a2ui/controls/ParamControl'
 import type { InsightParam } from '@/types/insight'
 import type { ParamChange } from '@/types/intervention'
 
@@ -178,7 +179,7 @@ export function InterventionPanel({
               <div className="flex items-center">
                 <ParamControl
                   param={param}
-                  onChange={(value) => handleParamChange(param.key, value)}
+                  onChange={(value) => { handleParamChange(param.key, value); }}
                   disabled={isLoading || isSubmitting}
                 />
                 {renderParamComparison(param)}
@@ -191,7 +192,7 @@ export function InterventionPanel({
         {advancedParams.length > 0 && (
           <div className="space-y-3">
             <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
+              onClick={() => { setShowAdvanced(!showAdvanced); }}
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               高级参数 ({advancedParams.length})
@@ -209,7 +210,7 @@ export function InterventionPanel({
                     <div className="flex items-center">
                       <ParamControl
                         param={param}
-                        onChange={(value) => handleParamChange(param.key, value)}
+                        onChange={(value) => { handleParamChange(param.key, value); }}
                         disabled={isLoading || isSubmitting}
                       />
                       {renderParamComparison(param)}

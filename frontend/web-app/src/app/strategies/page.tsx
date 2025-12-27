@@ -1,37 +1,26 @@
 'use client'
 
-import React from 'react'
-import { MainLayout } from '@/components/layout/MainLayout'
-import { ChatInterface } from '@/components/strategy/ChatInterface'
-import type { InsightData, InsightParam } from '@/types/insight'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
-// =============================================================================
-// Strategies Page - ChatGPT-style AI Strategy Interface
-// =============================================================================
+import { SystemLoading } from '@/components/system/SystemLoading'
 
+/**
+ * Strategies Page - Redirection
+ * 
+ * This route is being deprecated in favor of the unified /chat interface.
+ * Redirects users to the main chat experience where they can also manage strategies.
+ */
 export default function StrategiesPage() {
-  // A2UI: Handle insight approval - create strategy from approved params
-  const handleInsightApprove = React.useCallback((insight: InsightData, params: InsightParam[]) => {
-    console.log('Strategy approved:', insight.id, params)
-    // TODO: Call API to create strategy with approved params
-  }, [])
+  const router = useRouter()
 
-  // A2UI: Handle insight rejection
-  const handleInsightReject = React.useCallback((insight: InsightData) => {
-    console.log('Strategy rejected:', insight.id)
-  }, [])
+  useEffect(() => {
+    router.replace('/chat')
+  }, [router])
 
   return (
-    <MainLayout>
-      <div className="h-[calc(100vh-64px)]">
-        <ChatInterface
-          onStrategyGenerated={(strategy) => {
-            console.log('Strategy generated:', strategy)
-          }}
-          onInsightApprove={handleInsightApprove}
-          onInsightReject={handleInsightReject}
-        />
-      </div>
-    </MainLayout>
+    <div className="h-screen w-screen flex items-center justify-center bg-background">
+      <SystemLoading message="Redirecting to Unified Command..." />
+    </div>
   )
 }

@@ -243,10 +243,6 @@ PRD 定义的 MVP (前3个月) 必须功能：
 
 基于 PRD 缺口分析，建议创建以下 EPIC：
 
-### EPIC-008: 定投策略 (DCA)
-- **PRD 来源**: Feature 3.1 US-3.1.2
-- **优先级**: P0
-- **预估 Stories**: 3
 
 ### EPIC-009: 总览仪表盘
 - **PRD 来源**: Feature 5.1

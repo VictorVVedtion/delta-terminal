@@ -2,20 +2,21 @@
 
 import React from 'react'
 import {
-  ResponsiveContainer,
-  ComposedChart,
-  Line,
+  Area,
   Bar,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ReferenceLine,
-  Area,
 } from 'recharts'
-import type { BacktestEquityPoint } from '@/types/insight'
+
 import { cn } from '@/lib/utils'
+import type { BacktestEquityPoint } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -98,13 +99,13 @@ function formatFullDate(timestamp: number): string {
 
 interface CustomTooltipProps {
   active?: boolean
-  payload?: Array<{
+  payload?: {
     dataKey: string
     value: number
     color: string
     name: string
     payload: ChartDataPoint
-  }>
+  }[]
   label?: string
   initialCapital: number
 }

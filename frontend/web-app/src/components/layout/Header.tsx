@@ -1,40 +1,26 @@
 'use client'
 
-import React from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useDisconnect } from 'wagmi'
-import { Button } from '@/components/ui/button'
-import { useAuthStore } from '@/store/auth'
-import { apiClient } from '@/lib/api'
 import {
-  TrendingUp,
-  Settings,
-  Wallet,
   Menu,
   Search,
-  LogOut,
-  ChevronDown,
-  Copy,
-  Check
-} from 'lucide-react'
-import { ThemeSwitcher } from '@/components/ui/theme-switcher'
-import { ConnectionIndicator } from '@/components/ui/connection-status'
+  Settings,
+  TrendingUp} from 'lucide-react'
+import Link from 'next/link'
+import React from 'react'
+
 import { KillSwitch } from '@/components/KillSwitch'
 import { NotificationCenter } from '@/components/NotificationCenter'
-import { GlobalAgentStatus } from '@/components/system/GlobalAgentStatus'
-import { MarginAlertBadge } from '@/components/safety/MarginAlert'
-import { PaperTradingStatusCard } from '@/components/paper-trading/PaperTradingStatusCard'
 import { PaperTradingPanel } from '@/components/paper-trading/PaperTradingPanel'
-import { usePaperTradingStore } from '@/store/paperTrading'
+import { PaperTradingStatusCard } from '@/components/paper-trading/PaperTradingStatusCard'
+import { MarginAlertBadge } from '@/components/safety/MarginAlert'
+import { GlobalAgentStatus } from '@/components/system/GlobalAgentStatus'
+import { Button } from '@/components/ui/button'
+import { ConnectionIndicator } from '@/components/ui/connection-status'
+import { ThemeSwitcher } from '@/components/ui/theme-switcher'
 import { useHyperliquidPrice } from '@/hooks/useHyperliquidPrice'
+import { usePaperTradingStore } from '@/store/paperTrading'
 
 export function Header() {
-  const router = useRouter()
-  const { user, logout } = useAuthStore()
-  const { disconnect } = useDisconnect()
-  const [showUserMenu, setShowUserMenu] = React.useState(false)
-  const [copied, setCopied] = React.useState(false)
   const [showPTPanel, setShowPTPanel] = React.useState(false)
 
   // Paper Trading 状态
@@ -47,32 +33,6 @@ export function Header() {
   const { prices: livePrices } = useHyperliquidPrice(['BTC', 'ETH', 'SOL', 'BNB'], {
     refreshInterval: 5000,
   })
-
-  // 格式化钱包地址显示
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`
-  }
-
-  // 复制地址
-  const copyAddress = async () => {
-    if (user?.walletAddress) {
-      await navigator.clipboard.writeText(user.walletAddress)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await apiClient.logout()
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      disconnect()
-      logout()
-      router.push('/login')
-    }
-  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -102,7 +62,7 @@ export function Header() {
           <PaperTradingStatusCard
             isRunning={!!activeAccount}
             stats={ptStats}
-            onClick={() => setShowPTPanel(true)}
+            onClick={() => { setShowPTPanel(true); }}
           />
         </div>
 
@@ -130,70 +90,12 @@ export function Header() {
           {/* 分隔线 */}
           <div className="hidden md:block h-6 w-[1px] bg-border/50 mx-1" />
 
-          {/* User Menu - 包含设置入口 */}
-          <div className="relative">
-            <Button
-              variant="ghost"
-              className="flex items-center gap-2"
-              onClick={() => setShowUserMenu(!showUserMenu)}
-            >
-              <Wallet className="h-5 w-5" />
-              <span className="hidden md:inline text-sm font-mono">
-                {user?.walletAddress ? formatAddress(user.walletAddress) : '未连接'}
-              </span>
-              <ChevronDown className="h-4 w-4" />
+          {/* 设置按钮 */}
+          <Link href="/settings">
+            <Button variant="ghost" size="icon" title="设置">
+              <Settings className="h-5 w-5" />
             </Button>
-
-            {showUserMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowUserMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 rounded-md border bg-popover shadow-lg z-50">
-                  <div className="p-3 border-b">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <p className="text-sm font-medium">已连接</p>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <p className="text-sm font-mono text-muted-foreground">
-                        {user?.walletAddress ? formatAddress(user.walletAddress) : ''}
-                      </p>
-                      <button
-                        onClick={copyAddress}
-                        className="p-1 hover:bg-muted rounded-sm"
-                        title="复制地址"
-                      >
-                        {copied ? (
-                          <Check className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <Copy className="h-3 w-3 text-muted-foreground" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-1">
-                    <Link
-                      href="/settings"
-                      className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <Settings className="h-4 w-4" />
-                      设置
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent text-destructive"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      断开连接
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          </Link>
 
           {/* Mobile Menu */}
           <Button variant="ghost" size="icon" className="md:hidden">
@@ -229,7 +131,7 @@ export function Header() {
       {/* Paper Trading 滑动面板 - 始终渲染，Panel内部处理账户创建 */}
       <PaperTradingPanel
         isOpen={showPTPanel}
-        onClose={() => setShowPTPanel(false)}
+        onClose={() => { setShowPTPanel(false); }}
         strategyId={activeAccount?.agentId || 'manual-trading'}
         strategyName="Paper Trading"
         symbol="BTC/USDT"

@@ -7,8 +7,10 @@
  */
 
 import React, { useState } from 'react'
-import { LogicBuilder } from './LogicBuilder'
+
 import type { InsightParam, LogicCondition, LogicConnector } from '@/types/insight'
+
+import { LogicBuilder } from './LogicBuilder'
 
 export function LogicBuilderExample() {
   // 模拟参数定义
@@ -122,7 +124,7 @@ export function LogicBuilderExample() {
         <div className="prose prose-sm dark:prose-invert">
           <ul>
             <li>
-              <strong>添加条件</strong>：点击"添加条件"按钮创建新条件
+              <strong>添加条件</strong>：点击「添加条件」按钮创建新条件
             </li>
             <li>
               <strong>编辑条件</strong>：选择指标、运算符、输入阈值

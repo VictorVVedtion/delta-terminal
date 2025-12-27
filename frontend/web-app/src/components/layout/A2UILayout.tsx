@@ -1,12 +1,14 @@
 'use client'
 
 import React, { useCallback } from 'react'
-import { cn } from '@/lib/utils'
-import { Header } from './Header'
-import { FunctionalSidebar } from '@/components/sidebar'
-import { MobileBottomNav } from './MobileBottomNav'
+
 import { CanvasPanel } from '@/components/canvas/CanvasPanel'
+import { FunctionalSidebar } from '@/components/sidebar'
+import { cn } from '@/lib/utils'
 import { useInsightStore } from '@/store/insight'
+
+import { Header } from './Header'
+import { MobileBottomNav } from './MobileBottomNav'
 
 /**
  * A2UI 布局组件
@@ -75,7 +77,7 @@ export function A2UILayout({ children, showSidebar = true }: A2UILayoutProps) {
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [canvasOpen, handleCloseCanvas])
 
   return (

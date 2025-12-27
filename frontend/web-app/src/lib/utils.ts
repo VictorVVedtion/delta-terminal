@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * 格式化数字为货币显示
  */
-export function formatCurrency(value: number, decimals: number = 2): string {
+export function formatCurrency(value: number, decimals = 2): string {
   return value.toLocaleString('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -18,7 +18,7 @@ export function formatCurrency(value: number, decimals: number = 2): string {
 /**
  * 格式化百分比
  */
-export function formatPercentage(value: number, decimals: number = 2): string {
+export function formatPercentage(value: number, decimals = 2): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`
 }
 
@@ -43,7 +43,7 @@ export function calculatePriceChange(current: number, previous: number): number 
 /**
  * 格式化时间戳
  */
-export function formatTimestamp(timestamp: number, includeTime: boolean = true): string {
+export function formatTimestamp(timestamp: number, includeTime = true): string {
   const date = new Date(timestamp)
   if (includeTime) {
     return date.toLocaleString('en-US', {

@@ -5,20 +5,20 @@
  */
 
 import type {
-  DeploymentResult,
-  DeploymentStatus,
-  BacktestSummary,
-  PaperPerformance,
-} from '@/types/deployment'
-import type {
   BacktestConfig,
+  BacktestHistoryItem,
+  BacktestMetrics,
   BacktestResult,
   BacktestRunState,
-  BacktestMetrics,
   BacktestTrade,
   EquityPoint,
-  BacktestHistoryItem,
 } from '@/types/backtest'
+import type {
+  BacktestSummary,
+  DeploymentResult,
+  DeploymentStatus,
+  PaperPerformance,
+} from '@/types/deployment'
 
 // =============================================================================
 // Mock Deployment Results
@@ -142,14 +142,14 @@ export const mockPaperPerformanceNegative: PaperPerformance = {
 /**
  * 模拟 API 延迟
  */
-export function simulateDelay(ms: number = 1000): Promise<void> {
+export function simulateDelay(ms = 1000): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
  * 模拟随机延迟 (用于更真实的体验)
  */
-export function simulateRandomDelay(min: number = 500, max: number = 2000): Promise<void> {
+export function simulateRandomDelay(min = 500, max = 2000): Promise<void> {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min
   return simulateDelay(delay)
 }
@@ -210,7 +210,7 @@ export async function mockGetDeploymentStatus(
     mockDeploymentStatusCompleted,
   ]
   const index = Math.floor(Math.random() * statuses.length)
-  return statuses[index] as DeploymentStatus
+  return statuses[index]!
 }
 
 /**
@@ -306,7 +306,7 @@ export const mockEquityCurve: EquityPoint[] = Array.from({ length: 180 }, (_, i)
   const baseGrowth = 10000 * (1 + (i / 180) * 0.25)
   const volatility = Math.sin(i / 10) * 500 + Math.random() * 300
   return {
-    date: date.toISOString().split('T')[0] as string,
+    date: date.toISOString().split('T')[0]!,
     equity: baseGrowth + volatility,
     drawdown: Math.random() * -5,
   }
@@ -435,7 +435,7 @@ export async function mockGetBacktestRunStatus(
   if (mockProgressIndex < mockBacktestProgressSequence.length - 1) {
     mockProgressIndex++
   }
-  return status as BacktestRunState
+  return status!
 }
 
 /**
@@ -675,7 +675,7 @@ export async function mockGetAgentPositions(
  */
 export async function mockGetAgentTrades(
   _agentId: string,
-  limit: number = 10
+  limit = 10
 ): Promise<typeof mockTrades> {
   await simulateDelay(200)
   return mockTrades.slice(0, limit)

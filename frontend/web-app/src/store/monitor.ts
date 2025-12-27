@@ -5,12 +5,13 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+
 import type {
-  StrategyInfo,
   PnLData,
   Position,
-  Trade,
+  StrategyInfo,
   StrategyMetrics,
+  Trade,
 } from '@/components/canvas/MonitorCanvas'
 
 // =============================================================================

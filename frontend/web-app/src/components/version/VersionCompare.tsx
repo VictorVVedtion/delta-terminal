@@ -7,18 +7,19 @@
  * 并排对比两个版本的参数差异
  */
 
-import React from 'react'
 import {
-  GitCompare,
-  X,
   ArrowRight,
-  Plus,
-  Minus,
   Equal,
+  GitCompare,
+  Minus,
+  Plus,
   RotateCcw,
+  X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { StrategyVersion, VersionComparison } from '@/types/version'
 import { compareVersionParams } from '@/types/version'
@@ -197,7 +198,7 @@ export function VersionCompare({
           {onRollback && !version1.isActive && (
             <Button
               variant="outline"
-              onClick={() => onRollback(version1.id)}
+              onClick={() => { onRollback(version1.id); }}
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               回滚到 {version1.version}

@@ -6,17 +6,18 @@
  */
 
 import { useCallback, useRef, useState } from 'react'
+
 import { useAIStore } from '@/store/ai'
 import { useAuthStore } from '@/store/auth'
-import {
+import type {
   AIMessage,
   AIRequest,
   AIResponse,
   AIStreamChunk,
   AITaskType,
-  ThinkingStep,
-  AI_MODELS
-} from '@/types/ai'
+  ThinkingStep} from '@/types/ai';
+import {
+  AI_MODELS} from '@/types/ai'
 
 // ============================================================================
 // Types
@@ -100,7 +101,7 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
     config,
     userStatus,
     getModelForTask,
-    canUseModel,
+    canUseModel: _canUseModel,
     setLoading,
     setCurrentTask,
     addThinkingStep,
@@ -202,7 +203,7 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
         // 调用后端 API (携带 JWT token)
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
         if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`
+          headers.Authorization = `Bearer ${accessToken}`
         }
 
         const response = await fetch('/api/ai/chat', {
@@ -316,7 +317,7 @@ export function useAI(options: UseAIOptions = {}): UseAIReturn {
         // 调用后端流式 API (携带 JWT token)
         const streamHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
         if (accessToken) {
-          streamHeaders['Authorization'] = `Bearer ${accessToken}`
+          streamHeaders.Authorization = `Bearer ${accessToken}`
         }
 
         const response = await fetch('/api/ai/chat/stream', {

@@ -1,9 +1,10 @@
 'use client'
 
+import { TrendingDown,TrendingUp } from 'lucide-react'
 import React from 'react'
+
 import { cn } from '@/lib/utils'
 import { useAgentStore } from '@/store/agent'
-import { TrendingUp, TrendingDown } from 'lucide-react'
 
 /**
  * 盈亏仪表盘组件

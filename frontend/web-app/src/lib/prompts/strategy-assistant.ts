@@ -141,7 +141,7 @@ export function extractInsightData(content: string): {
   const insightRegex = /```insight-data\s*([\s\S]*?)```/
   const match = content.match(insightRegex)
 
-  if (!match || !match[1]) {
+  if (!match?.[1]) {
     return { textContent: content, insightData: null }
   }
 
@@ -170,7 +170,7 @@ export function validateInsightData(data: Record<string, unknown>): boolean {
 
   // 类型检查
   const validTypes = ['strategy_create', 'strategy_modify', 'batch_adjust', 'risk_alert', 'backtest']
-  if (!validTypes.includes(data.type as string)) return false
+  if (!validTypes.includes(data.type)) return false
 
   return true
 }

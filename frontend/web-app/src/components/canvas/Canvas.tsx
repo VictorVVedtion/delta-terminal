@@ -1,39 +1,40 @@
 'use client'
 
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
-  X,
-  Check,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp,
-  Lightbulb,
-  Settings,
-  BarChart3,
   Activity,
-  Eye,
-  TrendingUp,
   AlertCircle,
   AlertTriangle,
+  BarChart3,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Lightbulb,
   Plus,
-  Trash2,
   Rocket,
+  RotateCcw,
+  Settings,
+  Trash2,
+  TrendingUp,
+  X,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter,CardHeader, CardTitle } from '@/components/ui/card'
+import { useParamValidation } from '@/hooks/useParamValidation'
+import { cn } from '@/lib/utils'
 import type {
-  InsightData,
-  InsightParam,
-  InsightImpact,
   CanvasMode,
-  ParamValue,
+  ComparisonOperator,
+  InsightData,
+  InsightImpact,
+  InsightParam,
   LogicCondition,
   LogicConnector,
-  ComparisonOperator,
+  ParamValue,
 } from '@/types/insight'
-import { cn } from '@/lib/utils'
-import { useParamValidation } from '@/hooks/useParamValidation'
 
 // =============================================================================
 // Canvas Props
@@ -149,7 +150,7 @@ export function Canvas({
               <ParamControl
                 key={param.key}
                 param={param}
-                onChange={(value) => handleParamChange(param.key, value)}
+                onChange={(value) => { handleParamChange(param.key, value); }}
                 disabled={isLoading}
                 error={getError(param.key)}
                 warning={getWarning(param.key)}
@@ -162,7 +163,7 @@ export function Canvas({
         {advancedParams.length > 0 && (
           <section className="space-y-4">
             <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
+              onClick={() => { setShowAdvanced(!showAdvanced); }}
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {showAdvanced ? (
@@ -179,7 +180,7 @@ export function Canvas({
                   <ParamControl
                     key={param.key}
                     param={param}
-                    onChange={(value) => handleParamChange(param.key, value)}
+                    onChange={(value) => { handleParamChange(param.key, value); }}
                     disabled={isLoading}
                     error={getError(param.key)}
                     warning={getWarning(param.key)}
@@ -264,7 +265,7 @@ export function Canvas({
               <ParamControl
                 key={param.key}
                 param={param}
-                onChange={(value) => handleParamChange(param.key, value)}
+                onChange={(value) => { handleParamChange(param.key, value); }}
                 disabled={isLoading}
                 error={getError(param.key)}
                 warning={getWarning(param.key)}
@@ -277,7 +278,7 @@ export function Canvas({
         {advancedParams.length > 0 && (
           <section className="space-y-4">
             <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
+              onClick={() => { setShowAdvanced(!showAdvanced); }}
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {showAdvanced ? (
@@ -294,7 +295,7 @@ export function Canvas({
                   <ParamControl
                     key={param.key}
                     param={param}
-                    onChange={(value) => handleParamChange(param.key, value)}
+                    onChange={(value) => { handleParamChange(param.key, value); }}
                     disabled={isLoading}
                     error={getError(param.key)}
                     warning={getWarning(param.key)}
@@ -577,7 +578,7 @@ function SliderControl({ param, onChange, disabled, hasError }: ControlProps) {
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => { onChange(Number(e.target.value)); }}
         disabled={disabled}
         className={cn(
           'w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer disabled:opacity-50',
@@ -646,7 +647,7 @@ function HeatmapSliderControl({ param, onChange, disabled }: ControlProps) {
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => { onChange(Number(e.target.value)); }}
         disabled={disabled}
         className="w-full h-2 opacity-0 absolute cursor-pointer"
         style={{ marginTop: '-20px' }}
@@ -692,7 +693,7 @@ function NumberControl({ param, onChange, disabled, hasError }: ControlProps) {
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => { onChange(Number(e.target.value)); }}
         disabled={disabled}
         className={cn(
           'flex-1 h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 disabled:opacity-50',
@@ -713,7 +714,7 @@ function SelectControl({ param, onChange, disabled, hasError }: ControlProps) {
   return (
     <select
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => { onChange(e.target.value); }}
       disabled={disabled}
       className={cn(
         'w-full h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 disabled:opacity-50',
@@ -736,7 +737,7 @@ function ToggleControl({ param, onChange, disabled }: ParamControlProps) {
 
   return (
     <button
-      onClick={() => onChange(!value)}
+      onClick={() => { onChange(!value); }}
       disabled={disabled}
       className={cn(
         'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
@@ -763,7 +764,7 @@ function ButtonGroupControl({ param, onChange, disabled }: ParamControlProps) {
       {options.map(opt => (
         <button
           key={String(opt.value)}
-          onClick={() => onChange(opt.value)}
+          onClick={() => { onChange(opt.value); }}
           disabled={disabled}
           className={cn(
             'flex-1 px-3 py-2 text-sm rounded-md transition-colors',
@@ -842,7 +843,7 @@ function LogicBuilderControl({ param, onChange, disabled }: ControlProps) {
           <span className="text-xs text-muted-foreground">条件关系:</span>
           <div className="flex gap-1">
             <button
-              onClick={() => setConnector('AND')}
+              onClick={() => { setConnector('AND'); }}
               disabled={disabled}
               className={cn(
                 'px-2 py-1 text-xs rounded transition-colors',
@@ -854,7 +855,7 @@ function LogicBuilderControl({ param, onChange, disabled }: ControlProps) {
               且 (AND)
             </button>
             <button
-              onClick={() => setConnector('OR')}
+              onClick={() => { setConnector('OR'); }}
               disabled={disabled}
               className={cn(
                 'px-2 py-1 text-xs rounded transition-colors',
@@ -887,7 +888,7 @@ function LogicBuilderControl({ param, onChange, disabled }: ControlProps) {
               {/* Indicator select */}
               <select
                 value={condition.indicator}
-                onChange={(e) => handleUpdateCondition(condition.id, { indicator: e.target.value })}
+                onChange={(e) => { handleUpdateCondition(condition.id, { indicator: e.target.value }); }}
                 disabled={disabled}
                 className="flex-1 h-8 px-2 text-xs rounded border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
               >
@@ -899,7 +900,7 @@ function LogicBuilderControl({ param, onChange, disabled }: ControlProps) {
               {/* Operator select */}
               <select
                 value={condition.operator}
-                onChange={(e) => handleUpdateCondition(condition.id, { operator: e.target.value as ComparisonOperator })}
+                onChange={(e) => { handleUpdateCondition(condition.id, { operator: e.target.value as ComparisonOperator }); }}
                 disabled={disabled}
                 className="w-16 h-8 px-2 text-xs rounded border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
               >
@@ -912,14 +913,14 @@ function LogicBuilderControl({ param, onChange, disabled }: ControlProps) {
               <input
                 type="number"
                 value={typeof condition.value === 'number' ? condition.value : 0}
-                onChange={(e) => handleUpdateCondition(condition.id, { value: Number(e.target.value) })}
+                onChange={(e) => { handleUpdateCondition(condition.id, { value: Number(e.target.value) }); }}
                 disabled={disabled}
                 className="w-20 h-8 px-2 text-xs rounded border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
               />
 
               {/* Remove button */}
               <button
-                onClick={() => handleRemoveCondition(condition.id)}
+                onClick={() => { handleRemoveCondition(condition.id); }}
                 disabled={disabled || conditions.length <= 1}
                 className={cn(
                   'p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors',

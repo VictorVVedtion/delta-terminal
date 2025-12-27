@@ -1,12 +1,13 @@
 'use client'
 
 import React from 'react'
-import { MonitorCanvas } from './MonitorCanvas'
+
 import type {
   MonitorCanvasProps,
   Position,
   Trade,
 } from './MonitorCanvas'
+import { MonitorCanvas } from './MonitorCanvas'
 
 /**
  * MonitorCanvas 使用示例
@@ -160,7 +161,7 @@ export function MonitorCanvasExample() {
         </div>
 
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setIsOpen(true); }}
           className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
           打开监控面板
@@ -181,7 +182,7 @@ export function MonitorCanvasExample() {
       <MonitorCanvas
         {...mockData}
         isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={() => { setIsOpen(false); }}
       />
     </div>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+
 import { cn } from '@/lib/utils'
 import type { InsightParam, ParamOption } from '@/types/insight'
 
@@ -85,8 +86,8 @@ export function ParamButtonGroup({
               role="radio"
               aria-checked={isSelected}
               aria-label={option.label}
-              onClick={() => handleOptionClick(option.value)}
-              onKeyDown={(e) => handleKeyDown(e, option.value)}
+              onClick={() => { handleOptionClick(option.value); }}
+              onKeyDown={(e) => { handleKeyDown(e, option.value); }}
               disabled={disabled}
               title={option.description}
               className={cn(

@@ -5,12 +5,13 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+
 import type {
+  ResearchReport,
   ResearchSession,
   ResearchStep,
   ResearchStepId,
   ResearchStepStatus,
-  ResearchReport,
 } from '@/types/research'
 import { createDefaultResearchSteps } from '@/types/research'
 

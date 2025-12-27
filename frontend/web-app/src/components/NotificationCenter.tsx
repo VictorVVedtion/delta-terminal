@@ -1,24 +1,25 @@
 'use client'
 
-import React from 'react'
 import {
+  AlertCircle,
+  AlertTriangle,
   Bell,
   Check,
   CheckCheck,
+  CheckCircle,
+  Info,
   Trash2,
   X,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  CheckCircle,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
-  useNotificationStore,
   type Notification,
   type NotificationType,
+  useNotificationStore,
 } from '@/store/notification'
 
 // =============================================================================
@@ -112,7 +113,7 @@ export function NotificationCenter() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => { setIsOpen(!isOpen); }}
         className="relative"
         title="通知中心"
       >
@@ -166,7 +167,7 @@ export function NotificationCenter() {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => setIsOpen(false)}
+                onClick={() => { setIsOpen(false); }}
               >
                 <X className="h-4 w-4" />
               </Button>

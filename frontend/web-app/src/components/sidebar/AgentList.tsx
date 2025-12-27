@@ -1,12 +1,14 @@
-import React from 'react'
+import { AlertTriangle,BarChart3, GitCompare, History, MoreVertical, Plus, TrendingUp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { useAgentStore, Agent, AgentStatus } from '@/store/agent'
-import { useAnalysisStore } from '@/store/analysis'
-import { Plus, MoreVertical, BarChart3, TrendingUp, GitCompare, History, AlertTriangle } from 'lucide-react'
+import React from 'react'
+
 import { ThinkingIndicator } from '@/components/thinking/ThinkingIndicator'
-import { ThinkingProcess } from '@/types/thinking'
-import type { SensitivityInsightData, AttributionInsightData, ComparisonInsightData } from '@/types/insight'
+import { cn } from '@/lib/utils'
+import type { Agent, AgentStatus} from '@/store/agent';
+import {useAgentStore } from '@/store/agent'
+import { useAnalysisStore } from '@/store/analysis'
+import type { AttributionInsightData, ComparisonInsightData,SensitivityInsightData } from '@/types/insight'
+import type { ThinkingProcess } from '@/types/thinking'
 
 /**
  * Agent 列表组件
@@ -187,78 +189,86 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
 
   return (
     <div className="relative group">
-      <button
-        onClick={onClick}
-        className={cn(
-          'w-full text-left rounded-md p-2.5 mb-1.5',
-          'bg-muted/50 hover:bg-muted transition-colors',
-          'border-l-[3px]',
-          statusConfig.color,
-          isShadow && 'opacity-70',
-          isActive && 'ring-1 ring-primary'
-        )}
-      >
-        {/* 头部：名称 + 盈亏 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <span
-              className={cn(
-                'w-1.5 h-1.5 rounded-full flex-shrink-0',
-                statusConfig.dotClass
-              )}
-            />
-            <span className="text-[11px] font-semibold truncate">
-              {agent.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span
-              className={cn(
-                'text-[11px] font-mono font-medium',
-                isShadow
-                  ? 'text-muted-foreground'
-                  : isPositive
-                    ? 'text-green-500'
-                    : 'text-red-500'
-              )}
-            >
-              {isShadow ? (
-                `虚拟 ${isPositive ? '+' : ''}$${agent.pnl}`
-              ) : (
-                `${isPositive ? '+' : ''}$${agent.pnl}`
-              )}
-            </span>
-            {/* 更多菜单按钮 */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setMenuOpen(!menuOpen)
-              }}
-              className={cn(
-                'h-5 w-5 rounded flex items-center justify-center',
-                'opacity-0 group-hover:opacity-100 hover:bg-background/80 transition-opacity',
-                menuOpen && 'opacity-100'
-              )}
-            >
-              <MoreVertical className="h-3 w-3" />
-            </button>
-          </div>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className={cn(
+        'w-full text-left rounded-md p-2.5 mb-1.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
+        'bg-muted/50 hover:bg-muted transition-colors',
+        'border-l-[3px]',
+        statusConfig.color,
+        isShadow && 'opacity-70',
+        isActive && 'ring-1 ring-primary'
+      )}
+    >
+      {/* 头部：名称 + 盈亏 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span
+            className={cn(
+              'w-1.5 h-1.5 rounded-full flex-shrink-0',
+              statusConfig.dotClass
+            )}
+          />
+          <span className="text-[11px] font-semibold truncate">
+            {agent.name}
+          </span>
         </div>
-
-        {/* 底部：状态 + 交易对 */}
-        <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground">
-          <span>{statusConfig.label}</span>
-          <span>·</span>
-          <span>{agent.symbol}</span>
+        <div className="flex items-center gap-1">
+          <span
+            className={cn(
+              'text-[11px] font-mono font-medium',
+              isShadow
+                ? 'text-muted-foreground'
+                : isPositive
+                  ? 'text-green-500'
+                  : 'text-red-500'
+            )}
+          >
+            {isShadow ? (
+              `虚拟 ${isPositive ? '+' : ''}$${agent.pnl}`
+            ) : (
+              `${isPositive ? '+' : ''}$${agent.pnl}`
+            )}
+          </span>
+          {/* 更多菜单按钮 */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpen(!menuOpen)
+            }}
+            className={cn(
+              'h-5 w-5 rounded flex items-center justify-center',
+              'opacity-0 group-hover:opacity-100 hover:bg-background/80 transition-opacity',
+              menuOpen && 'opacity-100'
+            )}
+          >
+            <MoreVertical className="h-3 w-3" />
+          </button>
         </div>
+      </div>
 
-        {/* Glass Box: Thinking Indicator (Visible when active and has process) */}
-        {isActive && thinkingProcess && (
-          <div className="mt-2 pt-2 border-t border-border/50">
-            <ThinkingIndicator process={thinkingProcess} compact defaultExpanded={false} />
-          </div>
-        )}
-      </button>
+      {/* 底部：状态 + 交易对 */}
+      <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground">
+        <span>{statusConfig.label}</span>
+        <span>·</span>
+        <span>{agent.symbol}</span>
+      </div>
+
+      {/* Glass Box: Thinking Indicator (Visible when active and has process) */}
+      {isActive && thinkingProcess && (
+        <div className="mt-2 pt-2 border-t border-border/50">
+          <ThinkingIndicator process={thinkingProcess} compact defaultExpanded={false} />
+        </div>
+      )}
+    </div>
 
       {/* 下拉菜单 */}
       {menuOpen && (
@@ -266,26 +276,26 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
           {/* 背景遮罩 */}
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => { setMenuOpen(false); }}
           />
           {/* 菜单内容 */}
           <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
             <button
-              onClick={(e) => handleMenuClick(e, 'sensitivity')}
+              onClick={(e) => { handleMenuClick(e, 'sensitivity'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">敏感度分析</span>
             </button>
             <button
-              onClick={(e) => handleMenuClick(e, 'attribution')}
+              onClick={(e) => { handleMenuClick(e, 'attribution'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">归因分析</span>
             </button>
             <button
-              onClick={(e) => handleMenuClick(e, 'comparison')}
+              onClick={(e) => { handleMenuClick(e, 'comparison'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <GitCompare className="h-3.5 w-3.5 text-muted-foreground" />
@@ -293,14 +303,14 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
             </button>
             <div className="border-t border-border my-1" />
             <button
-              onClick={(e) => handleMenuClick(e, 'version')}
+              onClick={(e) => { handleMenuClick(e, 'version'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <History className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">版本历史</span>
             </button>
             <button
-              onClick={(e) => handleMenuClick(e, 'emergency')}
+              onClick={(e) => { handleMenuClick(e, 'emergency'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-orange-600"
             >
               <AlertTriangle className="h-3.5 w-3.5" />
@@ -359,7 +369,7 @@ export function AgentList() {
               key={agent.id}
               agent={agent}
               isActive={agent.id === activeAgentId}
-              onClick={() => setActiveAgent(agent.id)}
+              onClick={() => { setActiveAgent(agent.id); }}
               // Only show thinking process for the active agent for demo purposes or if they are 'live'
               {...(showThinking && { thinkingProcess: mockThinkingProcess })}
             />

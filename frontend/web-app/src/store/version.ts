@@ -5,13 +5,14 @@
 
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
+
+import type { InsightParam } from '@/types/insight'
 import type {
-  StrategyVersion,
   CreateVersionParams,
+  StrategyVersion,
   VersionChangeType,
 } from '@/types/version'
 import { generateNextVersion } from '@/types/version'
-import type { InsightParam } from '@/types/insight'
 
 // =============================================================================
 // Types

@@ -4,12 +4,14 @@
  * OpenRouter API 客户端，支持流式响应和思考过程解析
  */
 
-import {
+import type {
   AIRequest,
   AIResponse,
   AIStreamChunk,
-  AI_MODELS,
   ThinkingStep
+} from '@/types/ai';
+import {
+  AI_MODELS
 } from '@/types/ai'
 
 // ============================================================================
@@ -18,10 +20,10 @@ import {
 
 interface OpenRouterRequestBody {
   model: string
-  messages: Array<{
+  messages: {
     role: 'system' | 'user' | 'assistant'
     content: string
-  }>
+  }[]
   stream?: boolean
   max_tokens?: number
   temperature?: number
@@ -33,14 +35,14 @@ interface OpenRouterRequestBody {
 interface OpenRouterResponse {
   id: string
   model: string
-  choices: Array<{
+  choices: {
     index: number
     message: {
       role: string
       content: string
     }
     finish_reason: string
-  }>
+  }[]
   usage: {
     prompt_tokens: number
     completion_tokens: number
@@ -51,14 +53,14 @@ interface OpenRouterResponse {
 interface OpenRouterStreamChunk {
   id: string
   model: string
-  choices: Array<{
+  choices: {
     index: number
     delta: {
       role?: string
       content?: string
     }
     finish_reason: string | null
-  }>
+  }[]
 }
 
 // ============================================================================
@@ -144,8 +146,8 @@ export class OpenRouterClient {
 
     const decoder = new TextDecoder()
     let buffer = ''
-    let fullContent = ''
-    let thinkingSteps: ThinkingStep[] = []
+    let _fullContent = ''
+    const thinkingSteps: ThinkingStep[] = []
     let currentThinkingStep: Partial<ThinkingStep> | null = null
     let isInThinkingBlock = false
     let thinkingBuffer = ''
@@ -234,11 +236,11 @@ export class OpenRouterClient {
                 }
 
                 if (processedContent && !isInThinkingBlock) {
-                  fullContent += processedContent
+                  _fullContent += processedContent
                   yield { type: 'content', data: { content: processedContent } }
                 }
               } else {
-                fullContent += content
+                _fullContent += content
                 yield { type: 'content', data: { content } }
               }
             }
@@ -255,7 +257,7 @@ export class OpenRouterClient {
   /**
    * 获取模型列表
    */
-  async getModels(): Promise<Array<{ id: string; name: string }>> {
+  async getModels(): Promise<{ id: string; name: string }[]> {
     const response = await fetch(`${this.baseUrl}/models`, {
       headers: this.getHeaders()
     })
@@ -320,8 +322,8 @@ export class OpenRouterClient {
     const inputPrice = modelInfo?.inputPrice || 0
     const outputPrice = modelInfo?.outputPrice || 0
 
-    const inputTokens = data.usage?.prompt_tokens || 0
-    const outputTokens = data.usage?.completion_tokens || 0
+    const inputTokens = data.usage.prompt_tokens || 0
+    const outputTokens = data.usage.completion_tokens || 0
     const totalCost = (inputTokens * inputPrice + outputTokens * outputPrice) / 1000000
 
     const content = data.choices[0]?.message?.content || ''
@@ -373,8 +375,8 @@ export class OpenRouterClient {
   private processThinkingContent(
     content: string,
     isInThinkingBlock: boolean,
-    buffer: string,
-    stepIndex: number
+    _buffer: string,
+    _stepIndex: number
   ): {
     processedContent: string
     thinking?: {

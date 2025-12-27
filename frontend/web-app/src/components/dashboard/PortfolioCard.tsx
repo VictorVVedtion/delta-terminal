@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // Badge removed - unused
-import { TrendingUp, TrendingDown, Wallet } from 'lucide-react'
+import { TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import React from 'react'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
 
 interface PortfolioCardProps {

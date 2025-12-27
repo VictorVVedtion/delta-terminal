@@ -6,8 +6,9 @@
 
 'use client'
 
+import { ArrowDown, ArrowUp, Clock } from 'lucide-react'
 import React from 'react'
-import { ArrowUp, ArrowDown, Clock } from 'lucide-react'
+
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { PaperTrade } from '@/types/paperTrading'

@@ -1,7 +1,8 @@
 'use client'
 
+import { AlertCircle, Clock, RefreshCw, Server, WifiOff, X } from 'lucide-react'
 import React from 'react'
-import { AlertCircle, WifiOff, Server, Clock, RefreshCw, X } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 

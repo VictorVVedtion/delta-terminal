@@ -251,11 +251,12 @@ skillRegistry.register({
     params: z.record(z.unknown()).describe('要修改的参数'),
   }),
   execute: async (params, context) => {
+    const typedParams = params as { strategyId: string; params: Record<string, unknown> }
     // TODO: 调用 Strategy Service 修改参数
     return {
       success: true,
       data: {
-        strategyId: params.strategyId,
+        strategyId: typedParams.strategyId,
         status: 'updated',
         newVersion: 2,
       },
@@ -300,12 +301,13 @@ skillRegistry.register({
     strategyId: z.string().describe('策略 ID'),
   }),
   execute: async (params, context) => {
+    const typedParams = params as { strategyId: string }
     // TODO: 调用 Strategy Service
     return {
       success: true,
       data: {
         strategy: {
-          id: params.strategyId,
+          id: typedParams.strategyId,
           name: '示例策略',
           status: 'active',
         },
@@ -469,11 +471,12 @@ skillRegistry.register({
     sources: z.array(z.enum(['price', 'volume', 'social', 'news'])).optional().describe('数据来源'),
   }),
   execute: async (params, context) => {
+    const typedParams = params as { symbol: string; timeframe?: string; sources?: Array<'price' | 'volume' | 'social' | 'news'> }
     // TODO: 调用市场分析服务
     return {
       success: true,
       data: {
-        symbol: params.symbol,
+        symbol: typedParams.symbol,
         sentiment: 'bullish',
         fearGreedIndex: 65,
         trendStrength: 0.72,

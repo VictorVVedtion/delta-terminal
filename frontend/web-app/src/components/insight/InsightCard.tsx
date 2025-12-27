@@ -1,36 +1,37 @@
 'use client'
 
-import React from 'react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
-  Lightbulb,
-  TrendingUp,
-  TrendingDown,
+  Activity,
   AlertTriangle,
-  ChevronRight,
-  Check,
-  X,
-  Settings,
   BarChart3,
+  Check,
+  ChevronRight,
   Clock,
-  Percent,
-  Target,
+  GitCompare,
+  Lightbulb,
   LineChart,
   MessageSquare,
-  Activity,
+  Percent,
   PieChart,
-  GitCompare,
+  Settings,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  X,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import type {
-  InsightType,
+  ImpactMetric,
   InsightCardProps,
   InsightCardStatus,
   InsightParam,
-  ImpactMetric,
+  InsightType,
 } from '@/types/insight'
-import { cn } from '@/lib/utils'
 
 // =============================================================================
 // InsightCard Main Component
@@ -73,8 +74,8 @@ export function InsightCard({
         status === 'approved' && 'opacity-80 border-l-success',
         status === 'rejected' && 'opacity-50 border-l-destructive',
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => { setIsHovered(true); }}
+      onMouseLeave={() => { setIsHovered(false); }}
       onClick={onExpand}
     >
       {/* Status Badge */}
@@ -243,7 +244,7 @@ function ParamPreview({ param }: { param: InsightParam }) {
       <Settings className="h-3 w-3 text-muted-foreground" />
       <span className="text-muted-foreground">{param.label}:</span>
       <span className="font-medium">{displayValue}</span>
-      {param.old_value !== undefined && (
+      {param.old_value != null && (
         <span className="text-muted-foreground line-through ml-1">
           {formatParamValue({ ...param, value: param.old_value })}
         </span>

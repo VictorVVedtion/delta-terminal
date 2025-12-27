@@ -1,9 +1,10 @@
 'use client'
 
 import React from 'react'
+
 import type {
-  ThinkingProcess,
   ThinkingEvent,
+  ThinkingProcess,
   TodoItem,
   ToolCall,
   UseThinkingStreamReturn,
@@ -182,7 +183,6 @@ export function useThinkingStream(
 
   const connectWebSocket = React.useCallback(() => {
     if (!wsUrl) {
-      console.warn('[useThinkingStream] No WebSocket URL configured')
       return
     }
 
@@ -190,7 +190,7 @@ export function useThinkingStream(
       const ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
-        console.log('[useThinkingStream] WebSocket connected')
+        // WebSocket connected
       }
 
       ws.onmessage = (event) => {
@@ -208,7 +208,6 @@ export function useThinkingStream(
       }
 
       ws.onclose = () => {
-        console.log('[useThinkingStream] WebSocket disconnected')
         wsRef.current = null
 
         // Auto reconnect

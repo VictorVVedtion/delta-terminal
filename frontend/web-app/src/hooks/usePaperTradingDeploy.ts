@@ -6,14 +6,15 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { usePaperTradingStore } from '@/store/paperTrading'
+
+import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import { useHyperliquidPrice } from '@/hooks/useHyperliquidPrice'
+import { usePaperTradingStore } from '@/store/paperTrading'
 import type {
   PaperAccount,
   PaperAccountStats,
   PlaceOrderResult,
 } from '@/types/paperTrading'
-import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 
 // =============================================================================
 // Types
@@ -75,7 +76,7 @@ export interface UsePaperTradingDeployReturn {
 export function usePaperTradingDeploy(
   options: UsePaperTradingDeployOptions
 ): UsePaperTradingDeployReturn {
-  const { strategyId, agentId, symbol, onSuccess, onError } = options
+  const { strategyId: _strategyId, agentId, symbol, onSuccess, onError } = options
 
   // 提取交易对基础资产 (BTC/USDT -> BTC)
   const baseAsset = useMemo(() => {

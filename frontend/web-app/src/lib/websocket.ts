@@ -19,8 +19,8 @@ class WebSocketClient {
   private reconnectAttempts = 0
   private maxReconnectAttempts = 5
   private reconnectDelay = 1000
-  private listeners: Map<WebSocketEventType, Set<WebSocketCallback>> = new Map()
-  private subscriptions: Set<string> = new Set()
+  private listeners = new Map<WebSocketEventType, Set<WebSocketCallback>>()
+  private subscriptions = new Set<string>()
   private isConnecting = false
 
   constructor(url?: string) {
@@ -46,7 +46,6 @@ class WebSocketClient {
         this.ws = new WebSocket(wsUrl)
 
         this.ws.onopen = () => {
-          console.log('WebSocket connected')
           this.isConnecting = false
           this.reconnectAttempts = 0
 
@@ -74,7 +73,6 @@ class WebSocketClient {
         }
 
         this.ws.onclose = () => {
-          console.log('WebSocket disconnected')
           this.isConnecting = false
           this.ws = null
           this.attemptReconnect()
@@ -104,8 +102,6 @@ class WebSocketClient {
     this.reconnectAttempts++
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1)
 
-    console.log(`Attempting to reconnect in ${delay}ms...`)
-
     setTimeout(() => {
       this.connect().catch(error => {
         console.error('Reconnect failed:', error)
@@ -116,8 +112,6 @@ class WebSocketClient {
   private send(data: any) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data))
-    } else {
-      console.warn('WebSocket not connected')
     }
   }
 

@@ -7,19 +7,20 @@
  * 通过热力图和条形图展示参数对策略性能的影响程度
  */
 
-import React from 'react'
 import {
   Activity,
-  X,
-  TrendingUp,
-  Target,
   AlertTriangle,
   ChevronRight,
+  Target,
+  TrendingUp,
+  X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { SensitivityInsightData, KeyParameter } from '@/types/insight'
+import type { KeyParameter,SensitivityInsightData } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -146,7 +147,7 @@ export function SensitivityCanvas({
 
     // 计算该参数对指标的影响范围
     const values = matrixItem.impacts.map(
-      impact => impact[metric as keyof typeof impact] as number
+      impact => impact[metric as keyof typeof impact]
     )
     const baseline = data.baseline[metric as keyof typeof data.baseline]
     const maxChange = Math.max(...values.map(v => Math.abs(v - baseline)))
@@ -228,10 +229,10 @@ export function SensitivityCanvas({
                         value={getHeatmapValue(item.paramKey, metric)}
                         isSelected={
                           selectedCell?.paramKey === item.paramKey &&
-                          selectedCell?.metric === metric
+                          selectedCell.metric === metric
                         }
                         onClick={() =>
-                          setSelectedCell({ paramKey: item.paramKey, metric })
+                          { setSelectedCell({ paramKey: item.paramKey, metric }); }
                         }
                       />
                     ))}
@@ -329,7 +330,7 @@ export function SensitivityCanvas({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedCell(null)}
+                  onClick={() => { setSelectedCell(null); }}
                 >
                   关闭
                 </Button>

@@ -7,17 +7,18 @@
  * 展示版本历史列表，支持回滚和对比
  */
 
-import React from 'react'
 import {
+  Check,
+  ChevronRight,
+  Clock,
+  Eye,
   GitBranch,
   RotateCcw,
-  Eye,
-  ChevronRight,
-  Check,
-  Clock,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { StrategyVersion } from '@/types/version'
 import { formatVersionTime } from '@/types/version'
@@ -127,7 +128,7 @@ export function VersionList({
                   <Button
                     variant={isSelected ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => onSelectForCompare(version.id)}
+                    onClick={() => { onSelectForCompare(version.id); }}
                     className="h-7 text-xs"
                   >
                     {isSelected ? (
@@ -148,7 +149,7 @@ export function VersionList({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onRollback(version.id)}
+                    onClick={() => { onRollback(version.id); }}
                     className="h-7 text-xs"
                   >
                     <RotateCcw className="h-3 w-3 mr-1" />
@@ -161,7 +162,7 @@ export function VersionList({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onViewDetails(version)}
+                  onClick={() => { onViewDetails(version); }}
                   className="h-7 text-xs"
                 >
                   详情

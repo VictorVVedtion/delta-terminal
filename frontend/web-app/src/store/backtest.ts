@@ -5,11 +5,12 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+
 import type {
   BacktestConfig,
+  BacktestHistoryItem,
   BacktestResult,
   BacktestRunState,
-  BacktestHistoryItem,
 } from '@/types/backtest'
 
 // =============================================================================

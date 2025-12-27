@@ -215,12 +215,12 @@ export class StreamingParser {
   private detectCodeBlocks(): void {
     const buffer = this.state.buffer
     const codeBlockStart = /```(\w*)\n?/
-    const codeBlockEnd = /\n?```/
+    const _codeBlockEnd = /\n?```/
 
     if (!this.state.inCodeBlock) {
       // Look for opening
       const match = buffer.match(codeBlockStart)
-      if (match && match.index !== undefined) {
+      if (match?.index !== undefined) {
         // Flush text before code block
         const textBefore = buffer.substring(0, match.index)
         if (textBefore) {
@@ -371,11 +371,11 @@ export interface TextAnimatorOptions {
 }
 
 export class TextAnimator {
-  private text: string = ''
-  private position: number = 0
+  private text = ''
+  private position = 0
   private options: Required<TextAnimatorOptions>
   private animationFrame: number | null = null
-  private lastTime: number = 0
+  private lastTime = 0
 
   constructor(options: TextAnimatorOptions = {}) {
     this.options = {
@@ -511,9 +511,9 @@ export function createStreamHandler(
   })
 
   return {
-    push: (chunk: string) => parser.push(chunk),
+    push: (chunk: string) => { parser.push(chunk); },
     complete: () => parser.complete(),
-    reset: () => parser.reset(),
+    reset: () => { parser.reset(); },
   }
 }
 

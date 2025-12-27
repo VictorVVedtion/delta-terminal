@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useMemo } from 'react'
+
 import { cn } from '@/lib/utils'
-import type { InsightParam, HeatmapZone } from '@/types/insight'
+import type { HeatmapZone,InsightParam } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -135,7 +136,7 @@ export function HeatmapSlider({
           {heatmap_zones.map((zone, index) => (
             <button
               key={index}
-              onClick={() => handleZoneClick(zone)}
+              onClick={() => { handleZoneClick(zone); }}
               disabled={disabled}
               className={cn(
                 'h-full transition-opacity',
@@ -191,7 +192,7 @@ export function HeatmapSlider({
         {heatmap_zones.map((zone, index) => (
           <button
             key={index}
-            onClick={() => handleZoneClick(zone)}
+            onClick={() => { handleZoneClick(zone); }}
             disabled={disabled}
             className={cn(
               'text-xs transition-colors',

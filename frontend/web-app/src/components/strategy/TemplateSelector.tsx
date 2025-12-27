@@ -7,19 +7,20 @@
  * 提供策略模板浏览和一键应用功能
  */
 
+import { AlertTriangle, ChevronRight, Percent, Search, Sparkles,TrendingUp, X } from 'lucide-react'
 import React from 'react'
-import { X, Search, ChevronRight, TrendingUp, Percent, AlertTriangle, Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import {
-  STRATEGY_TEMPLATES,
-  TEMPLATE_CATEGORIES,
   RISK_LEVEL_CONFIG,
-  templateToInsightData,
+  STRATEGY_TEMPLATES,
   type StrategyTemplate,
+  TEMPLATE_CATEGORIES,
   type TemplateCategory,
+  templateToInsightData,
 } from '@/lib/templates/strategies'
+import { cn } from '@/lib/utils'
 import type { InsightData } from '@/types/insight'
 
 // =============================================================================
@@ -120,7 +121,7 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
               type="text"
               placeholder="搜索策略模板..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); }}
               className={cn(
                 'w-full h-10 pl-10 pr-4 rounded-lg',
                 'bg-muted/50 border border-border',
@@ -136,7 +137,7 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
             <Button
               variant={selectedCategory === 'all' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => { setSelectedCategory('all'); }}
               className="flex-shrink-0"
             >
               全部
@@ -148,7 +149,7 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
                   key={category}
                   variant={selectedCategory === category ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSelectedCategory(category)}
+                  onClick={() => { setSelectedCategory(category); }}
                   className="flex-shrink-0 gap-1.5"
                 >
                   <span>{config.icon}</span>
@@ -179,8 +180,8 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
                     key={template.id}
                     template={template}
                     isSelected={previewTemplate?.id === template.id}
-                    onSelect={() => handleSelect(template)}
-                    onPreview={() => setPreviewTemplate(template)}
+                    onSelect={() => { handleSelect(template); }}
+                    onPreview={() => { setPreviewTemplate(template); }}
                   />
                 ))}
               </div>
@@ -192,8 +193,8 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
             <div className="hidden lg:block w-1/2 border-l border-border overflow-y-auto bg-muted/20">
               <TemplatePreview
                 template={previewTemplate}
-                onSelect={() => handleSelect(previewTemplate)}
-                onClose={() => setPreviewTemplate(null)}
+                onSelect={() => { handleSelect(previewTemplate); }}
+                onClose={() => { setPreviewTemplate(null); }}
               />
             </div>
           )}

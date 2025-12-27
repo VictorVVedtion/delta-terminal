@@ -10,11 +10,12 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+
 import type {
-  InsightData,
-  InsightParam,
   CanvasMode,
   InsightCardStatus,
+  InsightData,
+  InsightParam,
 } from '@/types/insight'
 
 // =============================================================================

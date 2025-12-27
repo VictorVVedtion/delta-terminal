@@ -7,22 +7,17 @@
  */
 
 import type {
+  AssetConstraint,
   Constraint,
   ConstraintContext,
   ConstraintEvaluation,
-  ConstraintValidationResult,
   ConstraintResult,
-  PositionConstraint,
-  TimingConstraint,
-  AssetConstraint,
+  ConstraintValidationResult,
+  ExecutionConstraint,
   FrequencyConstraint,
   LossConstraint,
-  ExecutionConstraint,
-  isPositionConstraint,
-  isTimingConstraint,
-  isAssetConstraint,
-  isFrequencyConstraint,
-  isLossConstraint,
+  PositionConstraint,
+  TimingConstraint,
 } from '@/types/constraint'
 
 // =============================================================================
@@ -503,17 +498,17 @@ export function evaluateConstraint(
 
   switch (constraint.category) {
     case 'position':
-      return evaluatePositionConstraint(constraint as PositionConstraint, context)
+      return evaluatePositionConstraint(constraint, context)
     case 'timing':
-      return evaluateTimingConstraint(constraint as TimingConstraint, context)
+      return evaluateTimingConstraint(constraint, context)
     case 'asset':
-      return evaluateAssetConstraint(constraint as AssetConstraint, context)
+      return evaluateAssetConstraint(constraint, context)
     case 'frequency':
-      return evaluateFrequencyConstraint(constraint as FrequencyConstraint, context)
+      return evaluateFrequencyConstraint(constraint, context)
     case 'loss':
-      return evaluateLossConstraint(constraint as LossConstraint, context)
+      return evaluateLossConstraint(constraint, context)
     case 'execution':
-      return evaluateExecutionConstraint(constraint as ExecutionConstraint, context)
+      return evaluateExecutionConstraint(constraint, context)
     default:
       return {
         constraintId: constraint.id,

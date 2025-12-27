@@ -7,30 +7,31 @@
  * 监测市场异常指标（波动率、深度骤变），提供防护措施配置和历史事件记录
  */
 
-import React from 'react'
 import {
   AlertTriangle,
-  Gauge,
   BarChart3,
-  Volume2,
-  VolumeX,
-  Shield,
-  ShieldCheck,
-  Settings2,
-  Clock,
-  TrendingUp,
+  Bell,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Gauge,
   History,
   Pause,
+  Settings2,
+  Shield,
+  ShieldCheck,
+  TrendingUp,
+  Volume2,
+  VolumeX,
   XCircle,
-  Bell,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
 
 // =============================================================================
 // Types
@@ -185,7 +186,7 @@ export function ExtremeMarketPanel({
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setSoundEnabled(!soundEnabled)}
+              onClick={() => { setSoundEnabled(!soundEnabled); }}
             >
               {soundEnabled ? (
                 <Volume2 className="h-4 w-4" />
@@ -241,7 +242,7 @@ export function ExtremeMarketPanel({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={() => { setShowSettings(!showSettings); }}
               className="h-7 px-2"
             >
               <Settings2 className="h-3.5 w-3.5 mr-1" />
@@ -289,7 +290,7 @@ export function ExtremeMarketPanel({
                 ).map(({ value, label, icon: Icon }) => (
                   <button
                     key={value}
-                    onClick={() => handleModeChange(value)}
+                    onClick={() => { handleModeChange(value); }}
                     className={cn(
                       'flex items-center gap-2 p-2.5 rounded-lg border text-left text-sm transition-colors',
                       config.autoProtectionMode === value
@@ -318,7 +319,7 @@ export function ExtremeMarketPanel({
                 <span className="text-sm">声音警报</span>
               </div>
               <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
+                onClick={() => { setSoundEnabled(!soundEnabled); }}
                 className={cn(
                   'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
                   soundEnabled ? 'bg-primary' : 'bg-muted'
@@ -338,7 +339,7 @@ export function ExtremeMarketPanel({
         {/* Recent Events */}
         <div className="space-y-2">
           <button
-            onClick={() => setShowHistory(!showHistory)}
+            onClick={() => { setShowHistory(!showHistory); }}
             className="flex items-center justify-between w-full text-left"
           >
             <p className="text-sm font-medium flex items-center gap-2">

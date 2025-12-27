@@ -1,23 +1,25 @@
 'use client'
 
-import React from 'react'
 import {
-  CheckCircle,
-  XCircle,
-  Loader2,
   AlertCircle,
-  Settings,
-  Trash2,
-  RefreshCw,
+  CheckCircle,
   Link2,
   Link2Off,
+  Loader2,
+  RefreshCw,
+  Settings,
+  Trash2,
+  XCircle,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { ExchangeIcon, getExchangeLabel } from './ExchangeIcon'
-import type { ExchangeAccount, ConnectionStatus, ExchangeType } from '@/store/exchange'
+import type { ConnectionStatus, ExchangeAccount, ExchangeType } from '@/store/exchange'
 import { SUPPORTED_EXCHANGES } from '@/store/exchange'
+
+import { ExchangeIcon, getExchangeLabel } from './ExchangeIcon'
 
 // =============================================================================
 // Types

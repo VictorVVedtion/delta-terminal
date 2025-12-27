@@ -6,6 +6,7 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+
 import type { AgentDeploymentStatus, DeploymentStatus } from '@/types/deployment'
 
 // Agent 状态类型
@@ -113,96 +114,44 @@ const defaultRiskOverview: RiskOverview = {
   riskLevel: 'low',
 }
 
-// 默认盈亏仪表盘
+// 默认盈亏仪表盘 (初始为零，数据将从实际 Agent 汇总)
 const defaultPnLDashboard: PnLDashboard = {
-  totalPnL: 2340,
-  totalPnLPercent: 5.2,
-  todayPnL: 120,
-  todayPnLPercent: 0.8,
-  weekPnL: 580,
-  monthPnL: 2340,
+  totalPnL: 0,
+  totalPnLPercent: 0,
+  todayPnL: 0,
+  todayPnLPercent: 0,
+  weekPnL: 0,
+  monthPnL: 0,
 }
 
-// Mock Agents 数据
-const mockAgents: Agent[] = [
-  {
-    id: 'agent_1',
-    name: 'RSI 反弹',
-    symbol: 'BTC/USDT',
-    status: 'live',
-    pnl: 120,
-    pnlPercent: 2.4,
-    trades: 15,
-    winRate: 73,
-    createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'agent_2',
-    name: '网格交易',
-    symbol: 'ETH/USDT',
-    status: 'live',
-    pnl: -45,
-    pnlPercent: -1.2,
-    trades: 42,
-    winRate: 52,
-    createdAt: Date.now() - 14 * 24 * 60 * 60 * 1000,
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'agent_3',
-    name: '突破追踪',
-    symbol: 'SOL/USDT',
-    status: 'shadow',
-    pnl: 89,
-    pnlPercent: 3.1,
-    trades: 8,
-    winRate: 62,
-    createdAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
-    updatedAt: Date.now(),
-  },
-]
+// 初始 Agents 数据 (清空硬编码，从用户批准的策略动态创建)
+const initialAgents: Agent[] = []
 
-// Mock 历史对话
-const mockChatHistory: ChatHistory[] = [
-  {
-    id: 'chat_1',
-    title: 'BTC 策略优化',
-    preview: '调整止损参数到 2.5%...',
-    timestamp: Date.now() - 2 * 60 * 60 * 1000,
-    agentId: 'agent_1',
-  },
-  {
-    id: 'chat_2',
-    title: 'ETH 网格设置',
-    preview: '网格间距设为 1%...',
-    timestamp: Date.now() - 24 * 60 * 60 * 1000,
-    agentId: 'agent_2',
-  },
-]
+// 初始历史对话 (清空硬编码)
+const initialChatHistory: ChatHistory[] = []
 
 export const useAgentStore = create<AgentState>()(
   devtools((set) => ({
-    // 初始状态
-    agents: mockAgents,
+    // 初始状态 (清空硬编码，数据从用户批准的策略动态创建)
+    agents: initialAgents,
     activeAgentId: null,
     riskOverview: defaultRiskOverview,
     pnlDashboard: defaultPnLDashboard,
-    chatHistory: mockChatHistory,
+    chatHistory: initialChatHistory,
 
     // Agent Actions
     setAgents: (agents) =>
-      set({ agents }, false, 'agent/setAgents'),
+      { set({ agents }, false, 'agent/setAgents'); },
 
     addAgent: (agent) =>
-      set(
+      { set(
         (state) => ({ agents: [...state.agents, agent] }),
         false,
         'agent/addAgent'
-      ),
+      ); },
 
     updateAgent: (id, updates) =>
-      set(
+      { set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === id ? { ...a, ...updates, updatedAt: Date.now() } : a
@@ -210,59 +159,59 @@ export const useAgentStore = create<AgentState>()(
         }),
         false,
         'agent/updateAgent'
-      ),
+      ); },
 
     removeAgent: (id) =>
-      set(
+      { set(
         (state) => ({
           agents: state.agents.filter((a) => a.id !== id),
           activeAgentId: state.activeAgentId === id ? null : state.activeAgentId,
         }),
         false,
         'agent/removeAgent'
-      ),
+      ); },
 
     setActiveAgent: (id) =>
-      set({ activeAgentId: id }, false, 'agent/setActiveAgent'),
+      { set({ activeAgentId: id }, false, 'agent/setActiveAgent'); },
 
     // Risk Actions
     updateRiskOverview: (risk) =>
-      set(
+      { set(
         (state) => ({ riskOverview: { ...state.riskOverview, ...risk } }),
         false,
         'agent/updateRiskOverview'
-      ),
+      ); },
 
     // PnL Actions
     updatePnLDashboard: (pnl) =>
-      set(
+      { set(
         (state) => ({ pnlDashboard: { ...state.pnlDashboard, ...pnl } }),
         false,
         'agent/updatePnLDashboard'
-      ),
+      ); },
 
     // Chat History Actions
     addChatHistory: (chat) =>
-      set(
+      { set(
         (state) => ({ chatHistory: [chat, ...state.chatHistory] }),
         false,
         'agent/addChatHistory'
-      ),
+      ); },
 
     removeChatHistory: (id) =>
-      set(
+      { set(
         (state) => ({ chatHistory: state.chatHistory.filter((c) => c.id !== id) }),
         false,
         'agent/removeChatHistory'
-      ),
+      ); },
 
     clearChatHistory: () =>
-      set({ chatHistory: [] }, false, 'agent/clearChatHistory'),
+      { set({ chatHistory: [] }, false, 'agent/clearChatHistory'); },
 
     // ===== 部署相关 Actions (Story 1.2) =====
 
     deployAgentToPaper: (agentId, virtualCapital) =>
-      set(
+      { set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
@@ -280,10 +229,10 @@ export const useAgentStore = create<AgentState>()(
         }),
         false,
         'agent/deployToPaper'
-      ),
+      ); },
 
     deployAgentToLive: (agentId, initialCapital) =>
-      set(
+      { set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
@@ -300,10 +249,10 @@ export const useAgentStore = create<AgentState>()(
         }),
         false,
         'agent/deployToLive'
-      ),
+      ); },
 
     updateDeploymentProgress: (agentId, status) =>
-      set(
+      { set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
@@ -322,10 +271,10 @@ export const useAgentStore = create<AgentState>()(
         }),
         false,
         'agent/updateDeploymentProgress'
-      ),
+      ); },
 
     rollbackDeployment: (agentId, previousStatus) =>
-      set(
+      { set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
@@ -340,7 +289,7 @@ export const useAgentStore = create<AgentState>()(
         }),
         false,
         'agent/rollbackDeployment'
-      ),
+      ); },
 
     canDeployToPaper: (agentId: string): boolean => {
       const { agents } = useAgentStore.getState()
@@ -364,7 +313,7 @@ export const useAgentStore = create<AgentState>()(
     getPaperRunningDays: (agentId: string): number => {
       const { agents } = useAgentStore.getState()
       const agent = agents.find((a: Agent) => a.id === agentId)
-      if (!agent || !agent.paperStartedAt) return 0
+      if (!agent?.paperStartedAt) return 0
       const msPerDay = 24 * 60 * 60 * 1000
       return Math.floor((Date.now() - agent.paperStartedAt) / msPerDay)
     },

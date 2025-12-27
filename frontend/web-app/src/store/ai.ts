@@ -5,21 +5,22 @@
  */
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import {
+import { createJSONStorage,persist } from 'zustand/middleware'
+
+import type {
   AIConfig,
   AIResponse,
   AITaskType,
   AIUsageStats,
-  CostEstimate,
-  DEFAULT_AI_CONFIG,
-  SimplePreset,
-  SIMPLE_PRESETS,
-  AI_MODELS,
-  ThinkingStep,
   AIUserStatus,
-  DEFAULT_AI_USER_STATUS
-} from '@/types/ai'
+  CostEstimate,
+  SimplePreset,
+  ThinkingStep} from '@/types/ai';
+import {
+  AI_MODELS,
+  DEFAULT_AI_CONFIG,
+  DEFAULT_AI_USER_STATUS,
+  SIMPLE_PRESETS} from '@/types/ai'
 
 // ============================================================================
 // State Types
@@ -430,7 +431,7 @@ export const useAIStore = create<AIState & AIActions>()(
       },
 
       estimateCost: () => {
-        const { config } = get()
+        const { config: _config } = get()
 
         // 预估每日调用量
         const estimatedDailyCalls: Record<AITaskType, number> = {

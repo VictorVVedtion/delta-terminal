@@ -192,11 +192,15 @@ export class LLMProxyService {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
-      throw new Error(error.error?.message || `API Error: ${response.status}`)
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } }
+      throw new Error(errorData.error?.message || `API Error: ${response.status}`)
     }
 
-    const data = await response.json()
+    const data = await response.json() as {
+      id?: string
+      choices?: Array<{ message?: { content?: string }; finish_reason?: string }>
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+    }
     const content = data.choices?.[0]?.message?.content || ''
     const usage = data.usage || {}
 
@@ -209,13 +213,18 @@ export class LLMProxyService {
       timestamp: Date.now(),
     }
 
+    const rawFinishReason = data.choices?.[0]?.finish_reason
+    const finishReason: 'stop' | 'length' | 'error' =
+      rawFinishReason === 'length' ? 'length' :
+      rawFinishReason === 'error' ? 'error' : 'stop'
+
     return {
-      id: data.id || `chat_${Date.now()}`,
+      id: (data.id as string) || `chat_${Date.now()}`,
       model,
       content,
       usage: usageStats,
       latency: Date.now() - startTime,
-      finishReason: data.choices?.[0]?.finish_reason || 'stop',
+      finishReason,
     }
   }
 
@@ -262,10 +271,10 @@ export class LLMProxyService {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } }
       yield {
         type: 'error',
-        data: { error: error.error?.message || 'AI 服务暂时不可用' },
+        data: { error: errorData.error?.message || 'AI 服务暂时不可用' },
       }
       return
     }
@@ -412,7 +421,7 @@ export class LLMProxyService {
         return { healthy: false, latency: Date.now() - start }
       }
 
-      const data = await response.json()
+      const data = await response.json() as { data?: Array<unknown> }
       return {
         healthy: true,
         latency: Date.now() - start,

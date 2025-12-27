@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useState } from 'react'
-import { cn } from '@/lib/utils'
-import { useModeStore, MODE_CONFIGS, WorkMode } from '@/store/mode'
-import { useAIStore } from '@/store/ai'
-import { SIMPLE_PRESETS, AI_MODELS } from '@/types/ai'
 import { ChevronDown } from 'lucide-react'
+import React, { useState } from 'react'
+
+import { cn } from '@/lib/utils'
+import { useAIStore } from '@/store/ai'
+import type { WorkMode } from '@/store/mode';
+import { MODE_CONFIGS, useModeStore } from '@/store/mode'
+import { AI_MODELS,SIMPLE_PRESETS } from '@/types/ai'
 
 /**
  * 模式选择器组件
@@ -33,7 +35,7 @@ export function ModeSelector() {
     <div className="relative p-3 border-b border-border">
       {/* 当前模式按钮 */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => { setIsOpen(!isOpen); }}
         className={cn(
           'w-full flex items-center gap-2 px-3 py-2.5',
           'bg-muted/50 hover:bg-muted',
@@ -67,7 +69,7 @@ export function ModeSelector() {
           {/* 背景遮罩 */}
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
+            onClick={() => { setIsOpen(false); }}
           />
 
           {/* 模式列表 */}
@@ -75,7 +77,7 @@ export function ModeSelector() {
             {Object.values(MODE_CONFIGS).map((modeItem) => (
               <button
                 key={modeItem.id}
-                onClick={() => handleSelect(modeItem.id)}
+                onClick={() => { handleSelect(modeItem.id); }}
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-3',
                   'hover:bg-muted transition-colors text-left',

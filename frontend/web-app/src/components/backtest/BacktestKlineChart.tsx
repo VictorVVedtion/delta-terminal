@@ -1,21 +1,22 @@
 'use client'
 
-import React, { useEffect, useRef, useCallback } from 'react'
 import {
-  createChart,
+  type CandlestickData,
   CandlestickSeries,
-  HistogramSeries,
   ColorType,
+  createChart,
   CrosshairMode,
+  type HistogramData,
+  HistogramSeries,
   type IChartApi,
   type ISeriesApi,
-  type CandlestickData,
-  type HistogramData,
-  type Time,
   type SeriesMarker,
+  type Time,
 } from 'lightweight-charts'
-import type { ChartData, ChartSignal } from '@/types/insight'
+import React, { useCallback,useEffect, useRef } from 'react'
+
 import { cn } from '@/lib/utils'
+import type { ChartData, ChartSignal } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -71,7 +72,7 @@ function formatSignalMarkers(signals: ChartSignal[]): SeriesMarker<Time>[] {
   })
 }
 
-function formatCandlestickData(candles: ChartData['candles']): CandlestickData<Time>[] {
+function formatCandlestickData(candles: ChartData['candles']): CandlestickData[] {
   return candles.map((candle) => ({
     time: (candle.timestamp / 1000) as Time, // Convert to seconds
     open: candle.open,
@@ -81,7 +82,7 @@ function formatCandlestickData(candles: ChartData['candles']): CandlestickData<T
   }))
 }
 
-function formatVolumeData(candles: ChartData['candles']): HistogramData<Time>[] {
+function formatVolumeData(candles: ChartData['candles']): HistogramData[] {
   return candles.map((candle) => ({
     time: (candle.timestamp / 1000) as Time,
     value: candle.volume,
@@ -244,7 +245,7 @@ export function BacktestKlineChart({
     }
 
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => { window.removeEventListener('resize', handleResize); }
   }, [])
 
   // Initialize and update chart

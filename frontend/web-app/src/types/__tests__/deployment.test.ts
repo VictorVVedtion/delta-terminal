@@ -5,10 +5,10 @@
 
 import {
   DeploymentError,
+  type DeploymentErrorCode,
+  type DeploymentResult,
   isDeploymentError,
   isDeploymentSuccess,
-  type DeploymentResult,
-  type DeploymentErrorCode,
 } from '../deployment'
 
 describe('DeploymentError', () => {
@@ -28,7 +28,7 @@ describe('DeploymentError', () => {
   })
 
   describe('toUserMessage', () => {
-    const testCases: Array<{ code: DeploymentErrorCode; expected: string }> = [
+    const testCases: { code: DeploymentErrorCode; expected: string }[] = [
       { code: 'BACKTEST_NOT_PASSED', expected: '策略回测未通过，无法部署' },
       { code: 'PAPER_TIME_INSUFFICIENT', expected: 'Paper 模式运行时间不足 7 天，无法升级到 Live' },
       { code: 'INVALID_TOKEN', expected: '确认令牌无效，请重新确认' },

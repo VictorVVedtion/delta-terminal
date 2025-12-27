@@ -1,10 +1,11 @@
 'use client'
 
+import { TrendingDown,TrendingUp } from 'lucide-react'
 import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { TrendingUp, TrendingDown } from 'lucide-react'
 
 interface TradingViewProps {
   symbol: string

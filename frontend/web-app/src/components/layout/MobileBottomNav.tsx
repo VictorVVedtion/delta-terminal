@@ -1,17 +1,18 @@
 'use client'
 
-import React from 'react'
+import {
+  BarChart3,
+  Bot,
+  MessageSquare,
+  Settings,
+  Shield,
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import React from 'react'
+
 import { cn } from '@/lib/utils'
-import { useModeStore, MODE_CONFIGS } from '@/store/mode'
-import {
-  MessageSquare,
-  Bot,
-  BarChart3,
-  Shield,
-  Settings,
-} from 'lucide-react'
+import { MODE_CONFIGS,useModeStore } from '@/store/mode'
 
 /**
  * 移动端底部导航组件

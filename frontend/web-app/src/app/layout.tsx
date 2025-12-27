@@ -1,14 +1,14 @@
-import type { Metadata } from 'next';
-import { GeistSans } from 'geist/font/sans';
+import './globals.css';
+
 import { GeistMono } from 'geist/font/mono';
+import { GeistSans } from 'geist/font/sans';
+import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 
-import './globals.css';
-import { OnboardingTour } from '@/components/system/OnboardingTour';
-import { Web3Provider } from '@/providers/Web3Provider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { WebSocketProvider } from '@/components/providers/WebSocketProvider';
+import { OnboardingTour } from '@/components/system/OnboardingTour';
 
 export const metadata: Metadata = {
   title: {
@@ -52,26 +52,24 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Web3Provider>
-          <AuthProvider>
-            <ThemeProvider>
-              <WebSocketProvider>
-                {children}
-                {/* Story 5.1: Toast 通知容器 */}
-                <Toaster
-                  position="top-right"
-                  richColors
-                  closeButton
-                  toastOptions={{
-                    className: 'font-sans',
-                  }}
-                />
-                {/* Story 10.1: 新手引导 */}
-                <OnboardingTour />
-              </WebSocketProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </Web3Provider>
+        <AuthProvider>
+          <ThemeProvider>
+            <WebSocketProvider>
+              {children}
+              {/* Story 5.1: Toast 通知容器 */}
+              <Toaster
+                position="top-right"
+                richColors
+                closeButton
+                toastOptions={{
+                  className: 'font-sans',
+                }}
+              />
+              {/* Story 10.1: 新手引导 */}
+              <OnboardingTour />
+            </WebSocketProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

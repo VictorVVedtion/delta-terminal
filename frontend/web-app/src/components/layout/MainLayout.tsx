@@ -1,8 +1,10 @@
 'use client'
 
 import React from 'react'
-import { Header } from './Header'
+
 import { FunctionalSidebar } from '@/components/sidebar'
+
+import { Header } from './Header'
 import { MobileBottomNav } from './MobileBottomNav'
 
 /**

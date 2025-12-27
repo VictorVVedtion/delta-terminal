@@ -5,7 +5,7 @@
  * 提供常用策略模板，用户可一键应用并调整参数
  */
 
-import type { InsightParam, InsightData } from '@/types/insight'
+import type { InsightData,InsightParam } from '@/types/insight'
 
 // =============================================================================
 // Types

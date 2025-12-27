@@ -12,24 +12,25 @@
  * - Quick actions for risk reduction
  */
 
-import React from 'react'
 import {
   AlertTriangle,
+  DollarSign,
+  Percent,
   ShieldAlert,
   ShieldCheck,
   Skull,
+  TrendingDown,
   Volume2,
   VolumeX,
-  TrendingDown,
-  DollarSign,
-  Percent,
   Zap,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useSafetyStore, selectMarginStatus, selectSafetyConfig } from '@/store/safety'
-import type { MarginAlertLevel, MarginStatus } from '@/types/safety'
+import { selectMarginStatus, selectSafetyConfig,useSafetyStore } from '@/store/safety'
+import type { MarginAlertLevel } from '@/types/safety'
 
 // =============================================================================
 // Type Definitions
@@ -414,7 +415,9 @@ function playAlertSound() {
   if (typeof window === 'undefined') return
 
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const audioContext = new AudioContextClass()
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
 
@@ -432,7 +435,7 @@ function playAlertSound() {
 
     // Clean up
     setTimeout(() => {
-      audioContext.close()
+      void audioContext.close()
     }, 1000)
   } catch {
     // Silently fail if audio is not available

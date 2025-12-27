@@ -1,20 +1,21 @@
 'use client'
 
-import React from 'react'
+import {
+  BarChart3,
+  BookOpen,
+  Bot,
+  History,
+  LayoutDashboard,
+  LifeBuoy,
+  Settings,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import React from 'react'
+
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard,
-  TrendingUp,
-  Bot,
-  BarChart3,
-  Wallet,
-  History,
-  Settings,
-  BookOpen,
-  LifeBuoy,
-} from 'lucide-react'
 
 const navigationItems = [
   {

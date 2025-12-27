@@ -5,7 +5,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import { AIUserStatus } from '@/types/ai'
+
+import type { AIUserStatus } from '@/types/ai'
 
 // GET /api/ai/status - 获取 AI 服务状态
 export async function GET() {

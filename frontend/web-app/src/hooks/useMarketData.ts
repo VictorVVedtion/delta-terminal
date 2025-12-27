@@ -3,10 +3,11 @@
  * 处理实时市场数据订阅和更新
  */
 
-import { useEffect, useState, useCallback } from 'react'
-import { useMarketStore } from '@/store'
-import { wsClient } from '@/lib/websocket'
+import { useCallback,useEffect, useState } from 'react'
+
 import { apiClient } from '@/lib/api'
+import { wsClient } from '@/lib/websocket'
+import { useMarketStore } from '@/store'
 
 interface MarketData {
   symbol: string
@@ -19,8 +20,8 @@ interface MarketData {
 }
 
 interface OrderBookData {
-  asks: Array<{ price: number; amount: number; total: number }>
-  bids: Array<{ price: number; amount: number; total: number }>
+  asks: { price: number; amount: number; total: number }[]
+  bids: { price: number; amount: number; total: number }[]
   spread: number
   spreadPercent: number
 }
@@ -45,7 +46,7 @@ export function useMarketData(symbol: string) {
       setLoading(true)
       const data = await apiClient.getMarketData(symbol) as MarketData
       setMarketData(data)
-      updateMarket(symbol, data as MarketData)
+      updateMarket(symbol, data)
       setError(null)
     } catch (err) {
       setError(err as Error)
@@ -56,7 +57,7 @@ export function useMarketData(symbol: string) {
 
   // 订阅实时更新
   useEffect(() => {
-    fetchMarketData()
+    void fetchMarketData()
 
     const handleTickerUpdate = (data: any) => {
       setMarketData(prev => ({ ...prev, ...data }))
@@ -73,7 +74,7 @@ export function useMarketData(symbol: string) {
   return { marketData, loading, error, refetch: fetchMarketData }
 }
 
-export function useOrderBook(symbol: string, limit: number = 20) {
+export function useOrderBook(symbol: string, limit = 20) {
   const [orderBook, setOrderBook] = useState<OrderBookData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -92,10 +93,10 @@ export function useOrderBook(symbol: string, limit: number = 20) {
   }, [symbol, limit])
 
   useEffect(() => {
-    fetchOrderBook()
+    void fetchOrderBook()
 
-    const handleOrderBookUpdate = (data: any) => {
-      setOrderBook(data)
+    const handleOrderBookUpdate = (data: unknown) => {
+      setOrderBook(data as OrderBookData)
     }
 
     wsClient.subscribeOrderBook(symbol, handleOrderBookUpdate)
@@ -112,7 +113,7 @@ export function useOrderBook(symbol: string, limit: number = 20) {
   return { orderBook, loading, error, refetch: fetchOrderBook }
 }
 
-export function useTrades(symbol: string, limit: number = 50) {
+export function useTrades(symbol: string, limit = 50) {
   const [trades, setTrades] = useState<TradeData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -131,7 +132,7 @@ export function useTrades(symbol: string, limit: number = 50) {
   }, [symbol, limit])
 
   useEffect(() => {
-    fetchTrades()
+    void fetchTrades()
 
     const handleTradeUpdate = (data: TradeData) => {
       setTrades(prev => [data, ...prev.slice(0, limit - 1)])

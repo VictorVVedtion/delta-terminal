@@ -1,19 +1,20 @@
 'use client'
 
+import {
+  ArrowDown,
+  ArrowUp,
+  BookmarkPlus,
+  ExternalLink,
+  Minus,
+  Share2,
+} from 'lucide-react'
 import React from 'react'
-import { cn } from '@/lib/utils'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  ExternalLink,
-  BookmarkPlus,
-  Share2,
-} from 'lucide-react'
-import type { ResearchReport, ResearchSection, ResearchRecommendation } from '@/types/research'
+import { cn } from '@/lib/utils'
+import type { ResearchRecommendation,ResearchReport, ResearchSection } from '@/types/research'
 
 /**
  * ResearchReportCard - 研究报告展示组件

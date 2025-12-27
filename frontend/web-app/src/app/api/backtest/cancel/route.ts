@@ -4,7 +4,8 @@
  * 取消正在运行的回测任务
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 
 // 实际环境会维护任务状态，这里简化处理
 const runningJobs = new Map<string, boolean>()

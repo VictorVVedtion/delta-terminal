@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -40,7 +41,7 @@ export function ChatLayout({
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [canvasOpen, onCanvasClose])
 
   // Prevent body scroll when canvas is open on mobile

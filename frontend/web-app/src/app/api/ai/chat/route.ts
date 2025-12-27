@@ -6,11 +6,29 @@
  * 2. 直接调用模式 - 直接调用 OpenRouter API (当后端不可用时的降级方案)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { AIRequest, AIResponse, AI_MODELS, SIMPLE_PRESETS } from '@/types/ai'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 
-const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+import type { AIRequest, AIResponse} from '@/types/ai';
+import { AI_MODELS, SIMPLE_PRESETS } from '@/types/ai'
+
+// Type definitions for API responses
+interface OpenRouterResponse {
+  id?: string
+  choices?: {
+    message?: { content?: string }
+    finish_reason?: string
+  }[]
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+  }
+  error?: { message?: string }
+}
+
+const _OPENROUTER_API_URL = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/api/v1'
+const _OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 
 // 使用前端默认预设的模型作为后备默认值
 const DEFAULT_MODEL = SIMPLE_PRESETS.balanced.defaultModel
@@ -29,7 +47,7 @@ async function proxyToOrchestrator(
 
   // 转发 JWT token 进行身份验证
   if (authHeader) {
-    headers['Authorization'] = authHeader
+    headers.Authorization = authHeader
   }
 
   const orchestratorResponse = await fetch(`${orchestratorUrl}/api/ai/chat`, {
@@ -50,7 +68,7 @@ async function proxyToOrchestrator(
     throw new Error(`Orchestrator error: ${orchestratorResponse.status} - ${errorText}`)
   }
 
-  const data = await orchestratorResponse.json()
+  const data = await orchestratorResponse.json() as AIResponse
   return NextResponse.json(data)
 }
 
@@ -77,11 +95,9 @@ export async function POST(request: NextRequest) {
   // ==========================================================================
   if (orchestratorUrl) {
     try {
-      console.log('[AI Chat] Using AI Orchestrator backend:', orchestratorUrl)
       const authHeader = request.headers.get('Authorization')
       return await proxyToOrchestrator(orchestratorUrl, body, authHeader)
-    } catch (error) {
-      console.warn('[AI Chat] Orchestrator failed, falling back to direct OpenRouter:', error)
+    } catch {
       // 降级到直接调用模式
     }
   }
@@ -92,7 +108,6 @@ export async function POST(request: NextRequest) {
   try {
     // 检查平台 API Key 配置
     if (!apiKey || apiKey === 'your-openrouter-api-key-here') {
-      console.error('OpenRouter API Key not configured')
       return NextResponse.json(
         { error: '服务暂不可用，请稍后再试' },
         { status: 503 }
@@ -130,15 +145,14 @@ export async function POST(request: NextRequest) {
     })
 
     if (!openRouterResponse.ok) {
-      const errorData = await openRouterResponse.json().catch(() => ({}))
-      console.error('OpenRouter API error:', errorData)
+      const errorData = await openRouterResponse.json().catch(() => ({})) as OpenRouterResponse
       return NextResponse.json(
-        { error: errorData.error?.message || 'AI 服务暂时不可用' },
+        { error: errorData.error?.message ?? 'AI 服务暂时不可用' },
         { status: openRouterResponse.status }
       )
     }
 
-    const data = await openRouterResponse.json()
+    const data = await openRouterResponse.json() as OpenRouterResponse
     const latency = Date.now() - startTime
 
     // 计算成本（仅用于统计）
@@ -165,7 +179,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('AI chat error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'AI 服务异常' },
       { status: 500 }

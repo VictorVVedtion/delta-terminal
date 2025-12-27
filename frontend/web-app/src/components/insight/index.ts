@@ -4,28 +4,28 @@
  * Components for rendering AI-generated InsightData in the chat interface
  */
 
+export { ClarificationCard } from './ClarificationCard'
 export { InsightCard, default as InsightCardDefault } from './InsightCard'
 export { InsightMessage, MultiInsightMessage } from './InsightMessage'
-export { ClarificationCard } from './ClarificationCard'
 
 // Re-export types
 export type {
-  InsightData,
-  InsightParam,
-  InsightType,
-  InsightCardProps,
-  InsightCardStatus,
-  ParamType,
-  ParamValue,
-  ParamConfig,
-  InsightImpact,
-  InsightEvidence,
+  ClarificationAnswer,
+  ClarificationCategory,
   // Clarification types (EPIC-010 Story 10.2)
   ClarificationInsight,
   ClarificationOption,
-  ClarificationAnswer,
-  ClarificationCategory,
   ClarificationOptionType,
+  InsightCardProps,
+  InsightCardStatus,
+  InsightData,
+  InsightEvidence,
+  InsightImpact,
+  InsightParam,
+  InsightType,
+  ParamConfig,
+  ParamType,
+  ParamValue,
 } from '@/types/insight'
 
 // Re-export type guards

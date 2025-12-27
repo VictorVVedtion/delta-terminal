@@ -7,16 +7,17 @@
 'use client'
 
 import { useState } from 'react'
+
+import { cn } from '@/lib/utils'
 import { useAIStore } from '@/store/ai'
+import type {
+  AIModel,
+  AITaskType,
+  SimplePreset} from '@/types/ai';
 import {
   AI_MODELS,
   SIMPLE_PRESETS,
-  TASK_TYPES,
-  AIModel,
-  AITaskType,
-  SimplePreset
-} from '@/types/ai'
-import { cn } from '@/lib/utils'
+  TASK_TYPES} from '@/types/ai'
 
 // ============================================================================
 // Types
@@ -128,7 +129,7 @@ function SimpleMode({ currentPreset, onPresetChange }: SimpleModeProps) {
           return (
             <button
               key={preset.preset}
-              onClick={() => onPresetChange(preset.preset)}
+              onClick={() => { onPresetChange(preset.preset); }}
               className={cn(
                 'p-4 rounded-lg border text-left transition-all',
                 isSelected
@@ -191,7 +192,7 @@ function AdvancedMode({
           >
             {/* 任务头部 */}
             <button
-              onClick={() => onExpandTask(isExpanded ? null : task.type)}
+              onClick={() => { onExpandTask(isExpanded ? null : task.type); }}
               className="w-full p-4 flex items-center justify-between hover:bg-accent transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -232,7 +233,7 @@ function AdvancedMode({
                       model={model}
                       isSelected={currentModel === model.id}
                       isRecommended={task.recommendedModel === model.id}
-                      onSelect={() => onTaskModelChange(task.type, model.id)}
+                      onSelect={() => { onTaskModelChange(task.type, model.id); }}
                     />
                   ))}
                 </div>

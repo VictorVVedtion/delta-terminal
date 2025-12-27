@@ -6,10 +6,10 @@
 
 import type {
   AllMidsResponse,
-  HyperliquidRequest,
   HyperliquidError,
-  PriceData,
+  HyperliquidRequest,
   MarketDataCache,
+  PriceData,
 } from '@/types/hyperliquid';
 
 /**
@@ -41,7 +41,7 @@ async function fetchWithTimeout(
   timeout: number = DEFAULT_TIMEOUT
 ): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const timeoutId = setTimeout(() => { controller.abort(); }, timeout);
 
   try {
     const response = await fetch(url, {

@@ -8,10 +8,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePaperTrading } from '@/hooks/usePaperTrading'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { usePaperTrading } from '@/hooks/usePaperTrading'
 
 interface PaperTradingExampleProps {
   agentId: string
@@ -49,7 +50,7 @@ export function PaperTradingExample({ agentId }: PaperTradingExampleProps) {
         return Math.max(45000, Math.min(55000, prev + change))
       })
     }, 2000)
-    return () => clearInterval(interval)
+    return () => { clearInterval(interval); }
   }, [])
 
   // 更新持仓价格

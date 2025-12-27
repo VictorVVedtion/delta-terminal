@@ -4,8 +4,33 @@
  * 获取 OpenRouter 使用量统计
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
+
 import { AI_MODELS } from '@/types/ai'
+
+// Type definitions for OpenRouter API responses
+interface OpenRouterKeyResponse {
+  data?: {
+    usage?: number
+    limit?: number | null
+    rate_limit?: {
+      requests?: number
+      interval?: string
+    }
+  }
+}
+
+interface OpenRouterStatsResponse {
+  data?: unknown
+}
+
+interface CostEstimateBody {
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  callsPerDay?: number
+}
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1'
 
@@ -39,11 +64,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const keyData = await keyResponse.json()
+    const keyData = await keyResponse.json() as OpenRouterKeyResponse
 
     // 获取模型使用统计（如果可用）
     // 注意：OpenRouter 的统计 API 可能需要额外权限
-    let generationStats = null
+    let generationStats: OpenRouterStatsResponse | null = null
     try {
       const statsResponse = await fetch(`${OPENROUTER_API_URL}/generation/stats`, {
         method: 'GET',
@@ -54,31 +79,31 @@ export async function GET(request: NextRequest) {
       })
 
       if (statsResponse.ok) {
-        generationStats = await statsResponse.json()
+        generationStats = await statsResponse.json() as OpenRouterStatsResponse
       }
     } catch {
       // 统计 API 可能不可用，忽略错误
     }
 
+    const usage = keyData.data?.usage ?? 0
+    const limit = keyData.data?.limit ?? null
+
     return NextResponse.json({
       success: true,
       data: {
         account: {
-          creditsUsed: keyData.data?.usage || 0,
-          creditsLimit: keyData.data?.limit || null,
-          remaining: keyData.data?.limit
-            ? keyData.data.limit - (keyData.data.usage || 0)
-            : null
+          creditsUsed: usage,
+          creditsLimit: limit,
+          remaining: limit !== null ? limit - usage : null
         },
         rateLimit: {
-          requests: keyData.data?.rate_limit?.requests || null,
-          interval: keyData.data?.rate_limit?.interval || null
+          requests: keyData.data?.rate_limit?.requests ?? null,
+          interval: keyData.data?.rate_limit?.interval ?? null
         },
-        generationStats: generationStats?.data || null
+        generationStats: generationStats?.data ?? null
       }
     })
-  } catch (error) {
-    console.error('Error fetching usage:', error)
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch usage data' },
       { status: 500 }
@@ -89,17 +114,16 @@ export async function GET(request: NextRequest) {
 // POST /api/ai/usage/estimate - 估算成本
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const body = await request.json() as CostEstimateBody
     const { model, inputTokens, outputTokens, callsPerDay } = body
 
-    if (!model || !AI_MODELS[model]) {
+    const modelInfo = model ? AI_MODELS[model] : undefined
+    if (!model || !modelInfo) {
       return NextResponse.json(
         { success: false, error: 'Invalid or missing model' },
         { status: 400 }
       )
     }
-
-    const modelInfo = AI_MODELS[model]
     const input = inputTokens || 500
     const output = outputTokens || 300
     const calls = callsPerDay || 100
@@ -145,8 +169,7 @@ export async function POST(request: NextRequest) {
           .sort((a, b) => a.costPerCall - b.costPerCall)
       }
     })
-  } catch (error) {
-    console.error('Error estimating cost:', error)
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Failed to estimate cost' },
       { status: 500 }

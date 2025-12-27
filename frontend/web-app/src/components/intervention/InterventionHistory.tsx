@@ -7,24 +7,25 @@
  * 展示所有人工干预操作记录
  */
 
-import React from 'react'
 import {
-  History,
-  Download,
-  Settings2,
   AlertTriangle,
   ChevronRight,
-  X,
   Clock,
+  Download,
+  History,
+  Settings2,
   User,
+  X,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { useInterventionStore, selectRecentRecords } from '@/store/intervention'
+import { selectRecentRecords,useInterventionStore } from '@/store/intervention'
 import type { InterventionRecord } from '@/types/intervention'
-import { formatInterventionType, formatEmergencyAction } from '@/types/intervention'
+import { formatEmergencyAction,formatInterventionType } from '@/types/intervention'
 
 // =============================================================================
 // Types
@@ -237,7 +238,7 @@ export function InterventionHistory({
               {records.map((record) => (
                 <button
                   key={record.id}
-                  onClick={() => setSelectedRecord(record)}
+                  onClick={() => { setSelectedRecord(record); }}
                   className={cn(
                     'w-full p-3 rounded-lg border text-left',
                     'bg-card hover:bg-muted/50 transition-colors',
@@ -311,7 +312,7 @@ export function InterventionHistory({
         <RecordDetailModal
           record={selectedRecord}
           isOpen={!!selectedRecord}
-          onClose={() => setSelectedRecord(null)}
+          onClose={() => { setSelectedRecord(null); }}
         />
       )}
     </>

@@ -7,5 +7,5 @@
  * - VersionCompare - 版本对比
  */
 
-export { VersionList } from './VersionList'
 export { VersionCompare } from './VersionCompare'
+export { VersionList } from './VersionList'

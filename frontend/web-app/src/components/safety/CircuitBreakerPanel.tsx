@@ -7,27 +7,28 @@
  * 展示熔断器状态、触发原因、恢复倒计时，并提供手动重置功能
  */
 
-import React from 'react'
 import {
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  History,
+  RotateCcw,
   Shield,
   ShieldCheck,
   ShieldOff,
-  Clock,
   TrendingDown,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp,
-  History,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
-  useSafetyStore,
   selectCircuitBreakerStatus,
   selectSafetyConfig,
+  useSafetyStore,
 } from '@/store/safety'
 import type { CircuitBreakerTrigger } from '@/types/safety'
 
@@ -110,7 +111,7 @@ export function CircuitBreakerPanel({
         }
       }, 1000)
 
-      return () => clearInterval(interval)
+      return () => { clearInterval(interval); }
     } else {
       setRemainingTime(null)
     }
@@ -240,7 +241,7 @@ export function CircuitBreakerPanel({
     >
       <CardHeader
         className="cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => { setIsExpanded(!isExpanded); }}
       >
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">

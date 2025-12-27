@@ -1,11 +1,13 @@
 'use client'
 
 import React from 'react'
+
 import { cn } from '@/lib/utils'
 import type { InsightParam, ParamValue } from '@/types/insight'
-import { ParamSlider } from './ParamSlider'
+
 import { HeatmapSlider } from './HeatmapSlider'
 import { LogicBuilder } from './LogicBuilder'
+import { ParamSlider } from './ParamSlider'
 
 // =============================================================================
 // Types
@@ -177,7 +179,7 @@ function NumberControl({
     const rawValue = e.target.value
     if (rawValue === '' || rawValue === '-') return
 
-    let newValue = parseFloat(rawValue)
+    const newValue = parseFloat(rawValue)
     if (isNaN(newValue)) return
 
     onChange(newValue)
@@ -255,7 +257,7 @@ function ToggleControl({
         </div>
 
         <button
-          onClick={() => onChange(!value)}
+          onClick={() => { onChange(!value); }}
           disabled={disabled}
           className={cn(
             'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
@@ -319,7 +321,7 @@ function ButtonGroupControl({
         {options.map(opt => (
           <button
             key={String(opt.value)}
-            onClick={() => onChange(String(opt.value))}
+            onClick={() => { onChange(String(opt.value)); }}
             disabled={disabled}
             className={cn(
               'flex-1 px-3 py-2 text-sm rounded-md transition-colors',
@@ -381,7 +383,7 @@ function SelectControl({
 
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); }}
         disabled={disabled}
         className={cn(
           'w-full h-9 px-3 rounded-md border bg-background text-sm',

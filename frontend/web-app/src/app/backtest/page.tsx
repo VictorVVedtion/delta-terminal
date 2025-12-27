@@ -1,14 +1,15 @@
 'use client'
 
-import React from 'react'
-import { MainLayout } from '@/components/layout/MainLayout'
-import { BacktestForm } from '@/components/backtest/BacktestForm'
-import { BacktestResults } from '@/components/backtest/BacktestResults'
-import { BacktestHistory } from '@/components/backtest/BacktestHistory'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { FlaskConical, History, LineChart } from 'lucide-react'
-import type { BacktestResult, BacktestConfig, EquityPoint, BacktestTrade } from '@/types/backtest'
+import React from 'react'
+
+import { BacktestForm } from '@/components/backtest/BacktestForm'
+import { BacktestHistory } from '@/components/backtest/BacktestHistory'
+import { BacktestResults } from '@/components/backtest/BacktestResults'
+import { MainLayout } from '@/components/layout/MainLayout'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent,TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { BacktestConfig, BacktestResult, BacktestTrade,EquityPoint } from '@/types/backtest'
 
 // =============================================================================
 // Backtest Page
@@ -167,8 +168,8 @@ export default function BacktestPage() {
           <TabsContent value="history" className="mt-6">
             <BacktestHistory
               items={historyItems}
-              onSelect={(id) => console.log('Selected backtest:', id)}
-              onDelete={(id) => console.log('Delete backtest:', id)}
+              onSelect={(id) => { console.log('Selected backtest:', id); }}
+              onDelete={(id) => { console.log('Delete backtest:', id); }}
             />
           </TabsContent>
         </Tabs>

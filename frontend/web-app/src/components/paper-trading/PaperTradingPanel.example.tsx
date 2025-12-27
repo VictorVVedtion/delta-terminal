@@ -7,7 +7,9 @@
 'use client'
 
 import React, { useState } from 'react'
+
 import { Button } from '@/components/ui/button'
+
 import { PaperTradingPanel } from './PaperTradingPanel'
 
 export function PaperTradingPanelExample() {
@@ -17,13 +19,13 @@ export function PaperTradingPanelExample() {
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Paper Trading Panel 示例</h1>
 
-      <Button onClick={() => setIsPanelOpen(true)}>
+      <Button onClick={() => { setIsPanelOpen(true); }}>
         打开 Paper Trading 面板
       </Button>
 
       <PaperTradingPanel
         isOpen={isPanelOpen}
-        onClose={() => setIsPanelOpen(false)}
+        onClose={() => { setIsPanelOpen(false); }}
         strategyId="strategy_test_123"
         strategyName="趋势跟踪策略"
         symbol="BTC/USDT"

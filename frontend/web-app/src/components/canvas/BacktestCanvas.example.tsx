@@ -7,8 +7,11 @@
 'use client'
 
 import React from 'react'
-import { BacktestCanvas, BacktestMetrics, BacktestTrade, EquityCurvePoint } from './BacktestCanvas'
-import { InsightData } from '@/types/insight'
+
+import type { InsightData } from '@/types/insight'
+
+import type { BacktestMetrics, BacktestTrade, EquityCurvePoint } from './BacktestCanvas';
+import { BacktestCanvas } from './BacktestCanvas'
 
 // 示例数据
 const exampleInsight: InsightData = {
@@ -86,7 +89,7 @@ export function BacktestCanvasExample() {
       const timer = setTimeout(() => {
         setProgress((prev) => Math.min(prev + 10, 100))
       }, 500)
-      return () => clearTimeout(timer)
+      return () => { clearTimeout(timer); }
     }
     if (progress >= 100 && status === 'running') {
       setStatus('completed')
@@ -128,7 +131,7 @@ export function BacktestCanvasExample() {
         <BacktestCanvas
           insight={exampleInsight}
           isOpen={isOpen}
-          onClose={() => setIsOpen(false)}
+          onClose={() => { setIsOpen(false); }}
           onPause={handlePause}
           onResume={handleResume}
           onStop={handleStop}

@@ -1,14 +1,15 @@
 'use client'
 
+import { GripVertical,Plus, X } from 'lucide-react'
 import React from 'react'
+
 import { cn } from '@/lib/utils'
 import type {
+  ComparisonOperator,
   InsightParam,
   LogicCondition,
   LogicConnector,
-  ComparisonOperator,
 } from '@/types/insight'
-import { X, Plus, GripVertical } from 'lucide-react'
 
 // =============================================================================
 // Types
@@ -161,7 +162,7 @@ function ConditionCard({
         {/* Indicator Select with Categories */}
         <select
           value={condition.indicator}
-          onChange={(e) => onUpdate(condition.id, { indicator: e.target.value })}
+          onChange={(e) => { onUpdate(condition.id, { indicator: e.target.value }); }}
           disabled={disabled}
           className={cn(
             'flex-1 h-9 px-3 rounded-md border bg-background text-sm',
@@ -214,7 +215,7 @@ function ConditionCard({
         <select
           value={condition.operator}
           onChange={(e) =>
-            onUpdate(condition.id, { operator: e.target.value as ComparisonOperator })
+            { onUpdate(condition.id, { operator: e.target.value as ComparisonOperator }); }
           }
           disabled={disabled}
           className={cn(
@@ -254,7 +255,7 @@ function ConditionCard({
         {/* Remove Button */}
         <button
           type="button"
-          onClick={() => onRemove(condition.id)}
+          onClick={() => { onRemove(condition.id); }}
           disabled={disabled || total === 1}
           className={cn(
             'p-1.5 rounded-md text-muted-foreground',

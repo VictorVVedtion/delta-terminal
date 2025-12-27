@@ -1,7 +1,8 @@
 'use client'
 
+import { AlertTriangle, Home,RefreshCw } from 'lucide-react'
 import { useEffect } from 'react'
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 
 interface ErrorPageProps {

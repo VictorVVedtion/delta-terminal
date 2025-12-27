@@ -7,11 +7,14 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAIStore } from '@/store/ai'
-import { ModelSelector } from './ModelSelector'
-import { AIUserStatus, SUBSCRIPTION_PLANS } from '@/types/ai'
+import { useEffect,useState } from 'react'
+
 import { cn } from '@/lib/utils'
+import { useAIStore } from '@/store/ai'
+import type { AIUserStatus} from '@/types/ai';
+import { SUBSCRIPTION_PLANS } from '@/types/ai'
+
+import { ModelSelector } from './ModelSelector'
 
 // ============================================================================
 // Types
@@ -42,7 +45,7 @@ export function AIConfigPanel({ className, onClose }: AIConfigPanelProps) {
 
   // 加载用户状态
   useEffect(() => {
-    refreshUserStatus()
+    void refreshUserStatus()
   }, [refreshUserStatus])
 
   return (
@@ -70,7 +73,7 @@ export function AIConfigPanel({ className, onClose }: AIConfigPanelProps) {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
+            onClick={() => { setActiveTab(tab.id as TabType); }}
             className={cn(
               'flex-1 px-4 py-3 text-sm font-medium transition-colors',
               activeTab === tab.id
@@ -239,21 +242,21 @@ function SettingsTab({ settings, onSettingsChange, onReset }: SettingsTabProps) 
           label="流式输出"
           description="实时显示 AI 生成的内容"
           checked={settings.streaming}
-          onChange={(checked) => onSettingsChange({ streaming: checked })}
+          onChange={(checked) => { onSettingsChange({ streaming: checked }); }}
         />
 
         <ToggleSetting
           label="显示思考过程"
           description="展示 AI 的推理步骤（部分模型支持）"
           checked={settings.showThinking}
-          onChange={(checked) => onSettingsChange({ showThinking: checked })}
+          onChange={(checked) => { onSettingsChange({ showThinking: checked }); }}
         />
 
         <ToggleSetting
           label="自动路由"
           description="根据任务自动选择最佳模型"
           checked={settings.autoRoute}
-          onChange={(checked) => onSettingsChange({ autoRoute: checked })}
+          onChange={(checked) => { onSettingsChange({ autoRoute: checked }); }}
         />
       </div>
 
@@ -268,7 +271,7 @@ function SettingsTab({ settings, onSettingsChange, onReset }: SettingsTabProps) 
           min={256}
           max={32768}
           step={256}
-          onChange={(value) => onSettingsChange({ maxTokens: value })}
+          onChange={(value) => { onSettingsChange({ maxTokens: value }); }}
           formatValue={(v) => `${v} tokens`}
         />
 
@@ -279,7 +282,7 @@ function SettingsTab({ settings, onSettingsChange, onReset }: SettingsTabProps) 
           min={0}
           max={2}
           step={0.1}
-          onChange={(value) => onSettingsChange({ temperature: value })}
+          onChange={(value) => { onSettingsChange({ temperature: value }); }}
           formatValue={(v) => v.toFixed(1)}
         />
       </div>
@@ -385,7 +388,7 @@ function ToggleSetting({ label, description, checked, onChange }: ToggleSettingP
         <div className="text-xs text-muted-foreground">{description}</div>
       </div>
       <button
-        onClick={() => onChange(!checked)}
+        onClick={() => { onChange(!checked); }}
         className={cn(
           'relative w-11 h-6 rounded-full transition-colors',
           checked ? 'bg-primary' : 'bg-secondary'
@@ -438,7 +441,7 @@ function SliderSetting({
         min={min}
         max={max}
         step={step}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => { onChange(Number(e.target.value)); }}
         className="w-full h-2 rounded-full bg-secondary appearance-none cursor-pointer"
       />
     </div>

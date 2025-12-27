@@ -5,12 +5,13 @@
  * 提供分析数据获取的 hooks，用于支持各种高级分析功能
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { apiClient } from '@/lib/api'
+import { useCallback,useEffect, useState } from 'react'
+
+import { apiClient as _apiClient } from '@/lib/api'
 import type {
-  SensitivityInsightData,
   AttributionInsightData,
   ComparisonInsightData,
+  SensitivityInsightData,
 } from '@/types/insight'
 
 // =============================================================================

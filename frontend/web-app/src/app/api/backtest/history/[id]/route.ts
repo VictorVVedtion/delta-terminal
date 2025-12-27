@@ -4,7 +4,8 @@
  * 获取历史回测详情
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 
 // 实际环境会从数据库读取，这里返回模拟数据
 export async function GET(

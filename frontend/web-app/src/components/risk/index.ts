@@ -10,9 +10,9 @@ export { KillSwitch } from '@/components/KillSwitch'
 
 // Sentinel Alerts
 export {
-  SentinelAlerts,
-  type SentinelAlertsProps,
-  type SentinelAlert,
   type AlertSeverity,
   type AlertType,
+  type SentinelAlert,
+  SentinelAlerts,
+  type SentinelAlertsProps,
 } from './SentinelAlerts'

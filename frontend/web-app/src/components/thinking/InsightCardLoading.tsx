@@ -1,11 +1,13 @@
 'use client'
 
 import React from 'react'
-import { cn } from '@/lib/utils'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
+import type { InsightLoadingPhase, InsightLoadingState, ThinkingProcess } from '@/types/thinking'
+
 import { ThinkingIndicator } from './ThinkingIndicator'
-import type { InsightLoadingState, InsightLoadingPhase, ThinkingProcess } from '@/types/thinking'
 
 // =============================================================================
 // Props
@@ -295,7 +297,7 @@ export function useInsightLoadingState(
       setPhase('thinking')
     }, skeletonDuration)
 
-    return () => clearTimeout(timer)
+    return () => { clearTimeout(timer); }
   }, [isLoading, skeletonDuration, autoProgress])
 
   // 根据 thinkingProcess 状态自动切换到 filling

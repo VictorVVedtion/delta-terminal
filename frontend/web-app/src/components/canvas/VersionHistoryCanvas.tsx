@@ -7,18 +7,19 @@
  * 展示策略版本历史，支持快照、对比和回滚
  */
 
-import React from 'react'
 import {
-  GitBranch,
-  X,
-  Plus,
   AlertTriangle,
+  GitBranch,
+  Plus,
+  X,
 } from 'lucide-react'
+import React from 'react'
+
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { useVersionStore, selectStrategyVersions } from '@/store/version'
-import { VersionList } from '@/components/version/VersionList'
 import { VersionCompare } from '@/components/version/VersionCompare'
+import { VersionList } from '@/components/version/VersionList'
+import { cn } from '@/lib/utils'
+import { selectStrategyVersions,useVersionStore } from '@/store/version'
 import type { StrategyVersion } from '@/types/version'
 
 // =============================================================================
@@ -85,7 +86,7 @@ function CreateSnapshotModal({
             <input
               type="text"
               value={summary}
-              onChange={(e) => setSummary(e.target.value)}
+              onChange={(e) => { setSummary(e.target.value); }}
               placeholder="例如：调整止损参数"
               className="w-full px-3 py-2 rounded-lg border border-border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
@@ -97,7 +98,7 @@ function CreateSnapshotModal({
             </label>
             <textarea
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => { setReason(e.target.value); }}
               placeholder="说明为什么创建这个版本..."
               rows={3}
               className="w-full px-3 py-2 rounded-lg border border-border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
@@ -173,7 +174,7 @@ function RollbackConfirmModal({
             <input
               type="text"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => { setReason(e.target.value); }}
               placeholder="说明为什么回滚..."
               className="w-full px-3 py-2 rounded-lg border border-border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
@@ -186,7 +187,7 @@ function RollbackConfirmModal({
           </Button>
           <Button
             variant="destructive"
-            onClick={() => onConfirm(reason.trim() || undefined)}
+            onClick={() => { onConfirm(reason.trim() || undefined); }}
             disabled={isLoading}
           >
             {isLoading ? '回滚中...' : '确认回滚'}
@@ -307,7 +308,7 @@ export function VersionHistoryCanvas({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowCreateSnapshot(true)}
+              onClick={() => { setShowCreateSnapshot(true); }}
             >
               <Plus className="h-4 w-4 mr-1.5" />
               创建快照
@@ -354,7 +355,7 @@ export function VersionHistoryCanvas({
       {/* Create Snapshot Modal */}
       <CreateSnapshotModal
         isOpen={showCreateSnapshot}
-        onClose={() => setShowCreateSnapshot(false)}
+        onClose={() => { setShowCreateSnapshot(false); }}
         onConfirm={handleCreateSnapshot}
       />
 
@@ -362,7 +363,7 @@ export function VersionHistoryCanvas({
       <RollbackConfirmModal
         version={rollbackTarget}
         isOpen={!!rollbackTarget}
-        onClose={() => setRollbackTarget(null)}
+        onClose={() => { setRollbackTarget(null); }}
         onConfirm={handleConfirmRollback}
         isLoading={isRollingBack}
       />

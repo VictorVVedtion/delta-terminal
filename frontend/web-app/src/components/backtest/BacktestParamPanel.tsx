@@ -1,17 +1,18 @@
 'use client'
 
-import React from 'react'
 import {
-  Settings,
-  RotateCcw,
-  Play,
   ChevronDown,
   ChevronRight,
   Info,
+  Play,
+  RotateCcw,
+  Settings,
 } from 'lucide-react'
+import React from 'react'
+
 import { Button } from '@/components/ui/button'
-import type { BacktestParameter } from '@/types/insight'
 import { cn } from '@/lib/utils'
+import type { BacktestParameter } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -51,14 +52,14 @@ function formatValue(value: number | string | boolean, config: BacktestParameter
 }
 
 function groupParameters(params: BacktestParameter[]): Record<string, BacktestParameter[]> {
-  return params.reduce((acc, param) => {
+  return params.reduce<Record<string, BacktestParameter[]>>((acc, param) => {
     const group = param.group || '通用设置'
     if (!acc[group]) {
       acc[group] = []
     }
     acc[group].push(param)
     return acc
-  }, {} as Record<string, BacktestParameter[]>)
+  }, {})
 }
 
 // =============================================================================
@@ -87,7 +88,7 @@ function SliderInput({ param, onChange }: ParamInputProps) {
           max={max}
           step={step}
           value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={(e) => { onChange(Number(e.target.value)); }}
           className="w-full h-2 rounded-full appearance-none cursor-pointer bg-zinc-700"
           style={{
             background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, #3f3f46 ${percentage}%, #3f3f46 100%)`,
@@ -122,7 +123,7 @@ function NumberInput({ param, onChange }: ParamInputProps) {
           max={max}
           step={step}
           value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={(e) => { onChange(Number(e.target.value)); }}
           className={cn(
             'flex-1 px-3 py-2 rounded-lg',
             'bg-zinc-800 border border-zinc-700',
@@ -152,7 +153,7 @@ function SelectInput({ param, onChange }: ParamInputProps) {
       <span className="text-sm text-zinc-300">{param.label}</span>
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); }}
         className={cn(
           'w-full px-3 py-2 rounded-lg',
           'bg-zinc-800 border border-zinc-700',
@@ -187,7 +188,7 @@ function ToggleInput({ param, onChange }: ParamInputProps) {
         )}
       </div>
       <button
-        onClick={() => onChange(!value)}
+        onClick={() => { onChange(!value); }}
         className={cn(
           'relative w-11 h-6 rounded-full transition-colors',
           value ? 'bg-blue-500' : 'bg-zinc-700'
@@ -221,7 +222,7 @@ function ParamGroup({ title, params, onChange, defaultExpanded = true }: ParamGr
   return (
     <div className="border border-zinc-800 rounded-lg overflow-hidden">
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => { setExpanded(!expanded); }}
         className="w-full flex items-center justify-between px-4 py-3 bg-zinc-800/50 hover:bg-zinc-800 transition-colors"
       >
         <span className="text-sm font-medium text-zinc-300">{title}</span>
@@ -237,7 +238,7 @@ function ParamGroup({ title, params, onChange, defaultExpanded = true }: ParamGr
             <ParamInput
               key={param.key}
               param={param}
-              onChange={(value) => onChange(param.key, value)}
+              onChange={(value) => { onChange(param.key, value); }}
             />
           ))}
         </div>
@@ -345,7 +346,7 @@ export function BacktestParamPanel({
                 <ParamInput
                   key={param.key}
                   param={param}
-                  onChange={(value) => handleChange(param.key, value)}
+                  onChange={(value) => { handleChange(param.key, value); }}
                 />
               ))}
             </div>
@@ -356,7 +357,7 @@ export function BacktestParamPanel({
         <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
           <Info className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-blue-300">
-            调整参数后点击"重新回测"按钮查看新的回测结果。参数变化会影响策略表现。
+            调整参数后点击「重新回测」按钮查看新的回测结果。参数变化会影响策略表现。
           </p>
         </div>
       </div>

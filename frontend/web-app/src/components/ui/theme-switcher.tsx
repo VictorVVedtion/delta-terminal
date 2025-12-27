@@ -1,10 +1,11 @@
 'use client'
 
-import React from 'react'
 import { Moon, Sun } from 'lucide-react'
+import React from 'react'
+
 import { Button } from '@/components/ui/button'
-import { useUIStore } from '@/store'
 import { cn } from '@/lib/utils'
+import { useUIStore } from '@/store'
 
 // =============================================================================
 // ThemeSwitcher Component
@@ -93,7 +94,7 @@ function ThemeDropdown({ className }: ThemeDropdownProps) {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => { setIsOpen(!isOpen); }}
         className="h-9 w-9"
       >
         <CurrentIcon className="h-5 w-5" />
@@ -104,7 +105,7 @@ function ThemeDropdown({ className }: ThemeDropdownProps) {
           {/* Backdrop */}
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
+            onClick={() => { setIsOpen(false); }}
           />
           {/* Dropdown */}
           <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-lg py-1 min-w-[120px]">

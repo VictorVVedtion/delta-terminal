@@ -6,17 +6,18 @@
  * 提供策略实时监控和控制功能。
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { useMonitorStore } from '@/store/monitor'
-import { apiClient } from '@/lib/api'
+import { useCallback, useEffect, useRef,useState } from 'react'
+
 import type {
-  StrategyInfo,
   PnLData,
   Position,
-  Trade,
+  StrategyInfo,
   StrategyMetrics,
   StrategyStatus,
+  Trade,
 } from '@/components/canvas/MonitorCanvas'
+import { apiClient } from '@/lib/api'
+import { useMonitorStore } from '@/store/monitor'
 
 // =============================================================================
 // Types
@@ -224,10 +225,10 @@ export function useMonitor(options: UseMonitorOptions): UseMonitorReturn {
     setLoading(true)
 
     // 立即获取一次数据
-    fetchData()
+    void fetchData()
 
     // 设置轮询
-    pollingRef.current = setInterval(fetchData, pollingInterval)
+    pollingRef.current = setInterval(() => { void fetchData(); }, pollingInterval)
 
     return () => {
       cleanup()

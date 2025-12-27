@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+
 import { cn } from '@/lib/utils'
 import type { ExchangeType } from '@/store/exchange'
 
@@ -102,11 +103,11 @@ export function ExchangeIcon({ exchange, size = 'md', className }: ExchangeIconP
 // =============================================================================
 
 export function getExchangeLabel(exchange: ExchangeType): string {
-  return EXCHANGE_CONFIG[exchange]?.label ?? exchange
+  return EXCHANGE_CONFIG[exchange].label ?? exchange
 }
 
 export function getExchangeColor(exchange: ExchangeType): string {
-  return EXCHANGE_CONFIG[exchange]?.color ?? '#888888'
+  return EXCHANGE_CONFIG[exchange].color ?? '#888888'
 }
 
 export default ExchangeIcon

@@ -1,24 +1,25 @@
 'use client'
 
-import React from 'react'
-import { cn } from '@/lib/utils'
 import {
+  AlertTriangle,
   Check,
-  Loader2,
-  X,
-  Clock,
   ChevronDown,
   ChevronUp,
-  Wrench,
-  AlertTriangle,
+  Clock,
+  Loader2,
   Sparkles,
+  Wrench,
+  X,
 } from 'lucide-react'
+import React from 'react'
+
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
 import type {
   ThinkingProcess,
   ThinkingStatus,

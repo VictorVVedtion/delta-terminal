@@ -5,13 +5,13 @@
  * It supports multiple modes for different use cases.
  */
 
+export { BacktestCanvas, default as BacktestCanvasDefault } from './BacktestCanvas'
 export { Canvas, default as CanvasDefault } from './Canvas'
 export { CanvasPanel, default as CanvasPanelDefault } from './CanvasPanel'
-export { MonitorCanvas, default as MonitorCanvasDefault } from './MonitorCanvas'
-export { BacktestCanvas, default as BacktestCanvasDefault } from './BacktestCanvas'
-export { DeployCanvas, default as DeployCanvasDefault } from './DeployCanvas'
-export { RiskSettings, default as RiskSettingsDefault } from './RiskSettings'
 export { ConfigCanvas, default as ConfigCanvasDefault } from './ConfigCanvas'
+export { DeployCanvas, default as DeployCanvasDefault } from './DeployCanvas'
+export { MonitorCanvas, default as MonitorCanvasDefault } from './MonitorCanvas'
+export { RiskSettings, default as RiskSettingsDefault } from './RiskSettings'
 
 // EPIC-007: A2UI Backtest Insight Canvas
 export { BacktestInsightCanvas, default as BacktestInsightCanvasDefault } from './BacktestInsightCanvas'
@@ -20,34 +20,34 @@ export { BacktestInsightCanvas, default as BacktestInsightCanvasDefault } from '
 export type {
   CanvasMode,
   InsightData,
-  InsightParam,
   InsightImpact,
+  InsightParam,
 } from '@/types/insight'
 
 // Re-export MonitorCanvas types
 export type {
   MonitorCanvasProps,
-  StrategyStatus,
-  StrategyInfo,
-  Position,
-  Trade,
   OrderSide,
   PnLData,
+  Position,
+  StrategyInfo,
   StrategyMetrics,
+  StrategyStatus,
+  Trade,
 } from './MonitorCanvas'
 
 // Re-export BacktestCanvas types
 export type {
   BacktestCanvasProps,
-  BacktestStatus,
   BacktestMetrics,
+  BacktestStatus,
   BacktestTrade,
 } from './BacktestCanvas'
 
 // Re-export DeployCanvas types
 export type {
-  DeployConfig,
   BacktestSummary,
+  DeployConfig,
   PaperPerformance,
 } from './DeployCanvas'
 
@@ -58,20 +58,19 @@ export type { RiskSettingsProps } from './RiskSettings'
 export type {
   ConfigCanvasProps,
   ConfigCategory,
+  ConfigChange,
   ConfigGroup,
   ConfigPreset,
-  ConfigChange,
 } from './ConfigCanvas'
 
 // Re-export risk types from types/risk
 export type {
-  RiskSettings as RiskSettingsType,
-  StopLossConfig,
-  TakeProfitConfig,
   PositionLimitConfig,
   RiskLevel,
+  RiskSettings as RiskSettingsType,
   RiskValidationResult,
+  StopLossConfig,
+  TakeProfitConfig,
   ValidationMessage,
 } from '@/types/risk'
-
 export { DEFAULT_RISK_SETTINGS } from '@/types/risk'

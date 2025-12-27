@@ -1,36 +1,24 @@
 'use client'
 
 /**
- * 认证提供者 - 钱包认证版本
+ * 认证提供者 - 简化版本
  *
  * 设计原则：
- * - 默认允许浏览所有页面（无需登录）
- * - 只有需要写入操作时才要求连接钱包
- * - 用户可以通过右上角按钮随时连接/断开钱包
+ * - Paper Trading 模式不需要钱包连接
+ * - Live Trading 模式将来需要钱包连接（暂未实现）
+ * - 所有页面都可以自由访问
  */
 
-import { useEffect, useState, createContext, useContext, useCallback } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStore } from '@/store/auth'
+import { createContext, useContext, useEffect, useState } from 'react'
+
 import { apiClient } from '@/lib/api'
-
-// 需要认证才能访问的路由（执行敏感操作的页面）
-// 大部分页面都是可浏览的，只有这些页面强制要求登录
-const PROTECTED_ROUTES: string[] = [
-  // 暂时没有强制要求登录的页面
-  // 所有页面都可以浏览，只有执行操作时才需要连接钱包
-]
-
-// 登录页面路由（已登录用户会被重定向）
-const AUTH_ROUTES = ['/login']
+import { useAuthStore } from '@/store/auth'
 
 interface AuthContextValue {
-  /** 是否已连接钱包 */
+  /** 是否已连接钱包 (仅用于 Live Trading) */
   isConnected: boolean
-  /** 检查是否需要连接钱包，如果未连接则显示提示 */
+  /** 检查是否需要连接钱包 */
   requireAuth: (action?: string) => boolean
-  /** 打开连接钱包弹窗 */
-  openConnectModal: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -48,8 +36,6 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const router = useRouter()
-  const pathname = usePathname()
   const [isInitialized, setIsInitialized] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -75,41 +61,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsInitialized(true)
   }, [mounted, accessToken, refreshToken])
 
-  // 路由保护 - 只保护特定路由，其他页面都可以浏览
-  useEffect(() => {
-    if (!isInitialized) return
-
-    const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
-    const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route))
-
-    // 未登录用户访问强制保护路由 -> 跳转登录（目前没有这样的路由）
-    if (!isAuthenticated && isProtectedRoute) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
-      return
-    }
-
-    // 已登录用户访问登录页 -> 跳转仪表盘
-    if (isAuthenticated && isAuthRoute) {
-      router.replace('/dashboard')
-      return
-    }
-  }, [isInitialized, isAuthenticated, pathname, router])
-
   // 检查是否需要认证的辅助函数
-  const requireAuth = useCallback((action?: string) => {
-    if (isAuthenticated) return true
-
-    // 未连接钱包，可以在这里触发连接提示
-    // TODO: 显示一个友好的提示弹窗，而不是跳转到登录页
-    console.log(`需要连接钱包才能${action || '执行此操作'}`)
-    router.push(`/login?redirect=${encodeURIComponent(pathname)}&action=${encodeURIComponent(action || '')}`)
-    return false
-  }, [isAuthenticated, router, pathname])
-
-  // 打开连接钱包弹窗
-  const openConnectModal = useCallback(() => {
-    router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
-  }, [router, pathname])
+  // Paper Trading 不需要认证，直接返回 true
+  const requireAuth = (action?: string) => {
+    // Paper Trading 模式：始终允许
+    // Live Trading 模式：将来需要检查钱包连接
+    if (!isAuthenticated) {
+      console.log(`[Paper Trading] ${action || '操作'} - 无需钱包连接`)
+    }
+    return true
+  }
 
   // 初始化中显示加载状态
   if (!isInitialized) {
@@ -141,7 +102,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const contextValue: AuthContextValue = {
     isConnected: isAuthenticated,
     requireAuth,
-    openConnectModal,
   }
 
   return (
@@ -149,29 +109,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-/**
- * 高阶组件：保护需要认证的页面
- */
-export function withAuth<P extends object>(
-  WrappedComponent: React.ComponentType<P>
-) {
-  return function AuthenticatedComponent(props: P) {
-    const { isAuthenticated } = useAuthStore()
-    const router = useRouter()
-    const pathname = usePathname()
-
-    useEffect(() => {
-      if (!isAuthenticated) {
-        router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
-      }
-    }, [isAuthenticated, router, pathname])
-
-    if (!isAuthenticated) {
-      return null
-    }
-
-    return <WrappedComponent {...props} />
-  }
 }

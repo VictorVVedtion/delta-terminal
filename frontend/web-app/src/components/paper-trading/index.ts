@@ -5,13 +5,13 @@
  */
 
 // 主要组件
-export { PaperTradingExample } from './PaperTradingExample'
 export { PaperTradingDashboard } from './PaperTradingDashboard'
+export { PaperTradingExample } from './PaperTradingExample'
 export { PaperTradingPanel } from './PaperTradingPanel'
-export { PaperTradingStatusCard, PaperTradingStatusBadge } from './PaperTradingStatusCard'
+export { PaperTradingStatusBadge,PaperTradingStatusCard } from './PaperTradingStatusCard'
 export { PositionCard } from './PositionCard'
 export { QuickTradeButtons } from './QuickTradeButtons'
 export { TradeHistory } from './TradeHistory'
 
 // 类型重导出
-export type { PaperAccount, PaperPosition, PaperTrade, PaperAccountStats } from '@/types/paperTrading'
+export type { PaperAccount, PaperAccountStats,PaperPosition, PaperTrade } from '@/types/paperTrading'

@@ -5,11 +5,29 @@
  * 注意：API Key 不在这里存储，由前端安全存储
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { AI_MODELS, TASK_TYPES, SIMPLE_PRESETS } from '@/types/ai'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
+
+import { AI_MODELS, SIMPLE_PRESETS,TASK_TYPES } from '@/types/ai'
+
+// Type definitions for config validation
+interface ConfigValidationBody {
+  mode?: string
+  simple?: {
+    preset?: string
+    customModel?: string
+  }
+  advanced?: {
+    taskModels?: Record<string, string>
+  }
+  settings?: {
+    temperature?: number
+    maxTokens?: number
+  }
+}
 
 // GET /api/ai/config - 获取可用模型和配置选项
-export async function GET(_request: NextRequest) {
+export function GET(_request: NextRequest) {
   try {
     // 返回所有可用的模型、任务类型和预设
     return NextResponse.json({
@@ -63,8 +81,7 @@ export async function GET(_request: NextRequest) {
         }
       }
     })
-  } catch (error) {
-    console.error('Error fetching AI config:', error)
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch AI config' },
       { status: 500 }
@@ -75,7 +92,7 @@ export async function GET(_request: NextRequest) {
 // POST /api/ai/config - 验证配置
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const body = await request.json() as ConfigValidationBody
     const { mode, simple, advanced, settings } = body
 
     const errors: string[] = []
@@ -86,35 +103,40 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证简单模式预设
-    if (simple?.preset && !SIMPLE_PRESETS[simple.preset as keyof typeof SIMPLE_PRESETS]) {
-      errors.push(`Invalid preset: ${simple.preset}`)
+    if (simple?.preset) {
+      const presetKey = simple.preset as keyof typeof SIMPLE_PRESETS
+      if (!(presetKey in SIMPLE_PRESETS)) {
+        errors.push(`Invalid preset: ${simple.preset}`)
+      }
     }
 
     // 验证自定义模型
-    if (simple?.customModel && !AI_MODELS[simple.customModel]) {
-      errors.push(`Invalid custom model: ${simple.customModel}`)
+    if (simple?.customModel) {
+      if (!(simple.customModel in AI_MODELS)) {
+        errors.push(`Invalid custom model: ${simple.customModel}`)
+      }
     }
 
     // 验证高级模式任务模型
     if (advanced?.taskModels) {
       for (const [taskType, model] of Object.entries(advanced.taskModels)) {
-        if (!TASK_TYPES[taskType as keyof typeof TASK_TYPES]) {
+        if (!(taskType in TASK_TYPES)) {
           errors.push(`Invalid task type: ${taskType}`)
         }
-        if (!AI_MODELS[model as string]) {
-          errors.push(`Invalid model for ${taskType}: ${model}`)
+        if (!(model in AI_MODELS)) {
+          errors.push(`Invalid model for ${taskType}: ${String(model)}`)
         }
       }
     }
 
     // 验证设置
     if (settings) {
-      if (settings.temperature !== undefined) {
+      if (typeof settings.temperature === 'number') {
         if (settings.temperature < 0 || settings.temperature > 2) {
           errors.push('Temperature must be between 0 and 2')
         }
       }
-      if (settings.maxTokens !== undefined) {
+      if (typeof settings.maxTokens === 'number') {
         if (settings.maxTokens < 1 || settings.maxTokens > 128000) {
           errors.push('Max tokens must be between 1 and 128000')
         }
@@ -132,8 +154,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Configuration is valid'
     })
-  } catch (error) {
-    console.error('Error validating AI config:', error)
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Failed to validate AI config' },
       { status: 500 }

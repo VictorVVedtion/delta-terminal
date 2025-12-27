@@ -12,31 +12,28 @@
  * - Diff view between current and proposed changes
  */
 
-import React from 'react'
 import {
-  X,
-  Settings,
-  Save,
-  RotateCcw,
   AlertTriangle,
   Check,
   ChevronDown,
   ChevronUp,
-  Sliders,
-  ShieldAlert,
   Clock,
-  DollarSign,
-  Percent,
-  Zap,
-  History,
   Copy,
-  Download,
-  Upload,
+  History,
+  RotateCcw,
+  Save,
+  Settings,
+  ShieldAlert,
+  Sliders,
+  X,
+  Zap,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
 import type { InsightParam, ParamValue } from '@/types/insight'
 
 // =============================================================================
@@ -141,7 +138,7 @@ const CATEGORY_CONFIG: Record<
 // =============================================================================
 
 export function ConfigCanvas({
-  strategyId,
+  strategyId: _strategyId,
   strategyName,
   isOpen,
   onClose,
@@ -184,7 +181,7 @@ export function ConfigCanvas({
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [isOpen, onClose])
 
   // Get all params with edited values
@@ -401,7 +398,7 @@ export function ConfigCanvas({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowHistory(!showHistory)}
+              onClick={() => { setShowHistory(!showHistory); }}
               className={cn(showHistory && 'bg-muted')}
             >
               <History className="h-4 w-4" />
@@ -428,7 +425,7 @@ export function ConfigCanvas({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setShowChangeConfirm(false)}
+                onClick={() => { setShowChangeConfirm(false); }}
                 className="flex-1"
               >
                 取消
@@ -512,7 +509,7 @@ export function ConfigCanvas({
                     key={preset.id}
                     variant="outline"
                     size="sm"
-                    onClick={() => handleApplyPreset(preset)}
+                    onClick={() => { handleApplyPreset(preset); }}
                     className="text-xs"
                   >
                     {preset.name}
@@ -538,7 +535,7 @@ export function ConfigCanvas({
                 <section key={category} className="space-y-3">
                   {/* Category Header */}
                   <button
-                    onClick={() => toggleCategory(category)}
+                    onClick={() => { toggleCategory(category); }}
                     className={cn(
                       'w-full flex items-center justify-between p-3 rounded-lg',
                       'transition-colors hover:bg-muted/50',
@@ -580,7 +577,7 @@ export function ConfigCanvas({
                                   param={param}
                                   value={currentValue}
                                   originalValue={param.value}
-                                  onChange={value => handleParamChange(param.key, value)}
+                                  onChange={value => { handleParamChange(param.key, value); }}
                                   hasChange={hasChange}
                                   disabled={isLoading || isApplying}
                                 />
@@ -623,7 +620,7 @@ export function ConfigCanvas({
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={() => setShowPresetModal(true)}
+              onClick={() => { setShowPresetModal(true); }}
               disabled={isLoading || isApplying}
               className="flex-1"
             >
@@ -656,14 +653,14 @@ export function ConfigCanvas({
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowPresetModal(false)}
+            onClick={() => { setShowPresetModal(false); }}
           />
           <div className="relative bg-card border border-border rounded-xl p-6 w-[400px] shadow-2xl">
             <h3 className="text-lg font-semibold mb-4">保存配置预设</h3>
             <input
               type="text"
               value={presetName}
-              onChange={e => setPresetName(e.target.value)}
+              onChange={e => { setPresetName(e.target.value); }}
               placeholder="输入预设名称..."
               className="w-full h-10 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               autoFocus
@@ -671,7 +668,7 @@ export function ConfigCanvas({
             <div className="flex gap-2 mt-4">
               <Button
                 variant="outline"
-                onClick={() => setShowPresetModal(false)}
+                onClick={() => { setShowPresetModal(false); }}
                 className="flex-1"
               >
                 取消
@@ -799,7 +796,7 @@ function SliderControl({
         max={max}
         step={step}
         value={value}
-        onChange={e => onChange(Number(e.target.value))}
+        onChange={e => { onChange(Number(e.target.value)); }}
         disabled={disabled}
         className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer disabled:opacity-50 accent-primary"
       />
@@ -842,7 +839,7 @@ function NumberControl({
         max={max}
         step={step}
         value={value}
-        onChange={e => onChange(Number(e.target.value))}
+        onChange={e => { onChange(Number(e.target.value)); }}
         disabled={disabled}
         className="flex-1 h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
       />
@@ -867,7 +864,7 @@ function SelectControl({
   return (
     <select
       value={value}
-      onChange={e => onChange(e.target.value)}
+      onChange={e => { onChange(e.target.value); }}
       disabled={disabled}
       className="w-full h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
     >
@@ -891,7 +888,7 @@ function ToggleControl({
 }) {
   return (
     <button
-      onClick={() => onChange(!value)}
+      onClick={() => { onChange(!value); }}
       disabled={disabled}
       className={cn(
         'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
@@ -927,7 +924,7 @@ function ButtonGroupControl({
       {options.map(opt => (
         <button
           key={String(opt.value)}
-          onClick={() => onChange(opt.value)}
+          onClick={() => { onChange(opt.value); }}
           disabled={disabled}
           className={cn(
             'flex-1 px-3 py-2 text-sm rounded-md transition-colors',

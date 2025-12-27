@@ -1,9 +1,10 @@
 'use client'
 
+import { AlertTriangle, ChevronDown, Shield } from 'lucide-react'
 import React, { useState } from 'react'
+
 import { cn } from '@/lib/utils'
 import { useAgentStore } from '@/store/agent'
-import { ChevronDown, AlertTriangle, Shield } from 'lucide-react'
 
 /**
  * 风险概览组件
@@ -27,7 +28,7 @@ export function RiskPanel() {
     <div className="border-t border-border">
       {/* 折叠头部 */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={() => { setIsCollapsed(!isCollapsed); }}
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center gap-1.5">

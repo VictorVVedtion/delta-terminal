@@ -229,14 +229,12 @@ export interface TradingStats {
   currentDrawdown: number
 }
 
-export interface MarketData {
-  [symbol: string]: {
+export type MarketData = Record<string, {
     price: number
     volume24h: number
     spread: number
     spreadPercent: number
-  }
-}
+  }>;
 
 // =============================================================================
 // Constraint Evaluation Result

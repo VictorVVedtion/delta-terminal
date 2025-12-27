@@ -2,12 +2,13 @@
  * Hyperliquid API 客户端测试
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
+  clearPriceCache,
   getAllMidPrices,
   getAssetPrice,
   getBatchPrices,
-  clearPriceCache,
   validateConnection,
 } from '../hyperliquid';
 

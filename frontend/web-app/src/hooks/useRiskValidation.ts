@@ -1,11 +1,13 @@
 'use client'
 
 import { useMemo } from 'react'
-import {
+
+import type {
   RiskSettings,
   RiskValidationResult,
-  ValidationMessage,
-  calculateRiskLevel,
+  ValidationMessage} from '@/types/risk';
+import {
+  calculateRiskLevel
 } from '@/types/risk'
 
 // =============================================================================
@@ -31,7 +33,7 @@ export interface RiskValidationOptions {
 function validateRiskSettings(
   settings: RiskSettings,
   mode: 'paper' | 'live',
-  totalCapital: number = 10000
+  totalCapital = 10000
 ): RiskValidationResult {
   const errors: ValidationMessage[] = []
   const warnings: ValidationMessage[] = []

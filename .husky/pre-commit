@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Run type check on backend
+echo "📦 Checking backend types..."
+cd backend/ai-orchestrator && npm run build --silent 2>&1 || {
+  echo "❌ Backend TypeScript compilation failed!"
+  exit 1
+}
+cd ../..
+
+# Run type check on frontend
+echo "📦 Checking frontend types..."
+cd frontend/web-app && npm run type-check --silent 2>&1 || {
+  echo "❌ Frontend TypeScript compilation failed!"
+  exit 1
+}
+cd ../..
+
+echo "✅ All pre-commit checks passed!"

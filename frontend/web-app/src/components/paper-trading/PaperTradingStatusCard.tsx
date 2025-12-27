@@ -7,8 +7,9 @@
 
 'use client'
 
+import { Activity, Target,TrendingDown, TrendingUp } from 'lucide-react'
 import React from 'react'
-import { Activity, TrendingUp, TrendingDown, Target } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
 import type { PaperAccountStats } from '@/types/paperTrading'
 

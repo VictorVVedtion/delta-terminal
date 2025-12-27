@@ -1,11 +1,12 @@
 'use client'
 
 import React from 'react'
+
 import { MainLayout } from '@/components/layout/MainLayout'
-import { TradingView } from '@/components/trading/TradingView'
-import { OrderForm } from '@/components/trading/OrderForm'
 import { OrderBook } from '@/components/trading/OrderBook'
+import { OrderForm } from '@/components/trading/OrderForm'
 import { TradeHistory } from '@/components/trading/TradeHistory'
+import { TradingView } from '@/components/trading/TradingView'
 
 export default function TradingPage() {
   // 模拟数据

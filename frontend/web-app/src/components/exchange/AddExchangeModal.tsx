@@ -1,29 +1,31 @@
 'use client'
 
-import React from 'react'
 import {
-  X,
-  Eye,
-  EyeOff,
-  ExternalLink,
   AlertTriangle,
   CheckCircle,
+  ExternalLink,
+  Eye,
+  EyeOff,
   Loader2,
   ShieldAlert,
+  X,
 } from 'lucide-react'
+import React from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
-import { ExchangeIcon, getExchangeLabel } from './ExchangeIcon'
-import {
-  useExchangeStore,
-  SUPPORTED_EXCHANGES,
-  type ExchangeType,
-  type ExchangeAccount,
-  type Permission,
-} from '@/store/exchange'
 import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
+import {
+  type ExchangeAccount,
+  type ExchangeType,
+  type Permission,
+  SUPPORTED_EXCHANGES,
+  useExchangeStore,
+} from '@/store/exchange'
+
+import { ExchangeIcon, getExchangeLabel } from './ExchangeIcon'
 
 // =============================================================================
 // Types
@@ -160,7 +162,7 @@ export function AddExchangeModal({
       })
 
       // 自动测试连接
-      testConnection(accountId)
+      void testConnection(accountId)
 
       notify('success', '账户已添加', {
         description: `${formData.name} 正在连接...`,
@@ -207,7 +209,7 @@ export function AddExchangeModal({
               id="name"
               placeholder="例如: 币安-主账户"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); }}
               className={cn(errors.name && 'border-destructive')}
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
@@ -220,7 +222,7 @@ export function AddExchangeModal({
               id="apiKey"
               placeholder="输入 API Key"
               value={formData.apiKey}
-              onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+              onChange={(e) => { setFormData({ ...formData, apiKey: e.target.value }); }}
               className={cn('font-mono text-sm', errors.apiKey && 'border-destructive')}
             />
             {errors.apiKey && <p className="text-xs text-destructive">{errors.apiKey}</p>}
@@ -235,7 +237,7 @@ export function AddExchangeModal({
                 type={showSecret ? 'text' : 'password'}
                 placeholder="输入 API Secret"
                 value={formData.apiSecret}
-                onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, apiSecret: e.target.value }); }}
                 className={cn('font-mono text-sm pr-10', errors.apiSecret && 'border-destructive')}
               />
               <Button
@@ -243,7 +245,7 @@ export function AddExchangeModal({
                 variant="ghost"
                 size="icon"
                 className="absolute right-0 top-0 h-full"
-                onClick={() => setShowSecret(!showSecret)}
+                onClick={() => { setShowSecret(!showSecret); }}
               >
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -260,7 +262,7 @@ export function AddExchangeModal({
                 type="password"
                 placeholder="输入 Passphrase"
                 value={formData.passphrase}
-                onChange={(e) => setFormData({ ...formData, passphrase: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, passphrase: e.target.value }); }}
                 className={cn('font-mono text-sm', errors.passphrase && 'border-destructive')}
               />
               {errors.passphrase && (

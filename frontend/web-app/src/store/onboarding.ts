@@ -113,10 +113,10 @@ export const useOnboardingStore = create<OnboardingState>()(
 
       // Actions
       startOnboarding: () =>
-        set({
+        { set({
           currentStep: 0,
           lastShownAt: Date.now(),
-        }),
+        }); },
 
       nextStep: () => {
         const { currentStep } = get()
@@ -141,24 +141,24 @@ export const useOnboardingStore = create<OnboardingState>()(
       },
 
       skipOnboarding: () =>
-        set({
+        { set({
           skipped: true,
           lastShownAt: Date.now(),
-        }),
+        }); },
 
       completeOnboarding: () =>
-        set({
+        { set({
           completed: true,
           lastShownAt: Date.now(),
-        }),
+        }); },
 
       resetOnboarding: () =>
-        set({
+        { set({
           completed: false,
           skipped: false,
           currentStep: 0,
           lastShownAt: null,
-        }),
+        }); },
 
       setStep: (step: number) => {
         if (step >= 0 && step < ONBOARDING_STEPS.length) {

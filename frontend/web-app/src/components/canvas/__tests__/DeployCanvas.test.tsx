@@ -1,7 +1,8 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { DeployCanvas, type BacktestSummary, type PaperPerformance } from '../DeployCanvas'
+import React from 'react'
+
+import { type BacktestSummary, DeployCanvas, type PaperPerformance } from '../DeployCanvas'
 
 // =============================================================================
 // Test Data

@@ -7,21 +7,22 @@
  * and portfolio state.
  */
 
-import { useMemo, useCallback } from 'react'
+import { useCallback,useMemo } from 'react'
+
 import {
+  createDefaultContext,
   evaluateAllConstraints,
   evaluateConstraint,
-  createDefaultContext,
 } from '@/lib/constraint-engine'
 import type {
   Constraint,
   ConstraintContext,
-  ConstraintValidationResult,
   ConstraintEvaluation,
+  ConstraintValidationResult,
+  MarketData,
   PendingOrder,
   PortfolioPosition,
   TradingStats,
-  MarketData,
 } from '@/types/constraint'
 
 // =============================================================================

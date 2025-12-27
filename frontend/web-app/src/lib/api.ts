@@ -3,22 +3,22 @@
  * 处理所有后端 API 请求
  */
 
-import { UserRole } from '@/store/auth'
-import type {
-  DeploymentResult,
-  DeploymentStatus,
-  BacktestSummary,
-  PaperPerformance,
-  PaperDeployConfig,
-  LiveDeployConfig,
-} from '@/types/deployment'
-import { DeploymentError } from '@/types/deployment'
+import type { UserRole } from '@/store/auth'
 import type {
   BacktestConfig,
+  BacktestHistoryItem,
   BacktestResult,
   BacktestRunState,
-  BacktestHistoryItem,
 } from '@/types/backtest'
+import type {
+  BacktestSummary,
+  DeploymentResult,
+  DeploymentStatus,
+  LiveDeployConfig,
+  PaperDeployConfig,
+  PaperPerformance,
+} from '@/types/deployment'
+import { DeploymentError } from '@/types/deployment'
 
 // =============================================================================
 // API 特定类型 (Story 2.2)
@@ -94,7 +94,7 @@ class ApiClient {
     }
 
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
+      headers.Authorization = `Bearer ${this.token}`
     }
 
     return headers
@@ -224,13 +224,13 @@ class ApiClient {
     return this.request<unknown>(`/market/${symbol}`)
   }
 
-  async getOrderBook(symbol: string, limit: number = 20) {
+  async getOrderBook(symbol: string, limit = 20) {
     return this.request<unknown>(`/market/${symbol}/orderbook`, {
       params: { limit },
     })
   }
 
-  async getTrades(symbol: string, limit: number = 50) {
+  async getTrades(symbol: string, limit = 50) {
     return this.request<unknown>(`/market/${symbol}/trades`, {
       params: { limit },
     })
@@ -328,7 +328,7 @@ class ApiClient {
     return this.request<unknown>('/portfolio/balance')
   }
 
-  async getTransactions(limit: number = 50) {
+  async getTransactions(limit = 50) {
     return this.request<unknown[]>('/portfolio/transactions', {
       params: { limit },
     })
@@ -448,6 +448,43 @@ class ApiClient {
         body: JSON.stringify({ message, conversationId }),
       }
     )
+  }
+
+  /**
+   * A2UI 对话 - 返回结构化 InsightData
+   * 调用 AI Orchestrator 的 /api/ai/chat/a2ui 端点
+   */
+  async chatA2UI(message: string, conversationId?: string, context?: Record<string, unknown>) {
+    // 使用 AI Orchestrator URL (端口 4010)
+    const orchestratorUrl = process.env.NEXT_PUBLIC_AI_ORCHESTRATOR_URL || 'http://localhost:4010'
+
+    const response = await fetch(`${orchestratorUrl}/api/ai/chat/a2ui`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
+      },
+      body: JSON.stringify({ message, conversationId, context }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}))
+      throw new Error(error.error || `A2UI API Error: ${response.statusText}`)
+    }
+
+    return response.json() as Promise<{
+      success: boolean
+      data: {
+        message: string
+        conversationId: string
+        intent: string
+        confidence: number
+        extractedParams?: Record<string, unknown>
+        suggestedActions?: string[]
+        insight?: Record<string, unknown>
+        timestamp: string
+      }
+    }>
   }
 
   async generateStrategy(prompt: string) {
@@ -585,14 +622,14 @@ class ApiClient {
    * 获取 Agent 持仓
    * @param agentId Agent ID
    */
-  async getAgentPositions(agentId: string): Promise<Array<{
+  async getAgentPositions(agentId: string): Promise<{
     symbol: string
     amount: number
     avgPrice: number
     currentPrice: number
     unrealizedPnl: number
     unrealizedPnlPercent: number
-  }>> {
+  }[]> {
     return this.request(`/agents/${agentId}/positions`)
   }
 
@@ -601,7 +638,7 @@ class ApiClient {
    * @param agentId Agent ID
    * @param limit 返回条数 (默认 10)
    */
-  async getAgentTrades(agentId: string, limit: number = 10): Promise<Array<{
+  async getAgentTrades(agentId: string, limit = 10): Promise<{
     id: string
     timestamp: number
     symbol: string
@@ -610,7 +647,7 @@ class ApiClient {
     amount: number
     fee: number
     realizedPnl?: number
-  }>> {
+  }[]> {
     return this.request(`/agents/${agentId}/trades`, {
       params: { limit },
     })

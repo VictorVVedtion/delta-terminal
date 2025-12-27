@@ -1,12 +1,14 @@
 'use client'
 
 import React from 'react'
+
 import { cn } from '@/lib/utils'
+
+import { AgentList } from './AgentList'
+import { ChatHistoryPanel } from './ChatHistoryPanel'
 import { ModeSelector } from './ModeSelector'
 import { PnLPanel } from './PnLPanel'
-import { AgentList } from './AgentList'
 import { RiskPanel } from './RiskPanel'
-import { ChatHistoryPanel } from './ChatHistoryPanel'
 
 /**
  * 功能化 Sidebar 组件
@@ -63,8 +65,8 @@ export function FunctionalSidebar({ className }: FunctionalSidebarProps) {
   )
 }
 
+export { AgentList } from './AgentList'
+export { ChatHistoryPanel } from './ChatHistoryPanel'
 export { ModeSelector } from './ModeSelector'
 export { PnLPanel } from './PnLPanel'
-export { AgentList } from './AgentList'
 export { RiskPanel } from './RiskPanel'
-export { ChatHistoryPanel } from './ChatHistoryPanel'

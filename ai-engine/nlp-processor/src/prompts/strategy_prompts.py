@@ -10,38 +10,38 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
 
 你的任务是分析用户输入，识别其真实意图，并提取关键信息。
 
-可能的意图类型：
-1. CREATE_STRATEGY - 用户想要创建新的交易策略
-   关键词：创建、制定、设计、新策略、帮我写个策略等
+可能的意图类型（注意：返回的 intent 字段必须使用下面的小写格式）：
+1. create_strategy - 用户想要创建新的交易策略
+   关键词：创建、制定、设计、新策略、帮我写个策略、RSI策略、MACD策略、网格策略等
 
-2. MODIFY_STRATEGY - 用户想要修改现有策略
+2. modify_strategy - 用户想要修改现有策略
    关键词：修改、调整、更新、改变等
 
-3. DELETE_STRATEGY - 用户想要删除策略
+3. delete_strategy - 用户想要删除策略
    关键词：删除、移除、取消、停止等
 
-4. QUERY_STRATEGY - 用户想要查询策略信息
+4. query_strategy - 用户想要查询策略信息
    关键词：查看、显示、列出、有哪些策略等
 
-5. ANALYZE_MARKET - 用户想要分析市场
+5. analyze_market - 用户想要分析市场
    关键词：分析市场、趋势分析、行情分析、价格分析等
 
-6. BACKTEST - 用户想要进行回测
+6. backtest - 用户想要进行回测
    关键词：回测、测试、历史数据、效果如何等
 
-7. OPTIMIZE_STRATEGY - 用户想要优化策略
+7. optimize_strategy - 用户想要优化策略
    关键词：优化、改进、提升、提高收益、降低风险、调优、优化参数等
 
-8. BACKTEST_SUGGEST - 用户想要回测建议或回测配置
+8. backtest_suggest - 用户想要回测建议或回测配置
    关键词：怎么回测、回测建议、回测配置、推荐回测参数、回测多久等
 
-9. RISK_ANALYSIS - 用户想要风险分析
+9. risk_analysis - 用户想要风险分析
    关键词：风险分析、风险评估、风险检查、投资组合风险、仓位风险、VaR、最大回撤等
 
-10. GENERAL_CHAT - 一般对话
+10. general_chat - 一般对话
     关键词：问候、感谢、闲聊等
 
-11. UNKNOWN - 无法识别的意图
+11. unknown - 无法识别的意图
 
 分析时请考虑：
 - 用户的明确表述
@@ -52,7 +52,7 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
 输出格式要求：
 返回 JSON 格式，包含：
 {{
-  "intent": "意图类型",
+  "intent": "意图类型（必须是上面列出的小写格式之一，如 create_strategy）",
   "confidence": 0.0-1.0,
   "entities": {{
     "symbol": "交易对（如果提到）",
@@ -62,6 +62,20 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
     "other_params": {{}}
   }},
   "reasoning": "简要说明识别理由"
+}}
+
+示例响应（用户说"帮我创建RSI策略"）：
+{{
+  "intent": "create_strategy",
+  "confidence": 0.95,
+  "entities": {{
+    "symbol": null,
+    "timeframe": null,
+    "strategy_type": "rsi",
+    "strategy_id": null,
+    "other_params": {{"indicator": "RSI"}}
+  }},
+  "reasoning": "用户使用了'创建'关键词，并明确提到了RSI策略类型"
 }}"""
 
 INTENT_RECOGNITION_PROMPT = ChatPromptTemplate.from_messages([

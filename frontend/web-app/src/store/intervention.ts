@@ -5,10 +5,11 @@
 
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
+
 import type {
-  InterventionRecord,
-  InterventionFilter,
   EmergencyAction,
+  InterventionFilter,
+  InterventionRecord,
   ParamChange,
 } from '@/types/intervention'
 
@@ -202,5 +203,5 @@ export const useInterventionStore = create<InterventionState>()(
 export const selectAgentRecords = (agentId: string) => (state: InterventionState) =>
   state.records[agentId] ?? []
 
-export const selectRecentRecords = (agentId: string, limit: number = 20) => (state: InterventionState) =>
+export const selectRecentRecords = (agentId: string, limit = 20) => (state: InterventionState) =>
   (state.records[agentId] ?? []).slice(0, limit)

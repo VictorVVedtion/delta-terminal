@@ -1,27 +1,28 @@
 'use client'
 
-import React from 'react'
 import {
-  X,
+  Activity,
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  DollarSign,
   Pause,
   Play,
   StopCircle,
-  Activity,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
   Target,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
+  TrendingDown,
+  TrendingUp,
+  X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React from 'react'
+
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { InsightData } from '@/types/insight'
-import { cn } from '@/lib/utils'
+import { Progress } from '@/components/ui/progress'
 import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
+import type { InsightData } from '@/types/insight'
 
 // =============================================================================
 // Type Definitions
@@ -111,11 +112,11 @@ export function BacktestCanvas({
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose?.()
+        onClose()
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [isOpen, onClose])
 
   // Story 5.3: Notify on backtest completion/failure

@@ -1,17 +1,19 @@
 'use client'
 
+import { AlertTriangle, DollarSign,Shield, TrendingDown, TrendingUp } from 'lucide-react'
 import React from 'react'
-import { AlertTriangle, Shield, TrendingDown, TrendingUp, DollarSign } from 'lucide-react'
+
 import { Checkbox } from '@/components/ui/checkbox'
 import { SliderWithInput } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
-import {
-  RiskSettings as RiskSettingsType,
+import type {
   RiskLevel,
+  RiskSettings as RiskSettingsType} from '@/types/risk';
+import {
   calculateRiskLevel,
   calculateTriggerPrice,
-  formatCurrency,
   DEFAULT_RISK_SETTINGS,
+  formatCurrency
 } from '@/types/risk'
 
 // =============================================================================
@@ -149,7 +151,7 @@ export function RiskSettings({
             <Checkbox
               checked={value.stopLoss.enabled}
               onCheckedChange={(checked) =>
-                updateStopLoss({ enabled: checked === true })
+                { updateStopLoss({ enabled: checked === true }); }
               }
               disabled={disabled}
             />
@@ -163,7 +165,7 @@ export function RiskSettings({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => updateStopLoss({ type: 'percentage' })}
+                onClick={() => { updateStopLoss({ type: 'percentage' }); }}
                 disabled={disabled}
                 className={cn(
                   'px-3 py-1 text-xs rounded-md transition-colors',
@@ -176,7 +178,7 @@ export function RiskSettings({
               </button>
               <button
                 type="button"
-                onClick={() => updateStopLoss({ type: 'fixed_price' })}
+                onClick={() => { updateStopLoss({ type: 'fixed_price' }); }}
                 disabled={disabled}
                 className={cn(
                   'px-3 py-1 text-xs rounded-md transition-colors',
@@ -192,7 +194,7 @@ export function RiskSettings({
             {/* Value Slider */}
             <SliderWithInput
               value={value.stopLoss.value}
-              onChange={(v) => updateStopLoss({ value: v })}
+              onChange={(v) => { updateStopLoss({ value: v }); }}
               min={value.stopLoss.type === 'percentage' ? 0.5 : 0}
               max={value.stopLoss.type === 'percentage' ? 30 : currentPrice * 0.9}
               step={value.stopLoss.type === 'percentage' ? 0.5 : 100}
@@ -220,7 +222,7 @@ export function RiskSettings({
             <Checkbox
               checked={value.takeProfit.enabled}
               onCheckedChange={(checked) =>
-                updateTakeProfit({ enabled: checked === true })
+                { updateTakeProfit({ enabled: checked === true }); }
               }
               disabled={disabled}
             />
@@ -234,7 +236,7 @@ export function RiskSettings({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => updateTakeProfit({ type: 'percentage' })}
+                onClick={() => { updateTakeProfit({ type: 'percentage' }); }}
                 disabled={disabled}
                 className={cn(
                   'px-3 py-1 text-xs rounded-md transition-colors',
@@ -247,7 +249,7 @@ export function RiskSettings({
               </button>
               <button
                 type="button"
-                onClick={() => updateTakeProfit({ type: 'fixed_price' })}
+                onClick={() => { updateTakeProfit({ type: 'fixed_price' }); }}
                 disabled={disabled}
                 className={cn(
                   'px-3 py-1 text-xs rounded-md transition-colors',
@@ -263,7 +265,7 @@ export function RiskSettings({
             {/* Value Slider */}
             <SliderWithInput
               value={value.takeProfit.value}
-              onChange={(v) => updateTakeProfit({ value: v })}
+              onChange={(v) => { updateTakeProfit({ value: v }); }}
               min={value.takeProfit.type === 'percentage' ? 1 : currentPrice}
               max={value.takeProfit.type === 'percentage' ? 100 : currentPrice * 2}
               step={value.takeProfit.type === 'percentage' ? 1 : 100}
@@ -295,7 +297,7 @@ export function RiskSettings({
             </div>
             <SliderWithInput
               value={value.positionLimit.maxPositionPercent}
-              onChange={(v) => updatePositionLimit({ maxPositionPercent: v })}
+              onChange={(v) => { updatePositionLimit({ maxPositionPercent: v }); }}
               min={5}
               max={100}
               step={5}
@@ -314,7 +316,7 @@ export function RiskSettings({
             </div>
             <SliderWithInput
               value={value.positionLimit.maxTradeAmount}
-              onChange={(v) => updatePositionLimit({ maxTradeAmount: v })}
+              onChange={(v) => { updatePositionLimit({ maxTradeAmount: v }); }}
               min={100}
               max={totalCapital}
               step={100}

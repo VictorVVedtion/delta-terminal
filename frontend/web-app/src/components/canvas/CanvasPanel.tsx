@@ -1,26 +1,27 @@
 'use client'
 
-import React from 'react'
 import {
-  X,
   Check,
-  XCircle,
   ChevronDown,
   ChevronUp,
   Lightbulb,
-  TrendingUp,
-  TrendingDown,
   Minus,
   RotateCcw,
+  TrendingDown,
+  TrendingUp,
+  X,
+  XCircle,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { InsightData, InsightParam, ImpactMetric } from '@/types/insight'
+import React from 'react'
+
 import { ParamControl } from '@/components/a2ui/controls/ParamControl'
-import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useParamConstraints } from '@/hooks/useParamConstraints'
 import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
+import type { ImpactMetric,InsightData, InsightParam } from '@/types/insight'
 
 // =============================================================================
 // CanvasPanel Props
@@ -158,7 +159,7 @@ export function CanvasPanel({
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [isOpen, onClose])
 
   if (!insight) {
@@ -293,7 +294,7 @@ export function CanvasPanel({
                     key={param.key}
                     param={param}
                     value={param.value}
-                    onChange={(value) => handleParamChange(param.key, value)}
+                    onChange={(value) => { handleParamChange(param.key, value); }}
                     disabled={isLoading}
                   />
                 ))}
@@ -321,7 +322,7 @@ export function CanvasPanel({
                         key={param.key}
                         param={param}
                         value={param.value}
-                        onChange={(value) => handleParamChange(param.key, value)}
+                        onChange={(value) => { handleParamChange(param.key, value); }}
                         disabled={isLoading}
                       />
                     ))}

@@ -1,20 +1,21 @@
 'use client'
 
-import React from 'react'
 import {
-  TrendingUp,
-  TrendingDown,
   Activity,
-  Target,
   AlertTriangle,
+  BarChart3,
   Clock,
   DollarSign,
-  BarChart3,
   Percent,
+  Target,
+  TrendingDown,
+  TrendingUp,
   Zap,
 } from 'lucide-react'
-import type { BacktestStats } from '@/types/insight'
+import React from 'react'
+
 import { cn } from '@/lib/utils'
+import type { BacktestStats } from '@/types/insight'
 
 // =============================================================================
 // Types

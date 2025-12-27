@@ -7,18 +7,19 @@
  * 分解策略盈亏来源并展示各因子贡献度
  */
 
-import React from 'react'
 import {
-  PieChart,
-  X,
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Calendar,
+  PieChart,
+  TrendingDown,
+  TrendingUp,
+  X,
 } from 'lucide-react'
+import React from 'react'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { AttributionInsightData, AttributionBreakdownItem } from '@/types/insight'
+import type { AttributionBreakdownItem,AttributionInsightData } from '@/types/insight'
 
 // =============================================================================
 // Types

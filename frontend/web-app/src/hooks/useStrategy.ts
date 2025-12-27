@@ -3,10 +3,12 @@
  * 处理策略的 CRUD 操作和状态管理
  */
 
-import { useEffect, useState, useCallback } from 'react'
-import { useStrategyStore, Strategy } from '@/store'
+import { useCallback,useEffect, useState } from 'react'
+
 import { apiClient } from '@/lib/api'
 import { wsClient } from '@/lib/websocket'
+import type { Strategy} from '@/store';
+import {useStrategyStore } from '@/store'
 
 // Extended Strategy type with additional fields
 export interface ExtendedStrategy extends Strategy {
@@ -37,9 +39,9 @@ export function useStrategies() {
 
   // 订阅策略更新
   useEffect(() => {
-    fetchStrategies()
+    void fetchStrategies()
 
-    const handleStrategyUpdate = (data: any) => {
+    const handleStrategyUpdate = (data: { id: string }) => {
       updateStrategy(data.id, data)
     }
 
@@ -144,7 +146,7 @@ export function useStrategy(id: string) {
   }, [id])
 
   useEffect(() => {
-    fetchStrategy()
+    void fetchStrategy()
   }, [fetchStrategy])
 
   return { strategy, loading, error, refetch: fetchStrategy }

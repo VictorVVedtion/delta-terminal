@@ -5,8 +5,9 @@
  * 同时触发 Toast 即时通知和记录到 NotificationStore
  */
 
+import { type NotificationType,useNotificationStore } from '@/store/notification'
+
 import { toast } from './toast'
-import { useNotificationStore, type NotificationType } from '@/store/notification'
 
 // =============================================================================
 // Types

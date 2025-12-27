@@ -1,18 +1,18 @@
 'use client'
 
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
-  Play,
-  Pause,
-  Edit,
-  Trash2,
   Activity,
   Clock,
-  Plus
-} from 'lucide-react'
+  Edit,
+  Pause,
+  Play,
+  Plus,
+  Trash2} from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
 
 interface Strategy {

@@ -1,19 +1,20 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { cn } from '@/lib/utils'
 import {
-  AlertTriangle,
-  TrendingDown,
-  Zap,
-  Shield,
   Activity,
+  AlertTriangle,
   Bell,
-  X,
   ChevronRight,
   Clock,
+  Shield,
+  TrendingDown,
+  X,
+  Zap,
 } from 'lucide-react'
+import React, { useCallback,useEffect, useState } from 'react'
+
 import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
 
 // =============================================================================
 // Types
@@ -115,10 +116,10 @@ function generateMockAlert(): SentinelAlert {
     'margin',
     'consecutive_loss',
   ]
-  const type = types[Math.floor(Math.random() * types.length)] as AlertType
+  const type = types[Math.floor(Math.random() * types.length)]!
 
   const severities: AlertSeverity[] = ['info', 'warning', 'critical']
-  const severity = severities[Math.floor(Math.random() * severities.length)] as AlertSeverity
+  const severity = severities[Math.floor(Math.random() * severities.length)]!
 
   const alertTemplates: Record<AlertType, Partial<SentinelAlert>> = {
     volatility: {
@@ -171,18 +172,18 @@ function generateMockAlert(): SentinelAlert {
     id: `alert_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     type,
     severity,
-    title: alertData?.title || '系统预警',
-    message: alertData?.message || '请检查系统状态',
+    title: alertData.title || '系统预警',
+    message: alertData.message || '请检查系统状态',
     timestamp: Date.now(),
     strategyName: 'RSI 超卖反弹',
     isRead: false,
     isDismissed: false,
   }
 
-  if (alertData?.data) {
+  if (alertData.data) {
     result.data = alertData.data
   }
-  if (alertData?.suggestedAction) {
+  if (alertData.suggestedAction) {
     result.suggestedAction = alertData.suggestedAction
   }
 
@@ -288,7 +289,7 @@ function AlertCard({ alert, onDismiss, onAction }: AlertCardProps) {
       {/* Suggested Action */}
       {alert.suggestedAction && onAction && (
         <button
-          onClick={() => onAction(alert.suggestedAction!)}
+          onClick={() => { onAction(alert.suggestedAction!); }}
           className={cn(
             'w-full flex items-center justify-between px-3 py-2 rounded-md',
             'bg-primary/10 text-primary text-sm font-medium',
@@ -337,7 +338,7 @@ export function SentinelAlerts({
       }
     }, 10000) // Every 10 seconds
 
-    return () => clearInterval(interval)
+    return () => { clearInterval(interval); }
   }, [initialAlerts])
 
   // Use provided alerts if available
@@ -429,7 +430,7 @@ export function SentinelAlerts({
 
         {activeAlerts.length > maxVisible && (
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => { setIsExpanded(!isExpanded); }}
             className="text-xs text-primary hover:underline"
           >
             {isExpanded ? '收起' : `查看全部 (${activeAlerts.length})`}
@@ -443,8 +444,8 @@ export function SentinelAlerts({
           <AlertCard
             key={alert.id}
             alert={alert}
-            onDismiss={() => handleDismiss(alert.id)}
-            {...(onAction && { onAction: (action: string) => handleAction(alert.id, action) })}
+            onDismiss={() => { handleDismiss(alert.id); }}
+            {...(onAction && { onAction: (action: string) => { handleAction(alert.id, action); } })}
           />
         ))}
       </div>

@@ -214,7 +214,7 @@ export interface InsightLoadingState {
     title?: string
     symbol?: string
     type?: string
-    metrics?: Array<{ key: string; value?: number; loading: boolean }>
+    metrics?: { key: string; value?: number; loading: boolean }[]
   }
 }
 

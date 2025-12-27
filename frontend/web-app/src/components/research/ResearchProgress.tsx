@@ -1,14 +1,15 @@
 'use client'
 
+import { Check, ChevronDown, ChevronUp,Clock, Loader2, X } from 'lucide-react'
 import React from 'react'
-import { cn } from '@/lib/utils'
-import { Check, Loader2, X, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { cn } from '@/lib/utils'
 import type { ResearchStep, ResearchStepStatus } from '@/types/research'
 
 /**

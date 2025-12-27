@@ -5,9 +5,7 @@
 /**
  * 所有资产的中间价格响应
  */
-export interface AllMidsResponse {
-  [symbol: string]: string; // symbol -> price (字符串格式)
-}
+export type AllMidsResponse = Record<string, string>;
 
 /**
  * Hyperliquid API 请求类型

@@ -7,15 +7,16 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { X, TrendingUp, TrendingDown, Activity, DollarSign, Award, Play, Target } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Activity, Award, DollarSign, Play, Target,TrendingDown, TrendingUp, X } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription,CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
-import { usePaperTrading } from '@/hooks/usePaperTrading'
 import { useSingleAssetPrice } from '@/hooks/useHyperliquidPrice'
+import { usePaperTrading } from '@/hooks/usePaperTrading'
+import { cn } from '@/lib/utils'
 
 // =============================================================================
 // Types
@@ -65,12 +66,28 @@ export function PaperTradingPanel({
     enabled: isOpen && !!account,
   })
 
-  // 更新持仓价格
+  // 使用 ref 存储最新的回调函数，避免 useEffect 循环依赖
+  const updatePriceRef = useRef(updatePrice)
+  const getPositionBySymbolRef = useRef(getPositionBySymbol)
+
+  // 同步更新 ref
   useEffect(() => {
-    if (account && currentPrice && getPositionBySymbol(symbol)) {
-      updatePrice(symbol, currentPrice)
+    updatePriceRef.current = updatePrice
+    getPositionBySymbolRef.current = getPositionBySymbol
+  })
+
+  // 更新持仓价格 - 使用 ref 打破依赖循环
+  const lastPriceRef = useRef<number | null>(null)
+  useEffect(() => {
+    // 只在价格实际变化时更新，避免无限循环
+    if (account && currentPrice && currentPrice !== lastPriceRef.current) {
+      const hasPosition = getPositionBySymbolRef.current(symbol)
+      if (hasPosition) {
+        lastPriceRef.current = currentPrice
+        updatePriceRef.current(symbol, currentPrice)
+      }
     }
-  }, [currentPrice, account, symbol, getPositionBySymbol, updatePrice])
+  }, [currentPrice, account, symbol])
 
   // ESC 键关闭
   useEffect(() => {
@@ -80,7 +97,7 @@ export function PaperTradingPanel({
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [isOpen, onClose])
 
   // 创建账户
@@ -168,7 +185,7 @@ export function PaperTradingPanel({
                     <Input
                       type="number"
                       value={initialCapital}
-                      onChange={(e) => setInitialCapital(Number(e.target.value))}
+                      onChange={(e) => { setInitialCapital(Number(e.target.value)); }}
                       min={100}
                       max={1000000}
                       className="text-center text-lg font-mono"
@@ -179,7 +196,7 @@ export function PaperTradingPanel({
                           key={amount}
                           variant="outline"
                           size="sm"
-                          onClick={() => setInitialCapital(amount)}
+                          onClick={() => { setInitialCapital(amount); }}
                           className={cn(
                             'text-xs',
                             initialCapital === amount && 'border-[hsl(var(--rb-yellow))] bg-[hsl(var(--rb-yellow))]/10'

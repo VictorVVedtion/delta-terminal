@@ -5,22 +5,24 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import {
-  SafetyStatus,
-  SafetyConfig,
-  KillSwitchStatus,
-  KillSwitchResult,
-  MarginStatus,
-  MarginAlertLevel,
-  CircuitBreakerStatus,
-  CircuitBreakerTrigger,
+
+import type {
+  ApprovalRecord,
   ApprovalState,
   ApprovalStep,
-  ApprovalRecord,
-  DEFAULT_SAFETY_CONFIG,
+  CircuitBreakerStatus,
+  CircuitBreakerTrigger,
+  KillSwitchResult,
+  KillSwitchStatus,
+  MarginAlertLevel,
+  MarginStatus,
+  SafetyConfig,
+  SafetyStatus} from '@/types/safety';
+import {
   calculateMarginAlertLevel,
   calculateSafetyHealth,
-  generateApprovalToken,
+  DEFAULT_SAFETY_CONFIG,
+  generateApprovalToken
 } from '@/types/safety'
 
 // ============================================================================

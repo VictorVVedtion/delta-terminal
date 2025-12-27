@@ -4,7 +4,8 @@
  */
 
 import { act } from '@testing-library/react'
-import { useAgentStore, type Agent, type AgentStatus } from '../agent'
+
+import { type Agent, useAgentStore } from '../agent'
 
 // =============================================================================
 // Test Setup

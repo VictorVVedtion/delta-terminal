@@ -1,26 +1,27 @@
 'use client'
 
-import React from 'react'
 import {
-  X,
-  Play,
-  Pause,
-  Square,
-  Settings,
-  TrendingUp,
-  TrendingDown,
   Activity,
-  Clock,
-  Target,
   AlertTriangle,
+  Clock,
+  Pause,
+  Play,
+  Settings,
   ShieldAlert,
+  Square,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
-import { notify } from '@/lib/notification'
+import React from 'react'
+
 import { MarginAlert } from '@/components/safety/MarginAlert'
-import { useSafetyStore, selectMarginStatus } from '@/store/safety'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { notify } from '@/lib/notification'
+import { cn } from '@/lib/utils'
+import { selectMarginStatus,useSafetyStore } from '@/store/safety'
 
 // =============================================================================
 // Type Definitions
@@ -162,8 +163,8 @@ export function MonitorCanvas({
   isLoading = false,
   showMarginAlert = true,
 }: MonitorCanvasProps) {
-  // Get margin status for alert level
-  const marginStatus = useSafetyStore(selectMarginStatus)
+  // Get margin status for alert level (reserved for future use)
+  const _marginStatus = useSafetyStore(selectMarginStatus)
   // Track previous status for notification triggering
   const prevStatusRef = React.useRef<StrategyStatus | null>(null)
 
@@ -171,11 +172,11 @@ export function MonitorCanvas({
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose?.()
+        onClose()
       }
     }
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    return () => { window.removeEventListener('keydown', handleEscape); }
   }, [isOpen, onClose])
 
   // Story 5.3: Notify on strategy status changes

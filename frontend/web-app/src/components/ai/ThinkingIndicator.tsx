@@ -7,8 +7,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ThinkingStep } from '@/types/ai'
+
 import { cn } from '@/lib/utils'
+import type { ThinkingStep } from '@/types/ai'
 
 // ============================================================================
 // Types
@@ -50,7 +51,7 @@ export function ThinkingIndicator({
     <div className={cn('rounded-lg border bg-secondary/30', className)}>
       {/* 头部 */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={() => { setCollapsed(!collapsed); }}
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/50 transition-colors"
       >
         <div className="flex items-center gap-2">
@@ -152,7 +153,7 @@ function ThinkingStepItem({ step, index: _index, isNew }: ThinkingStepItemProps)
           {step.content && (
             <>
               <button
-                onClick={() => setExpanded(!expanded)}
+                onClick={() => { setExpanded(!expanded); }}
                 className="text-xs text-muted-foreground hover:text-foreground mt-1"
               >
                 {expanded ? '收起详情' : '查看详情'}

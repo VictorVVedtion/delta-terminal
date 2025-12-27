@@ -5,10 +5,11 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+
 import type {
-  SensitivityInsightData,
   AttributionInsightData,
   ComparisonInsightData,
+  SensitivityInsightData,
 } from '@/types/insight'
 
 interface AnalysisState {
@@ -64,49 +65,49 @@ export const useAnalysisStore = create<AnalysisState>()(
 
     // 敏感度分析
     openSensitivityAnalysis: (data) =>
-      set(
+      { set(
         { sensitivityOpen: true, sensitivityData: data },
         false,
         'analysis/openSensitivity'
-      ),
+      ); },
     closeSensitivityAnalysis: () =>
-      set(
+      { set(
         { sensitivityOpen: false, sensitivityData: null },
         false,
         'analysis/closeSensitivity'
-      ),
+      ); },
 
     // 归因分析
     openAttributionAnalysis: (data) =>
-      set(
+      { set(
         { attributionOpen: true, attributionData: data },
         false,
         'analysis/openAttribution'
-      ),
+      ); },
     closeAttributionAnalysis: () =>
-      set(
+      { set(
         { attributionOpen: false, attributionData: null },
         false,
         'analysis/closeAttribution'
-      ),
+      ); },
 
     // 对比分析
     openComparisonAnalysis: (data) =>
-      set(
+      { set(
         { comparisonOpen: true, comparisonData: data },
         false,
         'analysis/openComparison'
-      ),
+      ); },
     closeComparisonAnalysis: () =>
-      set(
+      { set(
         { comparisonOpen: false, comparisonData: null },
         false,
         'analysis/closeComparison'
-      ),
+      ); },
 
     // 版本历史
     openVersionHistory: (strategyId, strategyName) =>
-      set(
+      { set(
         {
           versionHistoryOpen: true,
           versionStrategyId: strategyId,
@@ -114,9 +115,9 @@ export const useAnalysisStore = create<AnalysisState>()(
         },
         false,
         'analysis/openVersionHistory'
-      ),
+      ); },
     closeVersionHistory: () =>
-      set(
+      { set(
         {
           versionHistoryOpen: false,
           versionStrategyId: '',
@@ -124,25 +125,25 @@ export const useAnalysisStore = create<AnalysisState>()(
         },
         false,
         'analysis/closeVersionHistory'
-      ),
+      ); },
 
     // 紧急操作
     openEmergencyActions: (strategyId) =>
-      set(
+      { set(
         { emergencyActionsOpen: true, emergencyStrategyId: strategyId },
         false,
         'analysis/openEmergencyActions'
-      ),
+      ); },
     closeEmergencyActions: () =>
-      set(
+      { set(
         { emergencyActionsOpen: false, emergencyStrategyId: '' },
         false,
         'analysis/closeEmergencyActions'
-      ),
+      ); },
 
     // 清理所有面板
     closeAllPanels: () =>
-      set(
+      { set(
         {
           sensitivityOpen: false,
           sensitivityData: null,
@@ -158,6 +159,6 @@ export const useAnalysisStore = create<AnalysisState>()(
         },
         false,
         'analysis/closeAll'
-      ),
+      ); },
   }))
 )

@@ -6,18 +6,19 @@
  * 提供完整的部署状态管理和错误处理。
  */
 
-import { useState, useCallback, useEffect } from 'react'
-import { useAgentStore } from '@/store/agent'
+import { useCallback, useEffect,useState } from 'react'
+
+import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import { apiClient } from '@/lib/api'
+import { useAgentStore } from '@/store/agent'
+import { usePaperTradingStore } from '@/store/paperTrading'
 import type {
+  BacktestSummary,
   DeploymentResult,
   DeploymentStatus,
-  BacktestSummary,
   PaperPerformance,
 } from '@/types/deployment'
 import { DeploymentError, isDeploymentError } from '@/types/deployment'
-import type { DeployConfig } from '@/components/canvas/DeployCanvas'
-import { usePaperTradingStore } from '@/store/paperTrading'
 
 // =============================================================================
 // Types
@@ -150,7 +151,7 @@ export function useDeployment(options: UseDeploymentOptions): UseDeploymentRetur
 
   // Initial data fetch
   useEffect(() => {
-    refreshPrerequisites()
+    void refreshPrerequisites()
   }, [refreshPrerequisites])
 
   // ==========================================================================
@@ -199,8 +200,8 @@ export function useDeployment(options: UseDeploymentOptions): UseDeploymentRetur
       }
     }
 
-    const interval = setInterval(pollStatus, pollingInterval)
-    return () => clearInterval(interval)
+    const interval = setInterval(() => { void pollStatus(); }, pollingInterval)
+    return () => { clearInterval(interval); }
   }, [deploymentId, state.phase, pollingInterval, strategyId, updateDeploymentProgress, onError])
 
   // ==========================================================================
@@ -409,7 +410,7 @@ export function useDeploymentStatus(deploymentId: string | null) {
   }, [deploymentId])
 
   useEffect(() => {
-    refresh()
+    void refresh()
   }, [refresh])
 
   return { status, isLoading, error, refresh }
@@ -437,7 +438,7 @@ export function useBacktestResult(strategyId: string) {
   }, [strategyId])
 
   useEffect(() => {
-    refresh()
+    void refresh()
   }, [refresh])
 
   return { result, isLoading, error, refresh }
@@ -465,7 +466,7 @@ export function usePaperPerformance(agentId: string) {
   }, [agentId])
 
   useEffect(() => {
-    refresh()
+    void refresh()
   }, [refresh])
 
   return { performance, isLoading, error, refresh }

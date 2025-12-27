@@ -1,21 +1,22 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence,motion } from 'framer-motion'
 import {
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Loader2,
   Square,
   StopCircle,
+  XCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import React, { useCallback, useEffect,useRef, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useSafetyStore } from '@/store/safety'
+import { cn } from '@/lib/utils'
 import { useNotificationStore } from '@/store/notification'
-import { KillSwitchResult } from '@/types/safety'
+import { useSafetyStore } from '@/store/safety'
+import type { KillSwitchResult } from '@/types/safety'
 
 interface KillSwitchModalProps {
   isOpen: boolean
@@ -89,7 +90,7 @@ export function KillSwitchModal({
 
     // Execute after duration
     pressTimerRef.current = setTimeout(() => {
-      handleExecute()
+      void handleExecute()
     }, CONFIRM_DURATION)
   }, [step])
 
@@ -215,7 +216,7 @@ export function KillSwitchModal({
                   <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer transition-colors">
                     <Checkbox
                       checked={closePositions}
-                      onCheckedChange={(checked) => setClosePositions(!!checked)}
+                      onCheckedChange={(checked) => { setClosePositions(!!checked); }}
                     />
                     <div>
                       <p className="text-sm font-medium text-foreground">
@@ -359,7 +360,7 @@ export function KillSwitchModal({
                     <Button
                       variant="destructive"
                       className="flex-1"
-                      onClick={() => setStep('confirm')}
+                      onClick={() => { setStep('confirm'); }}
                     >
                       Retry
                     </Button>

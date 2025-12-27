@@ -1,8 +1,9 @@
 'use client'
 
-import React from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
+import React from 'react'
+
 import { useAgentStore } from '@/store/agent'
 
 export function GlobalAgentStatus() {

@@ -5,12 +5,13 @@
 
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Activity, DollarSign, Percent, TrendingDown, TrendingUp, X } from 'lucide-react'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn, formatCurrency, formatPercentage, formatTimestamp } from '@/lib/utils'
 import type { PaperAccount, PaperAccountStats } from '@/types/paperTrading'
-import { Activity, TrendingUp, TrendingDown, DollarSign, Percent, X } from 'lucide-react'
 
 interface PaperTradingDashboardProps {
   account: PaperAccount | null
@@ -240,7 +241,7 @@ export function PaperTradingDashboard({
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => onClosePosition(position.id)}
+                          onClick={() => { onClosePosition(position.id); }}
                           className="gap-1.5"
                         >
                           <X className="h-3.5 w-3.5" />

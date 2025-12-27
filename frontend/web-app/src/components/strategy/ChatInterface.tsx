@@ -1,54 +1,91 @@
 'use client'
 
+import { Bot, Check, ChevronDown, Send, Settings2, Sparkles, User, X } from 'lucide-react'
 import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Send, Bot, User, Settings2, ChevronDown, Check, Sparkles, X } from 'lucide-react'
-import { InsightMessage } from '@/components/insight'
-import { TemplateSelector } from '@/components/strategy/TemplateSelector'
-import type { StrategyTemplate } from '@/lib/templates/strategies'
+
+import { AIConfigPanel } from '@/components/ai'
 import { CanvasPanel } from '@/components/canvas'
-import { DeployCanvas } from '@/components/canvas/DeployCanvas'
+import { AttributionCanvas } from '@/components/canvas/AttributionCanvas'
 import { BacktestCanvas } from '@/components/canvas/BacktestCanvas'
+import { ComparisonCanvas } from '@/components/canvas/ComparisonCanvas'
+import type { DeployConfig } from '@/components/canvas/DeployCanvas'
+import { DeployCanvas } from '@/components/canvas/DeployCanvas'
+import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
 import { MonitorCanvas } from '@/components/canvas/MonitorCanvas'
 // EPIC-008: Analysis Canvas Components
 import { SensitivityCanvas } from '@/components/canvas/SensitivityCanvas'
-import { AttributionCanvas } from '@/components/canvas/AttributionCanvas'
-import { ComparisonCanvas } from '@/components/canvas/ComparisonCanvas'
 // EPIC-009: Version & Intervention Components
 import { VersionHistoryCanvas } from '@/components/canvas/VersionHistoryCanvas'
+import { InsightMessage } from '@/components/insight'
 import { EmergencyActions } from '@/components/intervention/EmergencyActions'
-import type { EmergencyAction } from '@/types/intervention'
+import { TemplateSelector } from '@/components/strategy/TemplateSelector'
 import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
-import { useDeployment } from '@/hooks/useDeployment'
-import { useBacktest } from '@/hooks/useBacktest'
-import { useMonitor } from '@/hooks/useMonitor'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { useChat } from '@/hooks/useAI'
-import { AIConfigPanel } from '@/components/ai'
+import { useBacktest } from '@/hooks/useBacktest'
+import { useDeployment } from '@/hooks/useDeployment'
+import { useMonitor } from '@/hooks/useMonitor'
+import { notify, notifyWarning } from '@/lib/notification'
+import { extractInsightData, generateSystemPrompt, validateInsightData } from '@/lib/prompts/strategy-assistant'
+import type { StrategyTemplate } from '@/lib/templates/strategies'
+import { cn } from '@/lib/utils'
+import type { Agent } from '@/store/agent'
+import { useAgentStore } from '@/store/agent'
 import { useAIStore } from '@/store/ai'
 import { useAnalysisStore } from '@/store/analysis'
-import { SIMPLE_PRESETS, type SimplePreset } from '@/types/ai'
-import { generateSystemPrompt, extractInsightData, validateInsightData } from '@/lib/prompts/strategy-assistant'
-import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
-import type {
-  InsightData,
-  InsightParam,
-  InsightCardStatus,
-  InsightActionType,
-  SensitivityInsightData,
-  AttributionInsightData,
-  ComparisonInsightData,
-  ClarificationInsight,
-  ClarificationAnswer,
-} from '@/types/insight'
-import type { DeployConfig } from '@/components/canvas/DeployCanvas'
-import type { BacktestConfig } from '@/types/backtest'
-import { cn } from '@/lib/utils'
-import { notify, notifyWarning } from '@/lib/notification'
-
 // =============================================================================
 // Types
 // =============================================================================
+import { useModeStore } from '@/store/mode'
+import { SIMPLE_PRESETS, type SimplePreset } from '@/types/ai'
+import type { BacktestConfig } from '@/types/backtest'
+import type {
+  AttributionInsightData,
+  ClarificationAnswer,
+  ClarificationInsight,
+  ComparisonInsightData,
+  InsightActionType,
+  InsightCardStatus,
+  InsightData,
+  InsightParam,
+  SensitivityInsightData,
+} from '@/types/insight'
+import type { EmergencyAction } from '@/types/intervention'
+import type { ResearchReport } from '@/types/research'
+
+// =============================================================================
+// Trading Spirit Persona
+// =============================================================================
+
+const SPIRIT_CONFIG = {
+  name: 'Trading Spirit',
+  icon: '🔮',
+  greeting: `你好！我是 **Trading Spirit**，你的智能交易伙伴。
+
+我可以帮你：
+- 📈 创建和优化交易策略
+- 🔍 分析市场趋势和信号
+- ⚡ 快速部署 Paper/Live 交易
+- 🛡️ 设置风控规则和预警
+
+告诉我你的交易想法，我会将其转化为可执行的策略！`,
+}
+
+// Research Mode Persona
+const RESEARCH_CONFIG = {
+  name: 'Research Analyst',
+  icon: '🔬',
+  greeting: `你好！我是 **Research Analyst**，使用 Claude Opus 进行深度研究。
+
+**深度研究模式**将从多个维度综合分析：
+- 📈 技术面分析 (K线形态、指标信号)
+- ⛓️ 链上数据 (巨鲸动向、资金流向)
+- 🌍 宏观事件 (政策动态、行业新闻)
+- 😊 市场情绪 (社媒热度、恐慌贪婪指数)
+
+告诉我你想研究的标的，我会生成一份详尽的分析报告！`,
+}
 
 interface Message {
   id: string
@@ -59,6 +96,11 @@ interface Message {
   insight?: InsightData | undefined
   /** A2UI: Status of the insight card */
   insightStatus?: InsightCardStatus | undefined
+  /** Multiple insights (for batch operations) */
+  insights?: InsightData[] | undefined
+  insightStatuses?: InsightCardStatus[] | undefined
+  researchReport?: ResearchReport | undefined
+  isResearchProgress?: boolean
 }
 
 interface ChatInterfaceProps {
@@ -100,16 +142,40 @@ export function ChatInterface({
   onStrategyStatusChange,
 }: ChatInterfaceProps) {
   // ==========================================================================
+  // Mode & Persona State
+  // ==========================================================================
+  const { currentMode } = useModeStore()
+  const isResearchMode = currentMode === 'research'
+  const persona = isResearchMode ? RESEARCH_CONFIG : SPIRIT_CONFIG
+
+  // ==========================================================================
+  // Agent Store - 连接 InsightCard 批准 → Agent 创建
+  // ==========================================================================
+  const { addAgent, agents, updatePnLDashboard } = useAgentStore()
+
+  // ==========================================================================
   // State
   // ==========================================================================
-  const [messages, setMessages] = React.useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: '你好！我是 Delta AI，你的智能交易助手。我可以帮你：\n\n1. 创建自定义交易策略\n2. 分析市场趋势\n3. 优化现有策略\n4. 回答交易相关问题\n\n请告诉我你想做什么？',
-      timestamp: Date.now() - 60000,
-    },
-  ])
+  const [messages, setMessages] = React.useState<Message[]>([])
+  const isInitializedRef = React.useRef(false)
+  const lastModeRef = React.useRef(currentMode)
+
+  // Initialize messages based on mode
+  React.useEffect(() => {
+    // Mode change or initial load
+    if (lastModeRef.current !== currentMode || !isInitializedRef.current) {
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: persona.greeting,
+          timestamp: Date.now() - 60000,
+        },
+      ])
+      lastModeRef.current = currentMode
+      isInitializedRef.current = true
+    }
+  }, [currentMode, persona.greeting])
   const [input, setInput] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
@@ -121,25 +187,15 @@ export function ChatInterface({
   // AI Chat Hook - 通过后端 API 代理调用
   const {
     sendStream,
-    cancel: cancelAI,
+    cancel: _cancelAI,
     isLoading: isAILoading,
-    streamContent,
-    thinkingSteps,
+    streamContent: _streamContent,
+    thinkingSteps: _thinkingSteps,
     error: aiError,
     currentModel,
     canUseAI,
     disabledReason
-  } = useChat({
-    onSuccess: (response) => {
-      console.log('[AI] Response received:', response.model, response.usage)
-    },
-    onError: (error) => {
-      console.error('[AI] Error:', error.message)
-    },
-    onThinking: (step) => {
-      console.log('[AI] Thinking step:', step.title)
-    }
-  })
+  } = useChat({})
 
   // AI 配置面板状态
   const [configPanelOpen, setConfigPanelOpen] = React.useState(false)
@@ -435,6 +491,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   }, [])
 
   // A2UI: Handle insight approval (from Canvas or InsightCard)
+  // 连接完整流程: InsightCard 批准 → 创建 Agent
   const handleInsightApprove = React.useCallback((insight: InsightData, params: InsightParam[]) => {
     // Show loading state if Canvas is open
     if (canvasOpen) {
@@ -450,6 +507,46 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
           : msg
       ))
 
+      // =========================================================================
+      // 核心: 从 InsightData 创建真实的 Agent 并添加到 Store
+      // =========================================================================
+      if (insight.type === 'strategy_create' || insight.type === 'strategy_modify') {
+        const now = Date.now()
+        const newAgent: Agent = {
+          id: `agent_${now}`,
+          name: insight.target?.name ?? '新策略',
+          symbol: insight.target?.symbol ?? 'BTC/USDT',
+          status: 'shadow', // 新创建的策略默认为 shadow 模式
+          pnl: 0,
+          pnlPercent: 0,
+          trades: 0,
+          winRate: 0,
+          createdAt: now,
+          updatedAt: now,
+          // 存储回测相关字段以便后续部署
+          backtestId: insight.id, // 用于标记已通过批准
+        }
+
+        // 添加到 AgentStore
+        addAgent(newAgent)
+
+        // 重新计算 PnL 仪表盘 (从所有 Agent 汇总)
+        // 注意: 由于 addAgent 是异步更新，这里用当前 agents + 新 agent 计算
+        const allAgents = [...agents, newAgent]
+        const totalPnL = allAgents.reduce((sum, a) => sum + a.pnl, 0)
+        const totalCapital = 10000 // 假设总初始资本
+        const totalPnLPercent = totalCapital > 0 ? (totalPnL / totalCapital) * 100 : 0
+
+        updatePnLDashboard({
+          totalPnL,
+          totalPnLPercent,
+          todayPnL: allAgents.filter(a => a.updatedAt > now - 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
+          todayPnLPercent: 0,
+          weekPnL: allAgents.filter(a => a.updatedAt > now - 7 * 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
+          monthPnL: totalPnL,
+        })
+      }
+
       // Close Canvas and reset loading
       setCanvasLoading(false)
       setCanvasOpen(false)
@@ -459,7 +556,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       const confirmMessage: Message = {
         id: `confirm_${Date.now()}`,
         role: 'assistant',
-        content: `✅ 策略已批准并创建！您可以在策略列表中查看和管理此策略。\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${p.value}${p.config.unit || ''}`).join('\n')}`,
+        content: `✅ 策略已批准并创建！您可以在左侧边栏查看新创建的 Agent。\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`,
         timestamp: Date.now(),
       }
       setMessages(prev => [...prev, confirmMessage])
@@ -467,7 +564,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       // Notify parent
       onInsightApprove?.(insight, params)
     }, 800)
-  }, [canvasOpen, onInsightApprove])
+  }, [canvasOpen, onInsightApprove, addAgent, agents, updatePnLDashboard])
 
   // A2UI: Handle insight rejection (from Canvas or InsightCard)
   const handleInsightReject = React.useCallback((insight: InsightData) => {
@@ -514,8 +611,8 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     const answerText = answer.customText
       ? answer.customText
       : answer.selectedOptions
-          .map(optId => insight.options.find(opt => opt.id === optId)?.label || optId)
-          .join('、')
+        .map(optId => insight.options.find(opt => opt.id === optId)?.label || optId)
+        .join('、')
 
     // Add user's answer as a message
     const answerMessage: Message = {
@@ -713,7 +810,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   // Auto-start backtest when canvas opens
   React.useEffect(() => {
     if (backtestOpen && backtestInsight && backtestState.phase === 'idle') {
-      handleBacktestStart()
+      void handleBacktestStart()
     }
   }, [backtestOpen, backtestInsight, backtestState.phase, handleBacktestStart])
 
@@ -722,7 +819,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
    */
   const handleBacktestClose = React.useCallback(() => {
     if (isBacktestRunning) {
-      stopBacktest()
+      void stopBacktest()
     }
     setBacktestOpen(false)
     setBacktestInsight(null)
@@ -881,7 +978,6 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         }
 
         insight = builtInsight
-        console.log('[A2UI] InsightData extracted:', builtInsight.type, builtInsight.params?.length, 'params')
       }
 
       const aiMessage: Message = {
@@ -931,7 +1027,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setPresetMenuOpen(!presetMenuOpen)}
+                onClick={() => { setPresetMenuOpen(!presetMenuOpen); }}
                 className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
               >
                 <span className="text-sm">{currentPresetConfig.icon}</span>
@@ -942,7 +1038,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 <>
                   <div
                     className="fixed inset-0 z-40"
-                    onClick={() => setPresetMenuOpen(false)}
+                    onClick={() => { setPresetMenuOpen(false); }}
                   />
                   <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-popover border border-border rounded-lg shadow-lg py-1">
                     <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">
@@ -998,7 +1094,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setConfigPanelOpen(true)}
+            onClick={() => { setConfigPanelOpen(true); }}
             className="h-8 w-8"
             title="AI 设置"
           >
@@ -1060,7 +1156,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setTemplateSelectorOpen(true)}
+              onClick={() => { setTemplateSelectorOpen(true); }}
               className="text-xs gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
             >
               <Sparkles className="h-3 w-3" />
@@ -1073,7 +1169,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 key={index}
                 variant="outline"
                 size="sm"
-                onClick={() => setInput(prompt)}
+                onClick={() => { setInput(prompt); }}
                 className="text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/50"
               >
                 {prompt}
@@ -1090,7 +1186,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
             <div className="flex-1 relative">
               <input
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => { setInput(e.target.value); }}
                 placeholder="描述你想要的交易策略..."
                 disabled={isLoading || isThinking}
                 className={cn(
@@ -1124,7 +1220,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         isOpen={canvasOpen}
         onClose={handleCanvasClose}
         onApprove={handleInsightApprove}
-        onReject={(insight) => handleInsightReject(insight)}
+        onReject={(insight) => { handleInsightReject(insight); }}
         isLoading={canvasLoading}
       />
 
@@ -1279,7 +1375,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {configPanelOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-2xl max-h-[80vh] overflow-auto bg-background rounded-lg shadow-xl border">
-            <AIConfigPanel onClose={() => setConfigPanelOpen(false)} />
+            <AIConfigPanel onClose={() => { setConfigPanelOpen(false); }} />
           </div>
         </div>
       )}
@@ -1287,7 +1383,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {/* EPIC-010 S10.3: Template Selector Modal */}
       <TemplateSelector
         isOpen={templateSelectorOpen}
-        onClose={() => setTemplateSelectorOpen(false)}
+        onClose={() => { setTemplateSelectorOpen(false); }}
         onSelect={handleTemplateSelect}
       />
     </div>

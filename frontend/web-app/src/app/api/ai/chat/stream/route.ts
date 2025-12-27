@@ -11,15 +11,40 @@
  * 3. 使用分段算法将长推理内容拆分为多个步骤
  */
 
-import { NextRequest } from 'next/server'
-import { AIRequest, AIStreamChunk, AI_MODELS, ThinkingStep, SIMPLE_PRESETS } from '@/types/ai'
+import type { NextRequest } from 'next/server'
+
+import type { AIRequest, AIStreamChunk,ThinkingStep } from '@/types/ai';
+import { AI_MODELS, SIMPLE_PRESETS } from '@/types/ai'
+
+// Type definitions for OpenRouter streaming response
+interface OpenRouterStreamDelta {
+  content?: string
+  reasoning?: string
+  thinking?: string
+  reasoning_content?: string
+}
+
+interface OpenRouterStreamChoice {
+  delta?: OpenRouterStreamDelta
+  finish_reason?: string
+}
+
+interface OpenRouterStreamParsed {
+  id?: string
+  choices?: OpenRouterStreamChoice[]
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+  }
+  error?: { message?: string }
+}
 
 // AI Orchestrator 后端服务地址 (优先使用)
-const AI_ORCHESTRATOR_URL = process.env.AI_ORCHESTRATOR_URL
+const _AI_ORCHESTRATOR_URL = process.env.AI_ORCHESTRATOR_URL
 
 // OpenRouter 直接调用配置 (降级方案)
-const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+const _OPENROUTER_API_URL = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/api/v1'
+const _OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 
 // 使用前端默认预设的模型作为后备默认值
 const DEFAULT_MODEL = SIMPLE_PRESETS.balanced.defaultModel
@@ -43,7 +68,7 @@ async function proxyToOrchestratorWithBody(
 
   // 转发 JWT token 进行身份验证
   if (authHeader) {
-    headers['Authorization'] = authHeader
+    headers.Authorization = authHeader
   }
 
   const orchestratorResponse = await fetch(`${orchestratorUrl}/api/ai/chat/stream`, {
@@ -101,7 +126,7 @@ class ThinkingStepExtractor {
   private currentTitle = ''
   private currentContent = ''
   private stepStartTime = Date.now()
-  private emittedSteps: Set<number> = new Set()
+  private emittedSteps = new Set<number>()
   private lastEmitLength = 0
 
   /**
@@ -269,7 +294,7 @@ export async function POST(request: NextRequest) {
   // 每次请求时重新读取环境变量
   const orchestratorUrl = process.env.AI_ORCHESTRATOR_URL
   const apiKey = process.env.OPENROUTER_API_KEY
-  const apiUrl = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
+  const apiUrl = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/api/v1'
 
   // 先读取请求体（只能读取一次）
   let body: AIRequest
@@ -289,8 +314,7 @@ export async function POST(request: NextRequest) {
     try {
       const authHeader = request.headers.get('Authorization')
       return await proxyToOrchestratorWithBody(orchestratorUrl, body, authHeader)
-    } catch (error) {
-      console.warn('[AI Stream] Orchestrator failed, falling back to OpenRouter:', error)
+    } catch {
       // 降级到直接调用模式
     }
   }
@@ -301,7 +325,6 @@ export async function POST(request: NextRequest) {
   try {
     // 检查平台 API Key 配置
     if (!apiKey || apiKey === 'your-openrouter-api-key-here') {
-      console.error('OpenRouter API Key not configured')
       return new Response(
         JSON.stringify({ error: '服务暂不可用，请稍后再试' }),
         { status: 503, headers: { 'Content-Type': 'application/json' } }
@@ -397,10 +420,10 @@ export async function POST(request: NextRequest) {
           })
 
           if (!openRouterResponse.ok) {
-            const errorData = await openRouterResponse.json().catch(() => ({}))
+            const errorData = await openRouterResponse.json().catch(() => ({})) as OpenRouterStreamParsed
             const errorChunk: AIStreamChunk = {
               type: 'error',
-              data: { error: errorData.error?.message || 'AI 服务暂时不可用' }
+              data: { error: errorData.error?.message ?? 'AI 服务暂时不可用' }
             }
             safeEnqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
             safeClose()
@@ -431,14 +454,18 @@ export async function POST(request: NextRequest) {
           let outputTokens = 0
           let hasReceivedReasoning = false
           let contentBuffer = '' // 用于从内容中提取思考步骤（如果没有真实 reasoning）
+          let streamComplete = false
 
-          while (true) {
+          while (!streamComplete) {
             const { done, value } = await reader.read()
-            if (done) break
+            if (done) {
+              streamComplete = true
+              break
+            }
 
             buffer += decoder.decode(value, { stream: true })
             const lines = buffer.split('\n')
-            buffer = lines.pop() || ''
+            buffer = lines.pop() ?? ''
 
             for (const line of lines) {
               if (!line.startsWith('data: ')) continue
@@ -447,12 +474,12 @@ export async function POST(request: NextRequest) {
               if (!data) continue
 
               try {
-                const parsed = JSON.parse(data)
+                const parsed = JSON.parse(data) as OpenRouterStreamParsed
                 const delta = parsed.choices?.[0]?.delta
 
                 // 处理 reasoning/thinking 内容（真实思考步骤）
                 // OpenRouter 可能通过 delta.reasoning 或 delta.thinking 返回
-                const reasoning = delta?.reasoning || delta?.thinking || delta?.reasoning_content
+                const reasoning = delta?.reasoning ?? delta?.thinking ?? delta?.reasoning_content
 
                 if (reasoning && thinkingExtractor) {
                   hasReceivedReasoning = true
@@ -486,8 +513,8 @@ export async function POST(request: NextRequest) {
 
                 // 获取使用统计
                 if (parsed.usage) {
-                  inputTokens = parsed.usage.prompt_tokens || inputTokens
-                  outputTokens = parsed.usage.completion_tokens || outputTokens
+                  inputTokens = parsed.usage.prompt_tokens ?? inputTokens
+                  outputTokens = parsed.usage.completion_tokens ?? outputTokens
                 }
               } catch {
                 // 忽略解析错误
@@ -540,7 +567,6 @@ export async function POST(request: NextRequest) {
           safeEnqueue(encoder.encode(`data: ${JSON.stringify(doneChunk)}\n\n`))
           safeEnqueue(encoder.encode('data: [DONE]\n\n'))
         } catch (error) {
-          console.error('Stream processing error:', error)
           const errorChunk: AIStreamChunk = {
             type: 'error',
             data: { error: error instanceof Error ? error.message : 'AI 服务异常' }
@@ -561,7 +587,6 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('AI stream error:', error)
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'AI 服务异常' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -1,18 +1,21 @@
 'use client'
 
-import React from 'react'
 import { Bot } from 'lucide-react'
-import { InsightCard } from './InsightCard'
-import { ClarificationCard } from './ClarificationCard'
-import {
-  InsightData,
-  InsightParam,
-  InsightCardStatus,
-  ClarificationInsight,
+import React from 'react'
+
+import { cn } from '@/lib/utils'
+import type {
   ClarificationAnswer,
+  ClarificationInsight,
+  InsightCardStatus,
+  InsightData,
+  InsightParam} from '@/types/insight';
+import {
   isClarificationInsight,
 } from '@/types/insight'
-import { cn } from '@/lib/utils'
+
+import { ClarificationCard } from './ClarificationCard'
+import { InsightCard } from './InsightCard'
 
 // =============================================================================
 // Types
@@ -195,9 +198,9 @@ export function MultiInsightMessage({
           key={insight.id}
           insight={insight}
           status={statuses[index] || 'pending'}
-          onExpand={onExpand ? (i) => onExpand(i, index) : undefined}
-          onApprove={onApprove ? (i, p) => onApprove(i, p, index) : undefined}
-          onReject={onReject ? (i) => onReject(i, index) : undefined}
+          onExpand={onExpand ? (i) => { onExpand(i, index); } : undefined}
+          onApprove={onApprove ? (i, p) => { onApprove(i, p, index); } : undefined}
+          onReject={onReject ? (i) => { onReject(i, index); } : undefined}
           compact={compact}
           showAvatar={false}
         />

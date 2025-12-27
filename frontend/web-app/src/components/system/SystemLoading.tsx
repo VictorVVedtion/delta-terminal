@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import React, { useEffect, useState } from 'react'
 
 export function SystemLoading({ 
   message = "INITIALIZING SYSTEM...", 
@@ -23,7 +23,7 @@ export function SystemLoading({
         return prev + 2
       })
     }, 20)
-    return () => clearInterval(timer)
+    return () => { clearInterval(timer); }
   }, [onComplete])
 
   return (

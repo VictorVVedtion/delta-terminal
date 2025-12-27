@@ -4,8 +4,9 @@
  * 验证参数值是否满足定义的约束条件
  */
 
-import { useMemo, useCallback } from 'react'
-import type { InsightParam, Constraint, ConstraintType } from '@/types/insight'
+import { useCallback,useMemo } from 'react'
+
+import type { Constraint, ConstraintType,InsightParam } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -50,7 +51,7 @@ function evaluateMinMax(
   const config = param.config
 
   // Check against param config min/max first
-  if (config?.min !== undefined && value < config.min) {
+  if (config.min !== undefined && value < config.min) {
     return {
       paramKey: param.key,
       constraintType: 'min_max',
@@ -60,7 +61,7 @@ function evaluateMinMax(
     }
   }
 
-  if (config?.max !== undefined && value > config.max) {
+  if (config.max !== undefined && value > config.max) {
     return {
       paramKey: param.key,
       constraintType: 'min_max',

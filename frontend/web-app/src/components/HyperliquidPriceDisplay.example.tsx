@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useHyperliquidPrice, formatPrice } from '@/hooks/useHyperliquidPrice';
+import { formatPrice,useHyperliquidPrice } from '@/hooks/useHyperliquidPrice';
 
 /**
  * 基础价格显示示例

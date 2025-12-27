@@ -7,7 +7,8 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback,useEffect, useState } from 'react'
+
 import { useAIStore } from '@/store/ai'
 
 interface UseAIInitOptions {
@@ -86,7 +87,7 @@ export function useAIInit(options: UseAIInitOptions = {}): UseAIInitReturn {
   // 自动初始化
   useEffect(() => {
     if (autoInit && !isInitialized) {
-      initialize()
+      void initialize()
     }
   }, [autoInit, isInitialized, initialize])
 

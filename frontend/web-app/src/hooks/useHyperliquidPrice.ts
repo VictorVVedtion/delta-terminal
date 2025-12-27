@@ -6,7 +6,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef,useState } from 'react';
+
 import { getBatchPrices } from '@/lib/hyperliquid';
 import type {
   UseHyperliquidPriceOptions,
@@ -130,11 +131,11 @@ export function useHyperliquidPrice(
     }
 
     // 立即获取一次数据
-    fetchPrices();
+    void fetchPrices();
 
     // 设置定时刷新
     const intervalId = setInterval(() => {
-      fetchPrices();
+      void fetchPrices();
     }, refreshInterval);
 
     return () => {

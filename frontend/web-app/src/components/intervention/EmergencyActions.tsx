@@ -7,15 +7,16 @@
  * 提供平仓、禁用开仓、重启、暂停等紧急操作
  */
 
-import React from 'react'
 import {
   AlertTriangle,
-  Square,
   Ban,
-  RotateCcw,
   Pause,
+  RotateCcw,
+  Square,
   X,
 } from 'lucide-react'
+import React from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -169,7 +170,7 @@ export function EmergencyActions({
     if (config?.confirmRequired) {
       setPendingAction(action)
     } else {
-      executeAction(action)
+      void executeAction(action)
     }
   }
 
@@ -187,7 +188,7 @@ export function EmergencyActions({
   // 确认执行
   const handleConfirm = () => {
     if (pendingAction) {
-      executeAction(pendingAction)
+      void executeAction(pendingAction)
     }
   }
 
@@ -253,7 +254,7 @@ export function EmergencyActions({
                     disabled && 'opacity-50'
                   )}
                   disabled={disabled || isExecuting}
-                  onClick={() => handleActionClick(config.action)}
+                  onClick={() => { handleActionClick(config.action); }}
                 >
                   {ACTION_ICONS[config.action]}
                   <span className="text-xs">{getActionLabel(config.action)}</span>

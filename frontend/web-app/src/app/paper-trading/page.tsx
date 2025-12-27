@@ -6,18 +6,19 @@
 
 'use client'
 
+import { AlertCircle,History, Play, Target, TrendingUp, Wallet } from 'lucide-react'
 import React, { useState } from 'react'
+
 import { MainLayout } from '@/components/layout/MainLayout'
 import { PaperTradingDashboard } from '@/components/paper-trading/PaperTradingDashboard'
 import { TradeHistory } from '@/components/paper-trading/TradeHistory'
-import { usePaperTradingStore } from '@/store/paperTrading'
-import { useSingleAssetPrice } from '@/hooks/useHyperliquidPrice'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription,CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Target, Play, TrendingUp, Wallet, History, AlertCircle } from 'lucide-react'
+import { useSingleAssetPrice } from '@/hooks/useHyperliquidPrice'
 import { cn } from '@/lib/utils'
+import { usePaperTradingStore } from '@/store/paperTrading'
 
 // =============================================================================
 // Main Page Component
@@ -150,7 +151,7 @@ export default function PaperTradingPage() {
                 <Input
                   type="number"
                   value={initialCapital}
-                  onChange={(e) => setInitialCapital(Number(e.target.value))}
+                  onChange={(e) => { setInitialCapital(Number(e.target.value)); }}
                   min={100}
                   max={1000000}
                   className="text-center text-lg font-mono"
@@ -161,7 +162,7 @@ export default function PaperTradingPage() {
                       key={amount}
                       variant="outline"
                       size="sm"
-                      onClick={() => setInitialCapital(amount)}
+                      onClick={() => { setInitialCapital(amount); }}
                       className={cn(
                         initialCapital === amount && 'border-primary bg-primary/10'
                       )}

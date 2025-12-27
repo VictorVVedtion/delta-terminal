@@ -6,8 +6,9 @@
 
 'use client'
 
+import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react'
 import React, { useState } from 'react'
-import { ArrowUp, ArrowDown, Loader2 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -71,7 +72,7 @@ export function QuickTradeButtons({
     try {
       onBuy(size)
     } finally {
-      setTimeout(() => setIsProcessing(null), 300)
+      setTimeout(() => { setIsProcessing(null); }, 300)
     }
   }
 
@@ -85,7 +86,7 @@ export function QuickTradeButtons({
     try {
       onSell(size)
     } finally {
-      setTimeout(() => setIsProcessing(null), 300)
+      setTimeout(() => { setIsProcessing(null); }, 300)
     }
   }
 

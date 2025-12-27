@@ -1,23 +1,24 @@
 'use client'
 
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 import {
+  CheckCircle,
+  Clock,
+  Eye,
+  Loader2,
+  MoreVertical,
   Search,
   Trash2,
-  Eye,
-  Clock,
-  TrendingUp,
   TrendingDown,
-  Loader2,
-  CheckCircle,
+  TrendingUp,
   XCircle,
-  MoreVertical,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import type { BacktestHistoryItem } from '@/types/backtest'
 
 // =============================================================================
@@ -61,7 +62,7 @@ export function BacktestHistory({
   }
 
   const handleBulkDelete = () => {
-    selectedItems.forEach((id) => onDelete(id))
+    selectedItems.forEach((id) => { onDelete(id); })
     setSelectedItems(new Set())
   }
 
@@ -88,7 +89,7 @@ export function BacktestHistory({
           <Input
             placeholder="搜索回测记录..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); }}
             className="pl-10"
           />
         </div>
@@ -114,9 +115,9 @@ export function BacktestHistory({
                 key={item.id}
                 item={item}
                 isSelected={selectedItems.has(item.id)}
-                onSelect={() => onSelect(item.id)}
-                onToggle={() => toggleSelect(item.id)}
-                onDelete={() => onDelete(item.id)}
+                onSelect={() => { onSelect(item.id); }}
+                onToggle={() => { toggleSelect(item.id); }}
+                onDelete={() => { onDelete(item.id); }}
               />
             ))}
           </div>
@@ -196,7 +197,7 @@ function HistoryItem({
         checked={isSelected}
         onChange={onToggle}
         className="h-4 w-4 rounded border-border"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); }}
       />
 
       {/* Main Content */}
@@ -257,7 +258,7 @@ function HistoryItem({
             {/* Backdrop */}
             <div
               className="fixed inset-0 z-10"
-              onClick={() => setShowMenu(false)}
+              onClick={() => { setShowMenu(false); }}
             />
             {/* Menu */}
             <div className="absolute right-0 top-full mt-1 z-20 bg-popover border border-border rounded-md shadow-lg py-1 min-w-[120px]">

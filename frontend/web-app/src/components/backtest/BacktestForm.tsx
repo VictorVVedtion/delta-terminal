@@ -1,25 +1,26 @@
 'use client'
 
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import {
-  Play,
-  Loader2,
-  Grid3X3,
-  Calendar,
   Activity,
-  TrendingUp,
-  GitMerge,
   ArrowUpRight,
-  RefreshCw,
-  Code,
+  Calendar,
   ChevronDown,
   ChevronUp,
+  Code,
+  GitMerge,
+  Grid3X3,
+  Loader2,
+  Play,
+  RefreshCw,
+  TrendingUp,
 } from 'lucide-react'
+import React from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import type { BacktestConfig, StrategyType } from '@/types/backtest'
 import { STRATEGY_TYPES } from '@/types/backtest'
 
@@ -99,7 +100,7 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
               <Input
                 value={config.name}
                 onChange={(e) =>
-                  setConfig((prev) => ({ ...prev, name: e.target.value }))
+                  { setConfig((prev) => ({ ...prev, name: e.target.value })); }
                 }
                 placeholder="输入策略名称..."
               />
@@ -114,7 +115,7 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
                     variant={config.symbol === symbol ? 'default' : 'outline'}
                     className="cursor-pointer"
                     onClick={() =>
-                      setConfig((prev) => ({ ...prev, symbol }))
+                      { setConfig((prev) => ({ ...prev, symbol })); }
                     }
                   >
                     {symbol}
@@ -140,7 +141,7 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50'
                     )}
-                    onClick={() => handleStrategyChange(strategy.id)}
+                    onClick={() => { handleStrategyChange(strategy.id); }}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <IconComponent
@@ -186,12 +187,12 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
                             : String(defaultValue)
                         }
                         onChange={(e) =>
-                          updateParam(
+                          { updateParam(
                             key,
                             typeof defaultValue === 'number'
                               ? parseFloat(e.target.value) || 0
                               : e.target.value
-                          )
+                          ); }
                         }
                         className="h-9"
                       />
@@ -210,7 +211,7 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
                 type="date"
                 value={config.startDate}
                 onChange={(e) =>
-                  setConfig((prev) => ({ ...prev, startDate: e.target.value }))
+                  { setConfig((prev) => ({ ...prev, startDate: e.target.value })); }
                 }
               />
             </div>
@@ -221,7 +222,7 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
                 type="date"
                 value={config.endDate}
                 onChange={(e) =>
-                  setConfig((prev) => ({ ...prev, endDate: e.target.value }))
+                  { setConfig((prev) => ({ ...prev, endDate: e.target.value })); }
                 }
               />
             </div>
@@ -234,10 +235,10 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
               type="number"
               value={config.initialCapital}
               onChange={(e) =>
-                setConfig((prev) => ({
+                { setConfig((prev) => ({
                   ...prev,
                   initialCapital: parseFloat(e.target.value) || 0,
-                }))
+                })); }
               }
               min={100}
               step={100}
@@ -248,7 +249,7 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
           <button
             type="button"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setShowAdvanced(!showAdvanced)}
+            onClick={() => { setShowAdvanced(!showAdvanced); }}
           >
             {showAdvanced ? (
               <ChevronUp className="h-4 w-4" />
@@ -267,10 +268,10 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
                   type="number"
                   value={config.feeRate}
                   onChange={(e) =>
-                    setConfig((prev) => ({
+                    { setConfig((prev) => ({
                       ...prev,
                       feeRate: parseFloat(e.target.value) || 0,
-                    }))
+                    })); }
                   }
                   min={0}
                   step={0.01}
@@ -284,10 +285,10 @@ export function BacktestForm({ onSubmit, isRunning }: BacktestFormProps) {
                   type="number"
                   value={config.slippage}
                   onChange={(e) =>
-                    setConfig((prev) => ({
+                    { setConfig((prev) => ({
                       ...prev,
                       slippage: parseFloat(e.target.value) || 0,
-                    }))
+                    })); }
                   }
                   min={0}
                   step={0.01}

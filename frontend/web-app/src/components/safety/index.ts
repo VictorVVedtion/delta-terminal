@@ -10,8 +10,8 @@
  * - Extreme Market (S44) - EPIC-007 Story 7.3
  */
 
+export { CircuitBreakerPanel } from './CircuitBreakerPanel'
+export { ExtremeMarketPanel } from './ExtremeMarketPanel'
 export { KillSwitch } from './KillSwitch'
 export { KillSwitchModal } from './KillSwitchModal'
 export { MarginAlert, MarginAlertBadge } from './MarginAlert'
-export { CircuitBreakerPanel } from './CircuitBreakerPanel'
-export { ExtremeMarketPanel } from './ExtremeMarketPanel'

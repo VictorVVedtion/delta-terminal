@@ -1,9 +1,10 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useRef,useState } from 'react'
+
 import { wsClient } from '@/lib/websocket'
+import { type MarketData,useMarketStore } from '@/store'
 import { useAuthStore } from '@/store/auth'
-import { useMarketStore, type MarketData } from '@/store'
 
 // =============================================================================
 // Types
@@ -121,9 +122,8 @@ export function WebSocketProvider({ children, autoConnect = true }: WebSocketPro
     const key = `orderbook:${symbol}`
 
     if (!subscriptionsRef.current.has(key)) {
-      wsClient.subscribeOrderBook(symbol, (data) => {
+      wsClient.subscribeOrderBook(symbol, (_data) => {
         // Handle order book update
-        console.log('Order book update:', data)
       })
       subscriptionsRef.current.add(key)
     }
@@ -141,9 +141,8 @@ export function WebSocketProvider({ children, autoConnect = true }: WebSocketPro
     const key = `trades:${symbol}`
 
     if (!subscriptionsRef.current.has(key)) {
-      wsClient.subscribeTrades(symbol, (data) => {
+      wsClient.subscribeTrades(symbol, (_data) => {
         // Handle trades update
-        console.log('Trades update:', data)
       })
       subscriptionsRef.current.add(key)
     }
@@ -159,7 +158,7 @@ export function WebSocketProvider({ children, autoConnect = true }: WebSocketPro
   // Auto-connect when authenticated
   useEffect(() => {
     if (autoConnect && isAuthenticated && !isConnected && !isConnecting) {
-      connect()
+      void connect()
     }
 
     return () => {
@@ -201,11 +200,10 @@ export function WebSocketProvider({ children, autoConnect = true }: WebSocketPro
   useEffect(() => {
     if (!isConnected && !isConnecting && isAuthenticated && autoConnect) {
       const reconnectTimer = setTimeout(() => {
-        console.log('Attempting auto-reconnect...')
-        connect()
+        void connect()
       }, 3000) // Wait 3 seconds before attempting reconnect
 
-      return () => clearTimeout(reconnectTimer)
+      return () => { clearTimeout(reconnectTimer); }
     }
   }, [isConnected, isConnecting, isAuthenticated, autoConnect, connect])
 

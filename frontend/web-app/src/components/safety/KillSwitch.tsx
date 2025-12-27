@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Octagon, AlertTriangle, Loader2, XCircle } from 'lucide-react'
+import { AnimatePresence,motion } from 'framer-motion'
+import { AlertTriangle, Loader2,  XCircle } from 'lucide-react'
+import React, { useCallback,useRef, useState } from 'react'
+
 import { cn } from '@/lib/utils'
-import { useSafetyStore } from '@/store/safety'
 import { useAgentStore } from '@/store/agent'
+import { useSafetyStore } from '@/store/safety'
+
 import { KillSwitchModal } from './KillSwitchModal'
 
 interface KillSwitchProps {
@@ -253,7 +255,7 @@ export function KillSwitch({
       {/* Confirmation Modal */}
       <KillSwitchModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); }}
         activeStrategies={activeAgents}
         pendingOrders={0} // TODO: Get from order store
       />

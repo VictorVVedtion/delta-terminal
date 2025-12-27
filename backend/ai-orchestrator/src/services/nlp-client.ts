@@ -109,12 +109,12 @@ export class NLPClientService {
       })
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
+        const error = await response.json().catch(() => ({})) as Record<string, unknown>
         console.error('[NLPClient] Chat error:', error)
         return null
       }
 
-      return await response.json()
+      return await response.json() as NLPChatResponse
     } catch (error) {
       console.error('[NLPClient] Chat failed:', error)
       return null
@@ -142,7 +142,7 @@ export class NLPClientService {
         return null
       }
 
-      return await response.json()
+      return await response.json() as NLPIntentResponse
     } catch (error) {
       console.error('[NLPClient] Intent recognition failed:', error)
       return null
@@ -167,7 +167,7 @@ export class NLPClientService {
         return null
       }
 
-      return await response.json()
+      return await response.json() as NLPParseStrategyResponse
     } catch (error) {
       console.error('[NLPClient] Parse strategy failed:', error)
       return null

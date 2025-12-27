@@ -5,7 +5,7 @@
  * 仅作为示例，实际使用时可以删除
  */
 
-import { useSensitivityAnalysis, useAttributionAnalysis, useComparisonAnalysis } from './useAnalysis'
+import { useAttributionAnalysis, useComparisonAnalysis,useSensitivityAnalysis } from './useAnalysis'
 
 // 示例 1: 敏感度分析
 function SensitivityExample() {
@@ -64,4 +64,4 @@ function ComparisonExample() {
   )
 }
 
-export { SensitivityExample, AttributionExample, ComparisonExample }
+export { AttributionExample, ComparisonExample,SensitivityExample }

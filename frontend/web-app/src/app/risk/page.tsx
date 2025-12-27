@@ -1,22 +1,23 @@
 'use client'
 
-import React from 'react'
-import { MainLayout } from '@/components/layout/MainLayout'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import {
-  Shield,
-  TrendingDown,
-  DollarSign,
   Activity,
   BarChart3,
-  Target,
+  DollarSign,
   Power,
+  Shield,
+  Target,
+  TrendingDown,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { SentinelAlerts } from '@/components/risk'
+import React from 'react'
+
 import { KillSwitch } from '@/components/KillSwitch'
+import { MainLayout } from '@/components/layout/MainLayout'
+import { SentinelAlerts } from '@/components/risk'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription,CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
 
 // =============================================================================
 // Types

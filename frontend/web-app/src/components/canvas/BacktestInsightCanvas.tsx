@@ -11,28 +11,29 @@
  * - AI summary and suggestions
  */
 
-import React from 'react'
 import {
-  X,
-  TrendingUp,
-  LineChart,
-  Settings,
-  MessageSquare,
   ChevronDown,
   ChevronUp,
-  Maximize2,
-  Minimize2,
-  Share2,
   Download,
+  LineChart,
+  Maximize2,
+  MessageSquare,
+  Minimize2,
+  Settings,
+  Share2,
+  TrendingUp,
+  X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { BacktestKlineChart } from '@/components/backtest/BacktestKlineChart'
+import React from 'react'
+
 import { BacktestEquityCurve } from '@/components/backtest/BacktestEquityCurve'
-import { BacktestStatsCard } from '@/components/backtest/BacktestStatsCard'
+import { BacktestKlineChart } from '@/components/backtest/BacktestKlineChart'
 import { BacktestParamPanel, CompactParamDisplay } from '@/components/backtest/BacktestParamPanel'
-import type { BacktestInsightData, BacktestParameter } from '@/types/insight'
+import { BacktestStatsCard } from '@/components/backtest/BacktestStatsCard'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import type { BacktestInsightData, BacktestParameter } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -159,7 +160,7 @@ export function BacktestInsightCanvas({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => { setIsExpanded(!isExpanded); }}
             className="h-8 w-8"
           >
             {isExpanded ? (
@@ -206,7 +207,7 @@ export function BacktestInsightCanvas({
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => { setActiveTab(tab.id); }}
             className={cn(
               'flex-1 flex items-center justify-center gap-2 px-4 py-3',
               'text-sm font-medium transition-colors',
@@ -276,7 +277,7 @@ export function BacktestInsightCanvas({
         {/* AI Summary */}
         <div className="p-4 border-t border-zinc-800">
           <button
-            onClick={() => setShowSummary(!showSummary)}
+            onClick={() => { setShowSummary(!showSummary); }}
             className="w-full flex items-center justify-between mb-2"
           >
             <div className="flex items-center gap-2">

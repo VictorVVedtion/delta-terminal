@@ -6,10 +6,11 @@
 
 'use client'
 
+import { TrendingDown, TrendingUp, X } from 'lucide-react'
 import React from 'react'
-import { TrendingUp, TrendingDown, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { PaperPosition } from '@/types/paperTrading'
 
@@ -37,7 +38,7 @@ export function PositionCard({
 }: PositionCardProps) {
   const isProfit = position.unrealizedPnl >= 0
   const priceChange = position.currentPrice - position.entryPrice
-  const priceChangePercent =
+  const _priceChangePercent =
     (priceChange / position.entryPrice) * 100 * (position.side === 'long' ? 1 : -1)
 
   return (
@@ -72,7 +73,7 @@ export function PositionCard({
             variant="ghost"
             size="sm"
             disabled={disabled}
-            onClick={() => onClose(position.id)}
+            onClick={() => { onClose(position.id); }}
             className="h-7 px-2 text-xs hover:bg-[hsl(var(--rb-red))]/10 hover:text-[hsl(var(--rb-red))]"
           >
             <X className="h-3 w-3 mr-1" />
