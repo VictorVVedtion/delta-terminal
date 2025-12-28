@@ -7,6 +7,7 @@
 export { ClarificationCard } from './ClarificationCard'
 export { InsightCard, default as InsightCardDefault } from './InsightCard'
 export { InsightMessage, MultiInsightMessage } from './InsightMessage'
+export { ReasoningChainView, ReasoningNodeView } from './ReasoningChainView'
 
 // Re-export types
 export type {
@@ -30,3 +31,20 @@ export type {
 
 // Re-export type guards
 export { isClarificationInsight } from '@/types/insight'
+
+// Re-export reasoning chain types (A2UI 2.0)
+export type {
+  EvidenceType,
+  NodeAction,
+  ReasoningBranch,
+  ReasoningChain,
+  ReasoningChainStatus,
+  ReasoningChainViewProps,
+  ReasoningDisplayMode,
+  ReasoningEvidence,
+  ReasoningNode,
+  ReasoningNodeStatus,
+  ReasoningNodeType,
+  ReasoningNodeViewProps,
+  UserInteraction,
+} from '@/types/reasoning'

@@ -22,12 +22,11 @@ import { TemplateSelector } from '@/components/strategy/TemplateSelector'
 import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useChat } from '@/hooks/useAI'
+import { isClarificationInsight,useA2UIInsight } from '@/hooks/useA2UIInsight'
 import { useBacktest } from '@/hooks/useBacktest'
 import { useDeployment } from '@/hooks/useDeployment'
 import { useMonitor } from '@/hooks/useMonitor'
 import { notify, notifyWarning } from '@/lib/notification'
-import { extractInsightData, generateSystemPrompt, validateInsightData } from '@/lib/prompts/strategy-assistant'
 import type { StrategyTemplate } from '@/lib/templates/strategies'
 import { cn } from '@/lib/utils'
 import { useMarketStore } from '@/store'
@@ -44,6 +43,7 @@ import { SIMPLE_PRESETS, type SimplePreset } from '@/types/ai'
 import type { BacktestConfig } from '@/types/backtest'
 import type {
   AttributionInsightData,
+  BacktestInsightData,
   ClarificationAnswer,
   ClarificationInsight,
   ComparisonInsightData,
@@ -207,21 +207,26 @@ export function ChatInterface({
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
   // ==========================================================================
-  // AI Engine Integration
+  // AI Engine Integration - A2UI 统一路径 (仅 NLP Processor)
   // ==========================================================================
 
-  // AI Chat Hook - 通过后端 API 代理调用
+  // A2UI Insight Hook - NLP Processor 是 InsightData 的唯一来源
   const {
-    sendStream,
-    cancel: _cancelAI,
-    isLoading: isAILoading,
-    streamContent: _streamContent,
-    thinkingSteps: _thinkingSteps,
-    error: aiError,
-    currentModel,
-    canUseAI,
-    disabledReason
-  } = useChat({})
+    sendMessage: sendToNLP,
+    insight: _nlpInsight,
+    isLoading: isNLPLoading,
+    error: nlpError,
+    conversationId: _conversationId,
+    intent: _intent,
+    confidence: _confidence,
+    message: nlpMessage,
+    collectedParams,
+    reset: _resetNLP,
+  } = useA2UIInsight()
+
+  // AI 可用性 - 简化检查，NLP Processor 始终可用
+  const canUseAI = true
+  const disabledReason: string | null = null
 
   // AI 配置面板状态
   const [configPanelOpen, setConfigPanelOpen] = React.useState(false)
@@ -235,8 +240,8 @@ export function ChatInterface({
   const currentPreset = config.simple.preset
   const currentPresetConfig = SIMPLE_PRESETS[currentPreset]
 
-  // 组合加载状态
-  const isThinking = isAILoading
+  // 加载状态 (仅 NLP Processor)
+  const isThinking = isNLPLoading
 
   // 3 阶段加载状态管理
   // Note: thinkingProcess 需要完整的 ThinkingProcess 类型
@@ -250,6 +255,10 @@ export function ChatInterface({
   const [canvasOpen, setCanvasOpen] = React.useState(false)
   const [canvasInsight, setCanvasInsight] = React.useState<InsightData | null>(null)
   const [canvasLoading, setCanvasLoading] = React.useState(false)
+  // Canvas backtest state - 用于 CanvasPanel 中的回测功能
+  const [canvasBacktesting, setCanvasBacktesting] = React.useState(false)
+  const [canvasBacktestPassed, setCanvasBacktestPassed] = React.useState<boolean | undefined>(undefined)
+  const [canvasBacktestResult, setCanvasBacktestResult] = React.useState<BacktestInsightData | null>(null)
 
   // ==========================================================================
   // Story 1.3: Deployment State
@@ -514,6 +523,81 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     setCanvasOpen(false)
     setCanvasInsight(null)
     setCanvasLoading(false)
+    // 重置回测状态
+    setCanvasBacktesting(false)
+    setCanvasBacktestPassed(undefined)
+    setCanvasBacktestResult(null)
+  }, [])
+
+  // A2UI: Handle Canvas backtest - 在 CanvasPanel 中运行回测
+  const handleCanvasBacktest = React.useCallback(async (insight: InsightData, params: InsightParam[]) => {
+    setCanvasBacktesting(true)
+    setCanvasBacktestResult(null)
+
+    try {
+      // 生成回测任务 ID
+      const jobId = `bt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+      // 提取目标信息
+      const symbol = insight.target?.symbol || 'BTC/USDT'
+      const timeframe = params.find(p => p.key === 'timeframe')?.value as string || '1h'
+
+      // 调用回测 API
+      const response = await fetch('/api/backtest/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          config: {
+            strategyName: insight.target?.name || '策略回测',
+            strategyDescription: insight.explanation || 'AI 生成的交易策略',
+            symbol,
+            timeframe,
+            startDate: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30天前
+            endDate: Date.now(),
+            initialCapital: 10000,
+            parameters: params.map(p => ({
+              name: p.key,
+              value: p.value,
+              type: p.type,
+            })),
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('回测请求失败')
+      }
+
+      const result = await response.json() as BacktestInsightData
+
+      // 保存回测结果
+      setCanvasBacktestResult(result)
+
+      // 判断回测是否通过 (基于夏普比率和总收益)
+      const passed = result.stats.sharpeRatio >= 0.5 && result.stats.totalReturn > 0
+      setCanvasBacktestPassed(passed)
+
+      if (passed) {
+        notify('success', '回测通过', {
+          description: `收益率 ${result.stats.totalReturn.toFixed(1)}%，夏普比率 ${result.stats.sharpeRatio.toFixed(2)}`,
+          source: 'ChatInterface',
+        })
+      } else {
+        notify('warning', '回测未通过', {
+          description: `收益率 ${result.stats.totalReturn.toFixed(1)}%，建议调整参数后重试`,
+          source: 'ChatInterface',
+        })
+      }
+    } catch (error) {
+      setCanvasBacktestPassed(false)
+      notify('error', '回测失败', {
+        description: error instanceof Error ? error.message : '请检查网络连接',
+        source: 'ChatInterface',
+      })
+    } finally {
+      setCanvasBacktesting(false)
+    }
   }, [])
 
   // A2UI: Handle insight approval (from Canvas or InsightCard)
@@ -687,51 +771,70 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     }
     setMessages(prev => [...prev, answerMessage])
 
-    // Send answer to backend and continue the conversation
+    // Send answer to backend (NLP Processor) and continue the conversation
     try {
       setIsLoading(true)
 
-      // Include context about the clarification being answered
-      const contextMessage = `[回答追问] 类别: ${insight.category}, 问题: ${insight.question}, 回答: ${answerText}`
+      // =======================================================================
+      // 阶段 1: 通过 NLP Processor 继续多步骤引导
+      // =======================================================================
+      console.log('[ChatInterface] Clarification: Sending answer to NLP Processor...')
 
-      // Generate system prompt with context
-      const systemPrompt = generateSystemPrompt({
-        marketData: getMarketContext()
+      const nlpResult = await sendToNLP(answerText, {
+        isFollowUp: true,
+        previousQuestion: insight.question,
+        category: insight.category,
+        collectedParams: collectedParams,
+        marketData: getMarketContext(),
       })
 
-      const finalContent = await sendStream(contextMessage, {
-        systemPrompt,
-        context: { marketData: getMarketContext() }
-      })
+      // 如果 NLP 返回另一个 ClarificationInsight，继续引导
+      if (nlpResult && isClarificationInsight(nlpResult)) {
+        console.log('[ChatInterface] NLP returned another ClarificationInsight:', nlpResult)
 
-      if (finalContent) {
-        // Extract InsightData from response
-        const { textContent, insightData } = extractInsightData(finalContent)
-        let responseInsight: InsightData | undefined = undefined
-
-        if (insightData && validateInsightData(insightData)) {
-          responseInsight = {
-            id: `insight_${Date.now()}`,
-            type: insightData.type as InsightData['type'],
-            params: (insightData.params as InsightParam[]) || [],
-            explanation: textContent,
-            created_at: new Date().toISOString(),
-          }
-          if (insightData.target) Object.assign(responseInsight, { target: insightData.target })
-          if (insightData.impact) Object.assign(responseInsight, { impact: insightData.impact })
-          if (insightData.actions) Object.assign(responseInsight, { actions: insightData.actions })
-        }
-
-        const aiMessage: Message = {
-          id: `ai_response_${Date.now()}`,
+        const nextClarificationMessage: Message = {
+          id: `clarification_${Date.now()}`,
           role: 'assistant',
-          content: textContent,
+          content: nlpResult.question,
           timestamp: Date.now(),
-          insight: responseInsight,
-          insightStatus: responseInsight ? 'pending' : undefined,
+          insight: nlpResult,
+          insightStatus: 'pending',
         }
-        setMessages(prev => [...prev, aiMessage])
+        setMessages(prev => [...prev, nextClarificationMessage])
+        setIsLoading(false)
+        return // 等待下一个回答
       }
+
+      // 如果 NLP 返回其他类型的 InsightData，直接使用
+      if (nlpResult) {
+        console.log('[ChatInterface] NLP returned final InsightData:', nlpResult)
+
+        const nlpInsightMessage: Message = {
+          id: `nlp_insight_${Date.now()}`,
+          role: 'assistant',
+          content: nlpResult.explanation || nlpMessage,
+          timestamp: Date.now(),
+          insight: nlpResult,
+          insightStatus: 'pending',
+        }
+        setMessages(prev => [...prev, nlpInsightMessage])
+        setIsLoading(false)
+        return
+      }
+
+      // =======================================================================
+      // NLP Processor 未返回结构化数据 - 显示纯文本回复
+      // A2UI 优化: 所有 InsightData 必须来自 NLP Processor，不再双重调用 LLM
+      // =======================================================================
+      console.log('[ChatInterface] Clarification: NLP did not return InsightData after answer')
+
+      const fallbackMessage: Message = {
+        id: `text_${Date.now()}`,
+        role: 'assistant',
+        content: nlpMessage || '感谢你的回答！我正在处理你的需求，但目前无法生成完整的策略建议。请尝试提供更多细节。',
+        timestamp: Date.now(),
+      }
+      setMessages(prev => [...prev, fallbackMessage])
     } catch (error) {
       console.error('[ChatInterface] Failed to send clarification answer:', error)
       notify('error', '发送回答失败', {
@@ -741,7 +844,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     } finally {
       setIsLoading(false)
     }
-  }, [sendStream])
+  }, [sendToNLP, collectedParams, nlpMessage, getMarketContext])
 
   // ==========================================================================
   // EPIC-010 S10.3: Template Selection Handler
@@ -998,68 +1101,71 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     setInput('')
     setIsLoading(true)
 
-    // 使用真实 AI 进行响应
     try {
-      // 生成带上下文的 System Prompt
-      const systemPrompt = generateSystemPrompt({
-        marketData: getMarketContext()
+      // =======================================================================
+      // 阶段 1: 调用 NLP Processor 检测意图完整性
+      // =======================================================================
+      console.log('[ChatInterface] Phase 1: Sending to NLP Processor for intent analysis...')
+
+      const nlpResult = await sendToNLP(userInput, {
+        marketData: getMarketContext(),
       })
 
-      const finalContent = await sendStream(userInput, {
-        systemPrompt,
-        context: { marketData: getMarketContext() }
-      })
+      // 如果 NLP Processor 返回 ClarificationInsight，直接显示澄清问题卡片
+      if (nlpResult && isClarificationInsight(nlpResult)) {
+        console.log('[ChatInterface] NLP returned ClarificationInsight:', nlpResult)
 
-      // 检查是否有有效内容
-      if (!finalContent) {
-        throw new Error('AI 未返回有效内容')
+        const clarificationMessage: Message = {
+          id: `clarification_${Date.now()}`,
+          role: 'assistant',
+          content: nlpResult.question,
+          timestamp: Date.now(),
+          insight: nlpResult,
+          insightStatus: 'pending',
+        }
+        setMessages((prev) => [...prev, clarificationMessage])
+        setIsLoading(false)
+        return // 等待用户回答澄清问题，不继续调用 LLM
       }
 
-      // 从 AI 响应中提取 InsightData (A2UI 核心逻辑)
-      const { textContent, insightData } = extractInsightData(finalContent)
-      let insight: InsightData | undefined = undefined
+      // 如果 NLP Processor 返回其他类型的 InsightData，直接使用
+      if (nlpResult) {
+        console.log('[ChatInterface] NLP returned InsightData:', nlpResult)
 
-      // 验证并构建 InsightData
-      if (insightData && validateInsightData(insightData)) {
-        // 构建基础对象
-        const builtInsight: InsightData = {
-          id: `insight_${Date.now()}`,
-          type: insightData.type as InsightData['type'],
-          params: (insightData.params as InsightParam[]) || [],
-          explanation: textContent,
-          created_at: new Date().toISOString(),
+        const nlpInsightMessage: Message = {
+          id: `nlp_insight_${Date.now()}`,
+          role: 'assistant',
+          content: nlpResult.explanation || nlpMessage,
+          timestamp: Date.now(),
+          insight: nlpResult,
+          insightStatus: 'pending',
         }
-
-        // 有条件添加可选字段
-        if (insightData.target) {
-          Object.assign(builtInsight, { target: insightData.target })
-        }
-        if (insightData.impact) {
-          Object.assign(builtInsight, { impact: insightData.impact })
-        }
-        if (insightData.actions) {
-          Object.assign(builtInsight, { actions: insightData.actions })
-        }
-
-        insight = builtInsight
+        setMessages((prev) => [...prev, nlpInsightMessage])
+        setIsLoading(false)
+        return
       }
 
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      // =======================================================================
+      // NLP Processor 未返回结构化数据 - 显示纯文本回复
+      // A2UI 优化: 所有 InsightData 必须来自 NLP Processor，不再双重调用 LLM
+      // =======================================================================
+      console.log('[ChatInterface] NLP did not return InsightData, using text response')
+
+      // 使用 NLP 返回的消息作为回复
+      const fallbackMessage: Message = {
+        id: `text_${Date.now()}`,
         role: 'assistant',
-        content: textContent, // 使用去掉 JSON 块的纯文本
+        content: nlpMessage || '我理解了你的需求，但目前无法生成结构化的策略建议。请尝试更具体地描述你的交易策略需求，例如：\n\n• 交易什么币种？\n• 使用什么指标？\n• 入场和出场条件是什么？',
         timestamp: Date.now(),
-        insight,
-        insightStatus: insight ? 'pending' : undefined,
       }
-      setMessages((prev) => [...prev, aiMessage])
+      setMessages((prev) => [...prev, fallbackMessage])
 
     } catch (error) {
       console.error('[ChatInterface] AI Error:', error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: aiError || '抱歉，AI 服务暂时不可用。请检查网络连接或 API Key 配置。',
+        content: nlpError || '抱歉，AI 服务暂时不可用。请检查网络连接或后端服务配置。',
         timestamp: Date.now(),
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -1169,7 +1275,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
               'h-2 w-2 rounded-full',
               canUseAI ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
             )} />
-            {canUseAI ? (currentModel?.split('/')[1] || currentPresetConfig.defaultModel.split('/')[1]) : (disabledReason || '不可用')}
+            {canUseAI ? currentPresetConfig.defaultModel.split('/')[1] : (disabledReason || '不可用')}
           </Badge>
         </div>
       </header>
@@ -1285,7 +1391,11 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         onClose={handleCanvasClose}
         onApprove={handleInsightApprove}
         onReject={(insight) => { handleInsightReject(insight); }}
+        onBacktest={handleCanvasBacktest}
         isLoading={canvasLoading}
+        isBacktesting={canvasBacktesting}
+        backtestPassed={canvasBacktestPassed}
+        backtestResult={canvasBacktestResult}
       />
 
       {/* Story 1.3: Deploy Canvas */}

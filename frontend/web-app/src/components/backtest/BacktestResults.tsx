@@ -13,15 +13,6 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import React from 'react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -283,51 +274,98 @@ function EquityCurve({ data }: EquityCurveProps) {
     )
   }
 
+  // Simple SVG chart
+  const width = 800
+  const height = 200
+  const padding = 40
+
+  const minEquity = Math.min(...data.map((d) => d.equity))
+  const maxEquity = Math.max(...data.map((d) => d.equity))
+  const range = maxEquity - minEquity || 1
+
+  const xStep = (width - padding * 2) / (data.length - 1 || 1)
+  const yScale = (value: number) =>
+    height - padding - ((value - minEquity) / range) * (height - padding * 2)
+
+  const pathData = data
+    .map((d, i) => {
+      const x = padding + i * xStep
+      const y = yScale(d.equity)
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+    })
+    .join(' ')
+
+  // Gradient fill area
+  const areaData = `${pathData} L ${padding + (data.length - 1) * xStep} ${height - padding} L ${padding} ${height - padding} Z`
+
   const lastEquity = data[data.length - 1]?.equity ?? 0
   const firstEquity = data[0]?.equity ?? 0
   const isPositive = lastEquity >= firstEquity
-  const color = isPositive ? '#22c55e' : '#ef4444'
 
   return (
-    <div className="w-full h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
-          <defs>
-            <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-          <XAxis 
-            dataKey="date" 
-            tick={{ fontSize: 12, fill: '#888' }} 
-            tickLine={false}
-            axisLine={false}
-            minTickGap={30}
+    <div className="w-full overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full h-64"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop
+              offset="0%"
+              stopColor={isPositive ? 'hsl(var(--rb-green))' : 'hsl(var(--rb-red))'}
+              stopOpacity="0.3"
+            />
+            <stop
+              offset="100%"
+              stopColor={isPositive ? 'hsl(var(--rb-green))' : 'hsl(var(--rb-red))'}
+              stopOpacity="0"
+            />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+          <line
+            key={ratio}
+            x1={padding}
+            y1={padding + (height - padding * 2) * ratio}
+            x2={width - padding}
+            y2={padding + (height - padding * 2) * ratio}
+            stroke="hsl(var(--border))"
+            strokeDasharray="4 4"
           />
-          <YAxis 
-            tick={{ fontSize: 12, fill: '#888' }} 
-            tickLine={false}
-            axisLine={false}
-            domain={['auto', 'auto']}
-            tickFormatter={(val) => `$${val}`}
-          />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#111', borderColor: '#333' }}
-            formatter={(val: number) => [`$${val.toFixed(2)}`, '权益']}
-            labelFormatter={(label) => `日期: ${label}`}
-          />
-          <Area 
-            type="monotone" 
-            dataKey="equity" 
-            stroke={color} 
-            fillOpacity={1} 
-            fill="url(#colorEquity)" 
-            strokeWidth={2}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+        ))}
+
+        {/* Area fill */}
+        <path d={areaData} fill="url(#equityGradient)" />
+
+        {/* Line */}
+        <path
+          d={pathData}
+          fill="none"
+          stroke={isPositive ? 'hsl(var(--rb-green))' : 'hsl(var(--rb-red))'}
+          strokeWidth="2"
+        />
+
+        {/* Y-axis labels */}
+        <text
+          x={padding - 5}
+          y={padding}
+          textAnchor="end"
+          className="text-xs fill-muted-foreground"
+        >
+          ${maxEquity.toFixed(0)}
+        </text>
+        <text
+          x={padding - 5}
+          y={height - padding}
+          textAnchor="end"
+          className="text-xs fill-muted-foreground"
+        >
+          ${minEquity.toFixed(0)}
+        </text>
+      </svg>
     </div>
   )
 }

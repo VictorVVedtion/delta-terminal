@@ -13,9 +13,11 @@ import type {
 import {
   isClarificationInsight,
 } from '@/types/insight'
+import type { NodeAction } from '@/types/reasoning'
 
 import { ClarificationCard } from './ClarificationCard'
 import { InsightCard } from './InsightCard'
+import { ReasoningChainView } from './ReasoningChainView'
 
 // =============================================================================
 // Types
@@ -36,6 +38,10 @@ interface InsightMessageProps {
   onReject?: ((insight: InsightData) => void) | undefined
   /** Called when user answers a clarification question (EPIC-010) */
   onClarificationAnswer?: ((insight: ClarificationInsight, answer: ClarificationAnswer) => void) | undefined
+  /** Called when user interacts with reasoning chain node (A2UI 2.0) */
+  onReasoningNodeAction?: ((insight: InsightData, nodeId: string, action: NodeAction, input?: string) => void) | undefined
+  /** Called when user selects a reasoning branch (A2UI 2.0) */
+  onReasoningBranchSelect?: ((insight: InsightData, nodeId: string, branchId: string) => void) | undefined
   /** Whether to show in compact mode */
   compact?: boolean | undefined
   /** Whether to show avatar (default: false, for use within existing message layout) */
@@ -81,6 +87,8 @@ export function InsightMessage({
   onApprove,
   onReject,
   onClarificationAnswer,
+  onReasoningNodeAction,
+  onReasoningBranchSelect,
   compact = false,
   showAvatar = false,
   className,
@@ -103,11 +111,22 @@ export function InsightMessage({
     }
   }, [insight, onClarificationAnswer])
 
+  const handleReasoningNodeAction = React.useCallback((nodeId: string, action: NodeAction, input?: string) => {
+    onReasoningNodeAction?.(insight, nodeId, action, input)
+  }, [insight, onReasoningNodeAction])
+
+  const handleReasoningBranchSelect = React.useCallback((nodeId: string, branchId: string) => {
+    onReasoningBranchSelect?.(insight, nodeId, branchId)
+  }, [insight, onReasoningBranchSelect])
+
   // Determine clarification status from insight status
   const clarificationStatus: 'pending' | 'answered' | 'skipped' =
     status === 'approved' ? 'answered' :
     status === 'rejected' ? 'skipped' :
     'pending'
+
+  // Check if reasoning chain should be shown
+  const hasReasoningChain = insight.reasoning_chain && insight.show_reasoning
 
   // Render appropriate card based on insight type
   const renderCard = () => {
@@ -134,10 +153,28 @@ export function InsightMessage({
     )
   }
 
+  // Render reasoning chain if available
+  const renderReasoningChain = () => {
+    if (!hasReasoningChain || !insight.reasoning_chain) return null
+
+    return (
+      <ReasoningChainView
+        chain={insight.reasoning_chain}
+        displayMode={insight.reasoning_display_mode || 'collapsed'}
+        onNodeAction={handleReasoningNodeAction}
+        onBranchSelect={handleReasoningBranchSelect}
+        className="mt-3"
+      />
+    )
+  }
+
   // Without avatar - just render the card
   if (!showAvatar) {
     return (
-      <div className={cn('max-w-md', className)}>
+      <div className={cn('max-w-lg', className)}>
+        {/* Reasoning Chain (A2UI 2.0) - shows above card */}
+        {renderReasoningChain()}
+        {/* Main Insight Card */}
         {renderCard()}
       </div>
     )
@@ -153,8 +190,13 @@ export function InsightMessage({
 
       {/* Message Content */}
       <div className="flex-1 space-y-2">
+        {/* Reasoning Chain (A2UI 2.0) - shows above card */}
+        <div className="max-w-lg">
+          {renderReasoningChain()}
+        </div>
+
         {/* Card */}
-        <div className="max-w-md">
+        <div className="max-w-lg">
           {renderCard()}
         </div>
 

@@ -12,6 +12,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 
 import type {
+  BacktestInsightData,
   CanvasMode,
   InsightCardStatus,
   InsightData,
@@ -40,6 +41,11 @@ interface InsightState {
   // Loading state
   isLoading: boolean
   isValidating: boolean
+
+  // Backtest state
+  isBacktesting: boolean
+  backtestPassed: boolean | undefined
+  backtestResult: BacktestInsightData | null
 
   // Insight history for the current session
   insightHistory: InsightData[]
@@ -71,6 +77,12 @@ interface InsightActions {
   setLoading: (loading: boolean) => void
   setValidating: (validating: boolean) => void
 
+  // Backtest actions
+  setBacktesting: (backtesting: boolean) => void
+  setBacktestPassed: (passed: boolean | undefined) => void
+  setBacktestResult: (result: BacktestInsightData | null) => void
+  resetBacktest: () => void
+
   // History actions
   addToHistory: (insight: InsightData) => void
   clearHistory: () => void
@@ -94,6 +106,9 @@ const initialState: InsightState = {
   warnings: new Map(),
   isLoading: false,
   isValidating: false,
+  isBacktesting: false,
+  backtestPassed: undefined,
+  backtestResult: null,
   insightHistory: [],
   insightStatuses: new Map(),
 }
@@ -122,6 +137,10 @@ export const useInsightStore = create<InsightStore>()(
           editedParams,
           errors: new Map(),
           warnings: new Map(),
+          // 重置回测状态
+          isBacktesting: false,
+          backtestPassed: undefined,
+          backtestResult: null,
         }, false, 'insight/openCanvas')
       },
 
@@ -199,6 +218,27 @@ export const useInsightStore = create<InsightStore>()(
 
       setValidating: (isValidating) => {
         set({ isValidating }, false, 'insight/setValidating')
+      },
+
+      // Backtest actions
+      setBacktesting: (isBacktesting) => {
+        set({ isBacktesting }, false, 'insight/setBacktesting')
+      },
+
+      setBacktestPassed: (backtestPassed) => {
+        set({ backtestPassed }, false, 'insight/setBacktestPassed')
+      },
+
+      setBacktestResult: (backtestResult) => {
+        set({ backtestResult }, false, 'insight/setBacktestResult')
+      },
+
+      resetBacktest: () => {
+        set({
+          isBacktesting: false,
+          backtestPassed: undefined,
+          backtestResult: null,
+        }, false, 'insight/resetBacktest')
       },
 
       // History actions

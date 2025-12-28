@@ -22,7 +22,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
       <div className="flex">
         {/* Sidebar - 桌面端显示 */}

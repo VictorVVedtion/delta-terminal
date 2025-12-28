@@ -398,6 +398,20 @@ class InsightData(BaseModel):
     explanation: str = Field(description="AI's natural language explanation")
     created_at: str = Field(description="Timestamp when this insight was created")
 
+    # === 推理链支持 (A2UI 2.0) ===
+    reasoning_chain: Optional[Any] = Field(
+        default=None,
+        description="AI reasoning chain - shows the thought process (ReasoningChain type)"
+    )
+    show_reasoning: bool = Field(
+        default=False,
+        description="Whether to show reasoning chain by default"
+    )
+    reasoning_display_mode: Literal["collapsed", "expanded", "highlight_only"] = Field(
+        default="collapsed",
+        description="How to display reasoning chain"
+    )
+
 
 class RiskAlertInsight(InsightData):
     """Risk alert insight (extends InsightData)"""

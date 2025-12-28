@@ -129,10 +129,10 @@ export function HeatmapSlider({
         </div>
       </div>
 
-      {/* Heatmap Track */}
-      <div className="relative">
+      {/* Heatmap Track - 增加可交互区域 */}
+      <div className="relative h-8 flex items-center">
         {/* Zone Backgrounds */}
-        <div className="flex h-3 rounded-full overflow-hidden">
+        <div className="flex h-3 rounded-full overflow-hidden w-full">
           {heatmap_zones.map((zone, index) => (
             <button
               key={index}
@@ -149,7 +149,7 @@ export function HeatmapSlider({
           ))}
         </div>
 
-        {/* Native Range Input (invisible but functional) */}
+        {/* Native Range Input - 扩大可点击区域 */}
         <input
           type="range"
           min={min}
@@ -159,15 +159,16 @@ export function HeatmapSlider({
           onChange={handleChange}
           disabled={disabled}
           className={cn(
-            'absolute inset-0 w-full h-3 opacity-0 cursor-pointer',
+            'absolute inset-0 w-full h-8 opacity-0 cursor-pointer z-10',
             disabled && 'cursor-not-allowed',
           )}
+          style={{ touchAction: 'none' }}
         />
 
-        {/* Thumb */}
+        {/* Thumb - 不捕获事件 */}
         <div
           className={cn(
-            'absolute top-1/2 -translate-y-1/2 -translate-x-1/2',
+            'absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none',
             'w-5 h-5 rounded-full bg-white border-2 shadow-md',
             'transition-all duration-100',
             colors.border,

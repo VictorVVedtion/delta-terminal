@@ -21,6 +21,7 @@ from ...models.schemas import (
 )
 from ...services.insight_service import InsightGeneratorService, get_insight_service
 from ...services.intent_service import IntentService, get_intent_service
+from .insight import store_insight
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,9 @@ INSIGHT_INTENTS = {
     IntentType.MODIFY_STRATEGY,
     IntentType.ANALYZE_MARKET,
     IntentType.BACKTEST,
+    IntentType.OPTIMIZE_STRATEGY,
+    IntentType.BACKTEST_SUGGEST,
+    IntentType.RISK_ANALYSIS,
 }
 
 
@@ -104,6 +108,9 @@ async def send_message(
                     **(request.context or {}),
                 },
             )
+            # 存储 InsightData 以便后续批准/拒绝操作
+            await store_insight(insight)
+            logger.info(f"Stored InsightData: {insight.id}")
             insight_data = insight.model_dump()
             ai_response = insight.explanation
         else:

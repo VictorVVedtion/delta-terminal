@@ -100,11 +100,11 @@ export function ParamSlider({
 
       {/* Slider Row */}
       <div className="flex items-center gap-3">
-        {/* Custom Slider */}
-        <div className="relative flex-1">
+        {/* Custom Slider - 增加可交互区域 */}
+        <div className="relative flex-1 h-6 flex items-center">
           {/* Track Background */}
           <div className={cn(
-            'absolute inset-0 h-2 rounded-full',
+            'absolute left-0 right-0 h-2 rounded-full',
             hasError ? 'bg-red-100 dark:bg-red-950' : 'bg-muted',
           )} />
 
@@ -122,7 +122,7 @@ export function ParamSlider({
             style={{ width: `${percentage}%` }}
           />
 
-          {/* Native Range Input (invisible but functional) */}
+          {/* Native Range Input - 扩大可点击区域 */}
           <input
             type="range"
             min={min}
@@ -132,16 +132,17 @@ export function ParamSlider({
             onChange={handleSliderChange}
             disabled={disabled}
             className={cn(
-              'absolute inset-0 w-full h-2 opacity-0 cursor-pointer',
+              'absolute inset-0 w-full h-6 opacity-0 cursor-pointer z-10',
               disabled && 'cursor-not-allowed',
             )}
+            style={{ touchAction: 'none' }}
           />
 
-          {/* Thumb */}
+          {/* Thumb - 不捕获事件，让 input 处理 */}
           <div
             className={cn(
-              'absolute top-1/2 -translate-y-1/2 -translate-x-1/2',
-              'w-4 h-4 rounded-full border-2 shadow-sm',
+              'absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none',
+              'w-5 h-5 rounded-full border-2 shadow-md',
               'transition-all duration-100',
               hasError
                 ? 'bg-red-500 border-red-600'

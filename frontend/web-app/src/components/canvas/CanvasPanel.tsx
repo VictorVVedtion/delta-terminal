@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  FlaskConical,
   Lightbulb,
   Minus,
   RotateCcw,
@@ -15,13 +16,14 @@ import {
 import React from 'react'
 
 import { ParamControl } from '@/components/a2ui/controls/ParamControl'
+import { BacktestKlineChart } from '@/components/backtest/BacktestKlineChart'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useParamConstraints } from '@/hooks/useParamConstraints'
 import { notify } from '@/lib/notification'
 import { cn } from '@/lib/utils'
-import type { ImpactMetric,InsightData, InsightParam } from '@/types/insight'
+import type { BacktestInsightData, ImpactMetric,InsightData, InsightParam } from '@/types/insight'
 
 // =============================================================================
 // CanvasPanel Props
@@ -38,8 +40,16 @@ interface CanvasPanelProps {
   onApprove?: ((insight: InsightData, params: InsightParam[]) => void) | undefined
   /** Called when user rejects the insight */
   onReject?: ((insight: InsightData) => void) | undefined
+  /** Called when user triggers backtest */
+  onBacktest?: ((insight: InsightData, params: InsightParam[]) => void) | undefined
   /** Whether the panel is loading */
   isLoading?: boolean | undefined
+  /** Whether backtest is currently running */
+  isBacktesting?: boolean | undefined
+  /** Whether backtest has passed (enables approval) */
+  backtestPassed?: boolean | undefined
+  /** Backtest result data with chart */
+  backtestResult?: BacktestInsightData | null | undefined
 }
 
 // =============================================================================
@@ -52,7 +62,11 @@ export function CanvasPanel({
   onClose,
   onApprove,
   onReject,
+  onBacktest,
   isLoading = false,
+  isBacktesting = false,
+  backtestPassed,
+  backtestResult,
 }: CanvasPanelProps) {
   // Track edited params
   const [editedParams, setEditedParams] = React.useState<InsightParam[]>([])
@@ -150,6 +164,26 @@ export function CanvasPanel({
       onApprove?.(insight, editedParams)
     }
   }, [insight, editedParams, onApprove])
+
+  // Handle backtest trigger
+  const handleBacktest = React.useCallback(() => {
+    if (insight) {
+      onBacktest?.(insight, editedParams)
+    }
+  }, [insight, editedParams, onBacktest])
+
+  // Check if this insight type requires backtest
+  const requiresBacktest = React.useMemo(() => {
+    if (!insight) return false
+    // 策略创建和修改需要回测验证
+    return ['strategy_create', 'strategy_modify', 'batch_adjust'].includes(insight.type)
+  }, [insight])
+
+  // Determine if approval is allowed
+  const canApprove = React.useMemo(() => {
+    if (!requiresBacktest) return true
+    return backtestPassed === true
+  }, [requiresBacktest, backtestPassed])
 
   // Close on escape key
   React.useEffect(() => {
@@ -294,6 +328,52 @@ export function CanvasPanel({
               </section>
             )}
 
+            {/* 回测结果区: K线图和买卖信号 */}
+            {backtestResult?.chartData && (
+              <section className="space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4" />
+                  回测结果
+                </h3>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <BacktestKlineChart
+                    data={backtestResult.chartData}
+                    height={280}
+                    showVolume={true}
+                    visibleRange={50}
+                  />
+                </div>
+                {/* 回测统计摘要 */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-muted/50">
+                    <div className={cn(
+                      'text-lg font-bold',
+                      backtestResult.stats.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'
+                    )}>
+                      {backtestResult.stats.totalReturn >= 0 ? '+' : ''}
+                      {backtestResult.stats.totalReturn.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">总收益</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/50">
+                    <div className="text-lg font-bold text-foreground">
+                      {backtestResult.stats.winRate.toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">胜率</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/50">
+                    <div className={cn(
+                      'text-lg font-bold',
+                      backtestResult.stats.sharpeRatio >= 1 ? 'text-green-500' : 'text-yellow-500'
+                    )}>
+                      {backtestResult.stats.sharpeRatio.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">夏普比率</div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* L1 参数区: 核心参数 */}
             <section className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">
@@ -358,55 +438,96 @@ export function CanvasPanel({
           </div>
         </div>
 
-        {/* 操作区: [拒绝] [修改后提交] [批准] 按钮 */}
-        <footer className="flex items-center gap-3 px-4 py-3 border-t border-border bg-card/80 backdrop-blur-sm">
-          <Button
-            variant="outline"
-            onClick={handleReject}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            <XCircle className="h-4 w-4 mr-2" />
-            拒绝
-          </Button>
-
-          {hasChanges ? (
-            <Button
-              onClick={handleModifyAndSubmit}
-              disabled={isLoading}
-              className="flex-[2] bg-primary hover:bg-primary/90"
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  处理中...
-                </span>
-              ) : (
+        {/* 操作区: [拒绝] [回测] [批准] 按钮 */}
+        <footer className="flex flex-col gap-3 px-4 py-3 border-t border-border bg-card/80 backdrop-blur-sm">
+          {/* 回测状态提示 */}
+          {requiresBacktest && (
+            <div className={cn(
+              'flex items-center gap-2 text-xs px-3 py-2 rounded-lg',
+              backtestPassed === true && 'bg-green-500/10 text-green-500',
+              backtestPassed === false && 'bg-red-500/10 text-red-500',
+              backtestPassed === undefined && 'bg-muted text-muted-foreground'
+            )}>
+              {backtestPassed === true && (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
-                  修改后提交
+                  <Check className="h-3.5 w-3.5" />
+                  回测通过 - 可以批准策略
                 </>
               )}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleApprove}
-              disabled={isLoading}
-              className="flex-[2] bg-primary hover:bg-primary/90"
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  处理中...
-                </span>
-              ) : (
+              {backtestPassed === false && (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
-                  批准
+                  <XCircle className="h-3.5 w-3.5" />
+                  回测未通过 - 请调整参数后重新回测
                 </>
               )}
-            </Button>
+              {backtestPassed === undefined && (
+                <>
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  需要运行回测验证策略可行性
+                </>
+              )}
+            </div>
           )}
+
+          {/* 按钮区域 */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleReject}
+              disabled={isLoading || isBacktesting}
+              className="flex-1"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              拒绝
+            </Button>
+
+            {/* 回测按钮 - 仅对需要回测的 InsightType 显示 */}
+            {requiresBacktest && (
+              <Button
+                variant="secondary"
+                onClick={handleBacktest}
+                disabled={isLoading || isBacktesting}
+                className="flex-1"
+              >
+                {isBacktesting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    回测中...
+                  </span>
+                ) : (
+                  <>
+                    <FlaskConical className="h-4 w-4 mr-2" />
+                    {backtestPassed !== undefined ? '重新回测' : '运行回测'}
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* 批准按钮 */}
+            <Button
+              onClick={hasChanges ? handleModifyAndSubmit : handleApprove}
+              disabled={isLoading || isBacktesting || !canApprove}
+              className={cn(
+                'flex-1',
+                canApprove
+                  ? 'bg-primary hover:bg-primary/90'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              )}
+              title={!canApprove ? '请先运行回测验证策略' : undefined}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  处理中...
+                </span>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  {hasChanges ? '修改后提交' : '批准'}
+                </>
+              )}
+            </Button>
+          </div>
         </footer>
       </aside>
     </>

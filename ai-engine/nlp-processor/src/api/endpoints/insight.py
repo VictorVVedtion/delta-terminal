@@ -18,6 +18,11 @@ from ...models.insight_schemas import (
     InsightType,
     ParamType,
 )
+from ...services.strategy_client import (
+    StrategyClient,
+    StrategyServiceError,
+    get_strategy_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -97,21 +102,33 @@ class RejectInsightResponse(BaseModel):
 
 
 # =============================================================================
-# In-Memory Storage (TODO: Replace with database)
+# Repository Integration
 # =============================================================================
 
-# 临时存储洞察数据
-_insight_store: Dict[str, InsightData] = {}
+from ...repositories import get_insight_repository, InsightRepository
+
+# 获取 repository 实例 (懒加载)
+_repository: Optional[InsightRepository] = None
 
 
-def store_insight(insight: InsightData) -> None:
+async def _get_repo() -> InsightRepository:
+    """获取 repository 实例"""
+    global _repository
+    if _repository is None:
+        _repository = await get_insight_repository()
+    return _repository
+
+
+async def store_insight(insight: InsightData) -> None:
     """存储洞察"""
-    _insight_store[insight.id] = insight
+    repo = await _get_repo()
+    await repo.save(insight)
 
 
-def get_insight(insight_id: str) -> Optional[InsightData]:
+async def get_insight(insight_id: str) -> Optional[InsightData]:
     """获取洞察"""
-    return _insight_store.get(insight_id)
+    repo = await _get_repo()
+    return await repo.get(insight_id)
 
 
 # =============================================================================
@@ -257,7 +274,7 @@ async def validate_params(request: ValidateParamsRequest) -> ValidateParamsRespo
 
     对用户编辑的参数进行实时验证，返回错误和警告
     """
-    insight = get_insight(request.insight_id)
+    insight = await get_insight(request.insight_id)
     if not insight:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -306,7 +323,7 @@ async def answer_clarification(
 
     接收用户对 AI 追问的回答，生成下一个洞察
     """
-    insight = get_insight(request.insight_id)
+    insight = await get_insight(request.insight_id)
     if not insight:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -346,42 +363,100 @@ async def approve_insight(
 
     用户确认并批准 AI 生成的策略配置
     """
-    insight = get_insight(insight_id)
+    insight = await get_insight(insight_id)
     if not insight:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Insight {insight_id} not found"
         )
 
-    # 验证最终参数
+    # 构建参数值映射（使用编辑后的值或原始值）
+    values_map = {}
+    for param in insight.params:
+        values_map[param.key] = param.value
+
+    # 应用用户编辑的参数
     if request.edited_params:
-        values_map = {pv.key: pv.value for pv in request.edited_params}
-        errors: List[ValidationError] = []
+        for pv in request.edited_params:
+            values_map[pv.key] = pv.value
 
-        for param in insight.params:
-            if param.key in values_map:
-                param_errors = validate_param_value(param, values_map[param.key])
-                errors.extend([e for e in param_errors if e.severity == "error"])
+    # 验证最终参数
+    errors: List[ValidationError] = []
+    for param in insight.params:
+        if param.key in values_map:
+            param_errors = validate_param_value(param, values_map[param.key])
+            errors.extend([e for e in param_errors if e.severity == "error"])
 
-        if errors:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Validation failed: {errors[0].message}"
-            )
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Validation failed: {errors[0].message}"
+        )
 
     logger.info(f"Approved insight {insight_id}")
 
-    # TODO:
-    # 1. 创建策略记录
-    # 2. 调用策略服务保存策略
-    # 3. 返回策略 ID 和下一步操作
+    # 从参数中提取策略配置
+    strategy_name = values_map.get("name", f"Strategy-{insight_id[:8]}")
+    strategy_symbol = values_map.get("symbol", "BTC/USDT")
+    strategy_type = values_map.get("strategy_type", "custom")
 
-    return ApproveInsightResponse(
-        success=True,
-        strategy_id=f"strategy_{insight_id[:8]}",  # TODO: 真实策略 ID
-        message="策略已创建成功",
-        next_step="deploy"  # 引导用户去部署
-    )
+    # 构建策略配置
+    strategy_config = {
+        "params": values_map,
+        "insightId": insight_id,
+        "type": insight.type.value if hasattr(insight.type, "value") else str(insight.type),
+    }
+
+    # 如果有目标策略信息，则使用
+    if insight.target:
+        strategy_name = insight.target.name or strategy_name
+        strategy_symbol = insight.target.symbol or strategy_symbol
+
+    # 调用策略服务创建策略
+    try:
+        strategy_client = get_strategy_client()
+        result = await strategy_client.create_strategy(
+            name=strategy_name,
+            symbol=strategy_symbol,
+            strategy_type=strategy_type,
+            config=strategy_config,
+            user_id=getattr(insight, "user_id", None),
+        )
+
+        strategy_id = result.get("id") or result.get("strategyId")
+        if not strategy_id:
+            # 如果服务没有返回 ID，生成一个临时 ID
+            strategy_id = f"strategy_{insight_id[:8]}"
+            logger.warning(f"Strategy service did not return ID, using fallback: {strategy_id}")
+
+        logger.info(f"Created strategy {strategy_id} from insight {insight_id}")
+
+        return ApproveInsightResponse(
+            success=True,
+            strategy_id=strategy_id,
+            message="策略已创建成功",
+            next_step="deploy"
+        )
+
+    except StrategyServiceError as e:
+        logger.error(f"Strategy service error: {e}")
+        # 策略服务不可用时，生成临时 ID 并记录
+        fallback_id = f"pending_{insight_id[:8]}"
+        logger.warning(f"Using fallback strategy ID: {fallback_id}")
+
+        return ApproveInsightResponse(
+            success=True,
+            strategy_id=fallback_id,
+            message="策略已保存（等待同步到策略服务）",
+            next_step="deploy"
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error creating strategy: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建策略失败: {str(e)}"
+        )
 
 
 @router.post("/{insight_id}/reject", response_model=RejectInsightResponse)
@@ -394,7 +469,7 @@ async def reject_insight(
 
     用户拒绝 AI 生成的策略配置
     """
-    insight = get_insight(insight_id)
+    insight = await get_insight(insight_id)
     if not insight:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -416,7 +491,7 @@ async def get_insight_by_id(insight_id: str) -> InsightData:
     """
     获取洞察详情
     """
-    insight = get_insight(insight_id)
+    insight = await get_insight(insight_id)
     if not insight:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

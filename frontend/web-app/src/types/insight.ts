@@ -269,6 +269,21 @@ export interface InsightData {
    * ChatInterface 会自动弹出 DeployCanvas
    */
   actions?: InsightActionType[];
+
+  // === A2UI 2.0: 推理链支持 ===
+  /**
+   * AI 推理链数据 (可选)
+   * 展示 AI 的思考过程，让用户可以介入任意推理步骤
+   */
+  reasoning_chain?: import('./reasoning').ReasoningChain;
+  /**
+   * 是否默认展示推理链
+   */
+  show_reasoning?: boolean;
+  /**
+   * 推理链展示模式
+   */
+  reasoning_display_mode?: import('./reasoning').ReasoningDisplayMode;
 }
 
 export interface RiskAlertInsight extends InsightData {

@@ -57,6 +57,31 @@ interface InsightResponse {
 // 后端 NLP Processor 服务地址
 const NLP_PROCESSOR_URL = process.env.NLP_PROCESSOR_URL || process.env.AI_ORCHESTRATOR_URL
 
+// 后端请求超时时间 (毫秒)
+const BACKEND_TIMEOUT = 25000
+
+/**
+ * 带超时的 fetch 请求
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeout: number
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return response
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 // =============================================================================
 // POST Handler
 // =============================================================================
@@ -99,7 +124,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
     }
 
-    // 调用后端 NLP Processor
+    // 调用后端 NLP Processor (带超时)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
@@ -107,11 +132,39 @@ export async function POST(request: NextRequest): Promise<Response> {
       headers.Authorization = authHeader
     }
 
-    const backendResponse = await fetch(`${NLP_PROCESSOR_URL}/api/v1/chat/message`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(backendRequest),
-    })
+    let backendResponse: Response
+    try {
+      backendResponse = await fetchWithTimeout(
+        `${NLP_PROCESSOR_URL}/api/v1/chat/message`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(backendRequest),
+        },
+        BACKEND_TIMEOUT
+      )
+    } catch (error) {
+      // 超时错误特殊处理
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('[A2UI Insight API] Backend request timeout')
+        return Response.json(
+          {
+            success: false,
+            error: '后端服务响应超时，请稍后重试',
+          },
+          { status: 504 }
+        )
+      }
+      // 网络连接错误
+      console.error('[A2UI Insight API] Backend connection error:', error)
+      return Response.json(
+        {
+          success: false,
+          error: '无法连接后端服务，请检查服务是否运行',
+        },
+        { status: 503 }
+      )
+    }
 
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text().catch(() => '')

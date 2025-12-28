@@ -53,6 +53,9 @@ const DEFAULT_MODEL = SIMPLE_PRESETS.balanced.defaultModel
 // 后端代理函数
 // =============================================================================
 
+/** 后端 Orchestrator 连接超时 (毫秒) */
+const ORCHESTRATOR_TIMEOUT = 30000
+
 /**
  * 代理请求到后端 AI Orchestrator 服务
  * 使用预解析的 body 避免重复读取 request.json()
@@ -71,33 +74,52 @@ async function proxyToOrchestratorWithBody(
     headers.Authorization = authHeader
   }
 
-  const orchestratorResponse = await fetch(`${orchestratorUrl}/api/ai/chat/stream`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      messages: body.messages,
-      model: body.model,
-      taskType: body.taskType,
-      maxTokens: body.maxTokens,
-      temperature: body.temperature,
-      streaming: true,
-    }),
-  })
+  // 创建超时控制器
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), ORCHESTRATOR_TIMEOUT)
 
-  if (!orchestratorResponse.ok) {
-    // 如果后端返回错误，抛出异常触发降级
-    const errorText = await orchestratorResponse.text().catch(() => '')
-    throw new Error(`Orchestrator error: ${orchestratorResponse.status} - ${errorText}`)
+  try {
+    const orchestratorResponse = await fetch(`${orchestratorUrl}/api/ai/chat/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        messages: body.messages,
+        model: body.model,
+        taskType: body.taskType,
+        maxTokens: body.maxTokens,
+        temperature: body.temperature,
+        streaming: true,
+      }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!orchestratorResponse.ok) {
+      // 如果后端返回错误，抛出异常触发降级
+      const errorText = await orchestratorResponse.text().catch(() => '')
+      throw new Error(`Orchestrator error: ${orchestratorResponse.status} - ${errorText}`)
+    }
+
+    // 直接转发 SSE 响应
+    return new Response(orchestratorResponse.body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    })
+  } catch (error) {
+    clearTimeout(timeoutId)
+
+    // 超时错误
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('[AI Stream] Orchestrator timeout')
+      throw new Error('Orchestrator timeout - falling back to direct API')
+    }
+
+    throw error
   }
-
-  // 直接转发 SSE 响应
-  return new Response(orchestratorResponse.body, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  })
 }
 
 // =============================================================================

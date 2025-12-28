@@ -307,13 +307,17 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
       {/* 下拉菜单 */}
       {menuOpen && (
         <>
-          {/* 背景遮罩 */}
+          {/* 背景遮罩 - 提高 z-index 确保覆盖侧边栏 */}
           <div
-            className="fixed inset-0 z-40"
-            onClick={() => { setMenuOpen(false); }}
+            className="fixed inset-0 z-[100]"
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') setMenuOpen(false); }}
+            role="button"
+            tabIndex={-1}
+            aria-label="关闭菜单"
           />
           {/* 菜单内容 */}
-          <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
+          <div className="absolute right-0 top-full mt-1 z-[101] w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
             <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase">
               基本操作
             </div>

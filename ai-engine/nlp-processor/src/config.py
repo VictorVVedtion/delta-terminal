@@ -75,6 +75,20 @@ class Settings(BaseSettings):
     conversation_max_history: int = Field(default=20, description="最大对话历史条数")
     conversation_ttl: int = Field(default=3600, description="对话 TTL(秒)")
 
+    # 外部服务配置
+    strategy_service_url: str = Field(
+        default="http://localhost:3002/api/v1/strategies",
+        description="策略服务 URL",
+    )
+    trading_service_url: str = Field(
+        default="http://localhost:3003/api/v1/trading",
+        description="交易服务 URL",
+    )
+    backtest_service_url: str = Field(
+        default="http://localhost:3004/api/v1/backtest",
+        description="回测服务 URL",
+    )
+
     # 速率限制
     rate_limit_per_minute: int = Field(default=60, description="每分钟请求限制")
     rate_limit_per_hour: int = Field(default=1000, description="每小时请求限制")

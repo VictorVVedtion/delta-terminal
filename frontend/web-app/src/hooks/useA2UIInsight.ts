@@ -77,6 +77,19 @@ interface UseA2UIInsightReturn extends UseA2UIInsightState {
 }
 
 // =============================================================================
+// Constants
+// =============================================================================
+
+/** API 请求超时时间 (毫秒) */
+const REQUEST_TIMEOUT = 30000
+
+/** 最大重试次数 */
+const MAX_RETRIES = 2
+
+/** 重试延迟基数 (毫秒) */
+const RETRY_DELAY_BASE = 1000
+
+// =============================================================================
 // Initial State
 // =============================================================================
 
@@ -107,46 +120,101 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
   const { accessToken } = useAuthStore()
 
   /**
-   * 调用后端 API 获取 InsightData
+   * 带超时的 fetch 请求
+   */
+  const fetchWithTimeout = useCallback(
+    async (url: string, options: RequestInit, timeout: number): Promise<Response> => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+        })
+        return response
+      } finally {
+        clearTimeout(timeoutId)
+      }
+    },
+    []
+  )
+
+  /**
+   * 延迟函数
+   */
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  /**
+   * 调用后端 API 获取 InsightData (带超时和重试)
    */
   const fetchInsight = useCallback(
     async (
       message: string,
       context?: Record<string, unknown>
     ): Promise<InsightApiResponse | null> => {
-      try {
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        }
-        if (accessToken) {
-          headers.Authorization = `Bearer ${accessToken}`
-        }
-
-        const response = await fetch('/api/ai/insight', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            message,
-            conversationId: state.conversationId,
-            context: {
-              ...context,
-              collectedParams: state.collectedParams,
-            },
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || `API 错误: ${response.status}`)
-        }
-
-        return await response.json()
-      } catch (error) {
-        console.error('[useA2UIInsight] Fetch error:', error)
-        throw error
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
       }
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+
+      const requestBody = JSON.stringify({
+        message,
+        conversationId: state.conversationId,
+        context: {
+          ...context,
+          collectedParams: state.collectedParams,
+        },
+      })
+
+      let lastError: Error | null = null
+
+      // 重试逻辑
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            console.log(`[useA2UIInsight] Retry attempt ${attempt}/${MAX_RETRIES}...`)
+            await delay(RETRY_DELAY_BASE * attempt)
+          }
+
+          const response = await fetchWithTimeout(
+            '/api/ai/insight',
+            {
+              method: 'POST',
+              headers,
+              body: requestBody,
+            },
+            REQUEST_TIMEOUT
+          )
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `API 错误: ${response.status}`)
+          }
+
+          return await response.json()
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error(String(error))
+
+          // 超时错误特殊处理
+          if (lastError.name === 'AbortError') {
+            lastError = new Error('请求超时，请稍后重试')
+          }
+
+          console.error(`[useA2UIInsight] Fetch error (attempt ${attempt + 1}):`, lastError.message)
+
+          // 最后一次重试失败，抛出错误
+          if (attempt === MAX_RETRIES) {
+            throw lastError
+          }
+        }
+      }
+
+      throw lastError || new Error('请求失败')
     },
-    [accessToken, state.conversationId, state.collectedParams]
+    [accessToken, state.conversationId, state.collectedParams, fetchWithTimeout]
   )
 
   /**

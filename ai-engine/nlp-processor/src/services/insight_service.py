@@ -12,14 +12,20 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from ..models.insight_schemas import (
+    Candle,
     CanvasMode,
+    ChartData,
+    ChartOverlay,
+    ChartSignal,
     ClarificationCategory,
     ClarificationInsight,
     ClarificationOption,
     ClarificationOptionType,
+    ComparisonData,
     ComparisonOperator,
     Constraint,
     ConstraintType,
+    EquityCurvePoint,
     HeatmapZone,
     ImpactMetric,
     ImpactMetricKey,
@@ -52,6 +58,7 @@ from ..prompts.insight_prompts import (
     STRATEGY_INSIGHT_PROMPT,
 )
 from .llm_service import LLMService, get_llm_service
+from .reasoning_service import ReasoningChainService, get_reasoning_service
 
 logger = logging.getLogger(__name__)
 
@@ -85,14 +92,16 @@ class InsightGeneratorService:
         "strategy_type": ["策略", "网格", "RSI", "MACD", "趋势", "均线", "布林", "定投"],
     }
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLMService, reasoning_service: Optional[ReasoningChainService] = None):
         """
         Initialize the service
 
         Args:
             llm_service: LLM service instance
+            reasoning_service: Reasoning chain service instance (optional)
         """
         self.llm_service = llm_service
+        self.reasoning_service = reasoning_service
 
     def _assess_intent_completeness(
         self,
@@ -145,6 +154,37 @@ class InsightGeneratorService:
 
         return (is_complete, missing_params, has_abstract)
 
+    def _attach_reasoning_chain(
+        self,
+        insight: InsightData,
+        reasoning_chain: Optional[Any],
+    ) -> InsightData:
+        """
+        Attach reasoning chain to InsightData
+
+        A2UI 2.0: Add reasoning chain to insight for transparency.
+        Users can see how AI arrived at its recommendations.
+
+        Args:
+            insight: The generated InsightData
+            reasoning_chain: The reasoning chain (if generated)
+
+        Returns:
+            InsightData with reasoning chain attached
+        """
+        if reasoning_chain is not None:
+            insight.reasoning_chain = reasoning_chain.model_dump()
+            insight.show_reasoning = True  # Default to showing reasoning
+            insight.reasoning_display_mode = "collapsed"  # Start collapsed
+
+            # Update the reasoning chain with insight ID for linkage
+            if hasattr(reasoning_chain, 'insight_id'):
+                reasoning_chain.insight_id = insight.id
+
+            logger.debug(f"Attached reasoning chain to insight {insight.id}")
+
+        return insight
+
     async def generate_insight(
         self,
         user_input: str,
@@ -153,6 +193,7 @@ class InsightGeneratorService:
         user_id: str,
         context: Optional[Dict[str, Any]] = None,
         target_strategy: Optional[Dict[str, Any]] = None,
+        include_reasoning: bool = True,  # 新增：是否包含推理链
     ) -> InsightData:
         """
         Generate InsightData from user input
@@ -164,15 +205,29 @@ class InsightGeneratorService:
             user_id: User ID
             context: Additional context
             target_strategy: Target strategy for modifications
+            include_reasoning: Whether to generate and include reasoning chain
 
         Returns:
-            Structured InsightData
+            Structured InsightData with optional reasoning chain
         """
         try:
             logger.info(f"Generating insight for user {user_id}, intent: {intent}")
 
             # Extract entities from context
             entities = (context or {}).get("entities", {})
+
+            # A2UI 2.0: Generate reasoning chain if service is available
+            reasoning_chain = None
+            if include_reasoning and self.reasoning_service:
+                try:
+                    reasoning_chain = await self.reasoning_service.generate_reasoning_chain(
+                        user_input=user_input,
+                        intent=intent,
+                        context=context,
+                    )
+                    logger.info(f"Generated reasoning chain with {len(reasoning_chain.nodes)} nodes")
+                except Exception as e:
+                    logger.warning(f"Failed to generate reasoning chain: {e}")
 
             # A2UI Core: Check intent completeness before proceeding
             is_complete, missing_params, has_abstract = self._assess_intent_completeness(
@@ -185,53 +240,59 @@ class InsightGeneratorService:
                     f"Request incomplete (missing={missing_params}, abstract={has_abstract}), "
                     "generating clarification insight"
                 )
-                return await self._generate_clarification_insight(
+                insight = await self._generate_clarification_insight(
                     user_input,
                     chat_history,
                     context or {},
                     missing_params=missing_params,
                     has_abstract=has_abstract,
                 )
+                return self._attach_reasoning_chain(insight, reasoning_chain)
 
-            # Select prompt based on intent
+            # Select prompt based on intent and generate InsightData
+            insight: InsightData
+
             if intent == IntentType.CREATE_STRATEGY:
-                return await self._generate_strategy_insight(
+                insight = await self._generate_strategy_insight(
                     user_input, chat_history, context or {}
                 )
             elif intent == IntentType.MODIFY_STRATEGY:
-                return await self._generate_modify_insight(
+                insight = await self._generate_modify_insight(
                     user_input, chat_history, context or {}, target_strategy
                 )
             elif intent == IntentType.OPTIMIZE_STRATEGY:
                 # 策略优化建议
-                return await self._generate_optimize_insight(
+                insight = await self._generate_optimize_insight(
                     user_input, chat_history, context or {}, target_strategy
                 )
             elif intent == IntentType.BACKTEST_SUGGEST:
                 # 回测建议
-                return await self._generate_backtest_insight(
+                insight = await self._generate_backtest_insight(
                     user_input, chat_history, context or {}, target_strategy
                 )
             elif intent == IntentType.RISK_ANALYSIS:
                 # 风险分析
-                return await self._generate_risk_analysis_insight(
+                insight = await self._generate_risk_analysis_insight(
                     user_input, chat_history, context or {}
                 )
             elif intent in [IntentType.ANALYZE_MARKET, IntentType.BACKTEST]:
                 # For analysis requests, still generate strategy insight with analysis focus
-                return await self._generate_analysis_insight(
+                insight = await self._generate_analysis_insight(
                     user_input, chat_history, context or {}
                 )
             elif intent == IntentType.GENERAL_CHAT:
                 # For general chat, return a minimal insight with just explanation
-                return await self._generate_general_insight(
+                insight = await self._generate_general_insight(
                     user_input, chat_history, context or {}
                 )
             else:
                 # For unclear intents, generate clarification insight
-                return await self._generate_clarification_insight(
+                insight = await self._generate_clarification_insight(
                     user_input, chat_history, context or {}
                 )
+
+            # A2UI 2.0: Attach reasoning chain to insight before returning
+            return self._attach_reasoning_chain(insight, reasoning_chain)
 
         except Exception as e:
             logger.error(f"Error generating insight: {e}", exc_info=True)
@@ -876,12 +937,155 @@ class InsightGeneratorService:
 
     def _parse_evidence(self, evidence_data: Dict[str, Any]) -> InsightEvidence:
         """Parse evidence data from response"""
-        # For now, return a basic evidence structure
-        # Full implementation would parse chart and comparison data
+        chart = None
+        comparison = None
+
+        # Parse chart data
+        if "chart" in evidence_data and evidence_data["chart"]:
+            chart = self._parse_chart_data(evidence_data["chart"])
+
+        # Parse comparison data
+        if "comparison" in evidence_data and evidence_data["comparison"]:
+            comparison = self._parse_comparison_data(evidence_data["comparison"])
+
         return InsightEvidence(
-            chart=None,  # TODO: Parse chart data
-            comparison=None,  # TODO: Parse comparison data
+            chart=chart,
+            comparison=comparison,
         )
+
+    def _parse_chart_data(self, chart_data: Dict[str, Any]) -> Optional[ChartData]:
+        """Parse chart data from LLM response"""
+        try:
+            # Parse candles
+            candles = []
+            for c in chart_data.get("candles", []):
+                try:
+                    candle = Candle(
+                        timestamp=int(c.get("timestamp", 0)),
+                        open=float(c.get("open", 0)),
+                        high=float(c.get("high", 0)),
+                        low=float(c.get("low", 0)),
+                        close=float(c.get("close", 0)),
+                        volume=float(c.get("volume", 0)),
+                    )
+                    candles.append(candle)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse candle: {c}, error: {e}")
+                    continue
+
+            if not candles:
+                logger.warning("No valid candles in chart data")
+                return None
+
+            # Parse signals
+            signals = None
+            if "signals" in chart_data and chart_data["signals"]:
+                signals = []
+                for s in chart_data["signals"]:
+                    try:
+                        signal_type = s.get("type", "buy")
+                        if signal_type not in ["buy", "sell", "close"]:
+                            signal_type = "buy"
+                        signal = ChartSignal(
+                            timestamp=int(s.get("timestamp", 0)),
+                            type=signal_type,
+                            price=float(s.get("price", 0)),
+                            label=s.get("label"),
+                        )
+                        signals.append(signal)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Failed to parse signal: {s}, error: {e}")
+                        continue
+
+            # Parse overlays
+            overlays = None
+            if "overlays" in chart_data and chart_data["overlays"]:
+                overlays = []
+                for o in chart_data["overlays"]:
+                    try:
+                        overlay = ChartOverlay(
+                            name=o.get("name", "Unknown"),
+                            color=o.get("color", "#3b82f6"),
+                            data=o.get("data", []),
+                        )
+                        overlays.append(overlay)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse overlay: {o}, error: {e}")
+                        continue
+
+            return ChartData(
+                symbol=chart_data.get("symbol", "BTC/USDT"),
+                timeframe=chart_data.get("timeframe", "1h"),
+                candles=candles,
+                signals=signals,
+                overlays=overlays,
+            )
+
+        except Exception as e:
+            logger.error(f"Error parsing chart data: {e}")
+            return None
+
+    def _parse_comparison_data(self, comparison_data: Dict[str, Any]) -> Optional[ComparisonData]:
+        """Parse comparison data from LLM response"""
+        try:
+            # Parse original equity curve
+            original = []
+            for p in comparison_data.get("original", []):
+                try:
+                    point = EquityCurvePoint(
+                        timestamp=int(p.get("timestamp", 0)),
+                        value=float(p.get("value", 100)),
+                    )
+                    original.append(point)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse original point: {p}, error: {e}")
+                    continue
+
+            if not original:
+                logger.warning("No valid original points in comparison data")
+                return None
+
+            # Parse modified equity curve
+            modified = []
+            for p in comparison_data.get("modified", []):
+                try:
+                    point = EquityCurvePoint(
+                        timestamp=int(p.get("timestamp", 0)),
+                        value=float(p.get("value", 100)),
+                    )
+                    modified.append(point)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse modified point: {p}, error: {e}")
+                    continue
+
+            if not modified:
+                logger.warning("No valid modified points in comparison data")
+                return None
+
+            # Parse baseline (optional)
+            baseline = None
+            if "baseline" in comparison_data and comparison_data["baseline"]:
+                baseline = []
+                for p in comparison_data["baseline"]:
+                    try:
+                        point = EquityCurvePoint(
+                            timestamp=int(p.get("timestamp", 0)),
+                            value=float(p.get("value", 100)),
+                        )
+                        baseline.append(point)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Failed to parse baseline point: {p}, error: {e}")
+                        continue
+
+            return ComparisonData(
+                original=original,
+                modified=modified,
+                baseline=baseline,
+            )
+
+        except Exception as e:
+            logger.error(f"Error parsing comparison data: {e}")
+            return None
 
     def _parse_impact(self, impact_data: Dict[str, Any]) -> InsightImpact:
         """Parse impact data from response"""
@@ -962,7 +1166,25 @@ class InsightGeneratorService:
 # =============================================================================
 
 
-async def get_insight_service() -> InsightGeneratorService:
-    """Get insight generator service instance"""
+async def get_insight_service(include_reasoning: bool = True) -> InsightGeneratorService:
+    """
+    Get insight generator service instance
+
+    Args:
+        include_reasoning: Whether to include reasoning chain service (A2UI 2.0)
+
+    Returns:
+        InsightGeneratorService instance
+    """
     llm_service = get_llm_service()
-    return InsightGeneratorService(llm_service)
+
+    # A2UI 2.0: Initialize reasoning service for transparent AI
+    reasoning_service = None
+    if include_reasoning:
+        try:
+            reasoning_service = await get_reasoning_service()
+            logger.info("Reasoning chain service initialized for A2UI 2.0")
+        except Exception as e:
+            logger.warning(f"Failed to initialize reasoning service: {e}")
+
+    return InsightGeneratorService(llm_service, reasoning_service)
