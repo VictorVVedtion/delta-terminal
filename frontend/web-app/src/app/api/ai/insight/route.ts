@@ -113,6 +113,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     const authHeader = request.headers.get('Authorization')
 
     // 构建后端请求
+    // collectedParams 可能在 body 顶层或 context 中
+    const collectedParams = body.collectedParams || body.context?.collectedParams || {}
+    const isFollowUp = body.context?.isFollowUp || false
+
     const backendRequest = {
       message: body.message,
       user_id: body.userId || 'anonymous',
@@ -120,7 +124,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       context: {
         ...body.context,
         // 传递已收集的参数用于多步骤引导
-        collected_params: body.collectedParams,
+        collected_params: collectedParams,
+        // 传递多步骤引导标志
+        isFollowUp: isFollowUp,
       },
     }
 

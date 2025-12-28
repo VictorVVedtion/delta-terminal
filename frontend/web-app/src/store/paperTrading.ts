@@ -19,6 +19,11 @@ import type {
   TradeSide,
 } from '@/types/paperTrading'
 
+import {
+  fetchRemoteAccountsFromSupabase,
+  persistAccountsToSupabase,
+} from '@/lib/paperTradingSync'
+
 // =============================================================================
 // Constants
 // =============================================================================
@@ -583,6 +588,28 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
           accounts: state.accounts,
           activeAccountId: state.activeAccountId,
         }),
+        // 启动时从 Supabase 拉取远程数据并合并
+        onRehydrateStorage: () => (state) => {
+          if (!state) return
+          void (async () => {
+            try {
+              const remoteAccounts = await fetchRemoteAccountsFromSupabase()
+              if (!remoteAccounts.length) return
+
+              // 合并本地和远程账户（以远程为准）
+              const localMap = new Map(state.accounts.map((a) => [a.id, a]))
+              remoteAccounts.forEach((a) => localMap.set(a.id, a))
+              const merged = Array.from(localMap.values())
+
+              usePaperTradingStore.setState({
+                accounts: merged,
+                activeAccountId: state.activeAccountId ?? merged[0]?.id ?? null,
+              })
+            } catch (err) {
+              console.warn('[PaperTrading] 同步远程数据失败:', err)
+            }
+          })()
+        },
       }
     ),
     {
@@ -590,6 +617,17 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
     }
   )
 )
+
+// 订阅 accounts 变化，自动同步到 Supabase
+if (typeof window !== 'undefined') {
+  usePaperTradingStore.subscribe(
+    (state, prevState) => {
+      if (state.accounts !== prevState.accounts) {
+        void persistAccountsToSupabase(state.accounts)
+      }
+    }
+  )
+}
 
 // =============================================================================
 // Selectors

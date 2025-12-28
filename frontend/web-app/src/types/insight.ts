@@ -185,6 +185,7 @@ export interface InsightEvidence {
 // =============================================================================
 
 export type ImpactMetricKey =
+  // 策略相关指标
   | 'expectedReturn'
   | 'annualizedReturn'
   | 'winRate'
@@ -194,14 +195,61 @@ export type ImpactMetricKey =
   | 'totalTrades'
   | 'avgTradeDuration'
   | 'avgProfit'
-  | 'avgLoss';
+  | 'avgLoss'
+  // 市场分析指标
+  | 'trendStrength'
+  | 'trend'
+  | 'volatility'
+  | 'supportLevel'
+  | 'resistanceLevel'
+  | 'rsi'
+  | 'macd'
+  | 'volume'
+  | 'priceChange'
+  | 'marketCap'
+  | 'momentum'
+  // 信号与情绪指标
+  | 'signal'
+  | 'sentiment'
+  | 'strength'
+  | 'direction'
+  // 网格交易指标
+  | 'gridSpacing'
+  | 'gridProfitPercent'
+  | 'gridCount'
+  | 'amountPerGrid'
+  | 'estimatedDailyTrades'
+  | 'tradingFrequency'
+  | 'priceRange'
+  | 'upperPrice'
+  | 'lowerPrice'
+  | 'gridProfit'
+  | 'totalInvestment'
+  // 附加市场指标
+  | 'rsi_level'
+  | 'macd_signal'
+  | 'bollingerPosition'
+  | 'atr'
+  | 'volumeRatio'
+  // 风险指标
+  | 'riskLevel'
+  | 'positionSize'
+  | 'leverage'
+  | 'liquidationPrice'
+  | 'marginRatio'
+  // 定投/抄底策略指标
+  | 'estimatedPurchases'
+  | 'avgCostReduction'
+  | 'dipOpportunities'
+  | 'capitalUtilization'
+  | 'averageEntryPrice';
 
 export interface ImpactMetric {
   key: ImpactMetricKey;
   label: string;
-  value: number;
-  old_value?: number;
-  unit: string;
+  value: number | string;  // 支持数值或描述性文本
+  old_value?: number | string;
+  unit?: string;  // 单位可选
   trend: 'up' | 'down' | 'neutral';
 }
 

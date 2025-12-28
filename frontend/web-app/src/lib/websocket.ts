@@ -22,24 +22,25 @@ class WebSocketClient {
   private listeners = new Map<WebSocketEventType, Set<WebSocketCallback>>()
   private subscriptions = new Set<string>()
   private isConnecting = false
+  private connectPromise: Promise<void> | null = null
 
   constructor(url?: string) {
     this.url = url || process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000'
   }
 
   connect(token?: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        resolve()
-        return
-      }
+    // 已连接，直接返回成功
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      return Promise.resolve()
+    }
 
-      if (this.isConnecting) {
-        reject(new Error('Already connecting'))
-        return
-      }
+    // 正在连接中，返回现有的 Promise（支持 React 18 Strict Mode 双重调用）
+    if (this.isConnecting && this.connectPromise) {
+      return this.connectPromise
+    }
 
-      this.isConnecting = true
+    this.isConnecting = true
+    this.connectPromise = new Promise((resolve, reject) => {
       const wsUrl = token ? `${this.url}?token=${token}` : this.url
 
       try {
@@ -47,6 +48,7 @@ class WebSocketClient {
 
         this.ws.onopen = () => {
           this.isConnecting = false
+          this.connectPromise = null
           this.reconnectAttempts = 0
 
           // 重新订阅之前的频道
@@ -69,19 +71,24 @@ class WebSocketClient {
         this.ws.onerror = (error) => {
           console.error('WebSocket error:', error)
           this.isConnecting = false
+          this.connectPromise = null
           reject(error)
         }
 
         this.ws.onclose = () => {
           this.isConnecting = false
+          this.connectPromise = null
           this.ws = null
           this.attemptReconnect()
         }
       } catch (error) {
         this.isConnecting = false
+        this.connectPromise = null
         reject(error)
       }
     })
+
+    return this.connectPromise
   }
 
   disconnect() {
