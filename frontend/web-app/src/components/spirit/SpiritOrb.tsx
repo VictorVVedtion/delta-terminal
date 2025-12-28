@@ -6,26 +6,19 @@ import React, { useRef } from 'react'
 import * as THREE from 'three'
 
 import { OrbShaderMaterial } from './OrbShader'
+import { useSpiritStore } from '@/store/spiritStore'
+import { SpiritState } from '@/types/spirit'
 
 extend({ OrbShaderMaterial })
 
 interface OrbProps {
-  /** 当前状态：idling, thinking, speaking, error */
-  state?: 'idle' | 'thinking' | 'speaking' | 'error'
-  /** 主要颜色 (Hex or CSS string) */
   primaryColor?: string
-  /** 次要颜色 (Hex or CSS string) */
   secondaryColor?: string
-  /** 湍流强度 (0.0 - 2.0) */
   turbulence?: number
-  /** 強度 (0.0 - 2.0) */
   intensity?: number
-  /** 尺寸 */
-  size?: number
 }
 
 function OrbMesh({
-  state: _state = 'idle',
   primaryColor = '#00ffff',
   secondaryColor = '#ff00ff',
   turbulence = 0.1,
@@ -71,13 +64,32 @@ function OrbMesh({
   )
 }
 
-export function SpiritOrb({ className, ...props }: OrbProps & { className?: string }) {
+// 视觉配置映射
+const visualConfig: Record<SpiritState, OrbProps> = {
+  dormant: { primaryColor: '#4a4a4a', secondaryColor: '#2a2a2a', turbulence: 0.1, intensity: 0.5 },
+  monitoring: { primaryColor: '#00ffff', secondaryColor: '#0088ff', turbulence: 0.3, intensity: 1.0 },
+  analyzing: { primaryColor: '#a020f0', secondaryColor: '#00ffff', turbulence: 1.2, intensity: 1.5 },
+  executing: { primaryColor: '#00ff00', secondaryColor: '#ccff00', turbulence: 0.8, intensity: 1.8 },
+  alerting: { primaryColor: '#ffaa00', secondaryColor: '#ff4400', turbulence: 2.0, intensity: 2.0 },
+  error: { primaryColor: '#ff0000', secondaryColor: '#550000', turbulence: 0.1, intensity: 0.8 }
+};
+
+export function SpiritOrb({ className }: { className?: string }) {
+  // 仅从 Store 读取状态，订阅由 SpiritConnectionProvider 管理
+  const currentState = useSpiritStore((s) => s.currentState);
+  const config = visualConfig[currentState] || visualConfig.dormant;
+
   return (
     <div className={className}>
       <Canvas camera={{ position: [0, 0, 3], fov: 45 }} gl={{ alpha: true, antialias: true }}>
         {/* eslint-disable-next-line react/no-unknown-property */}
         <ambientLight intensity={0.5} />
-        <OrbMesh {...props} />
+        <OrbMesh 
+          primaryColor={config.primaryColor} 
+          secondaryColor={config.secondaryColor}
+          turbulence={config.turbulence}
+          intensity={config.intensity}
+        />
       </Canvas>
     </div>
   )

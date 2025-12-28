@@ -1,8 +1,8 @@
 # PRD 到 EPIC 映射文档
 
-> 版本：3.1
+> 版本：3.2
 > 创建日期：2025-12-26
-> 最后更新：2025-12-27 (S20/S45/S78 完成)
+> 最后更新：2025-12-28 (生产部署完成, 全量代码库验证)
 
 ---
 
@@ -669,11 +669,34 @@ Delta Terminal V3 设计系统包含 **77 个核心场景**，分布在 16 个�
 
 | 服务 | 状态 | 路由数 | 说明 |
 |------|------|--------|------|
-| strategy-service | ✅ 完成 | 8 | 策略 CRUD + 启停控制 |
-| auth-service | ✅ 完成 | 4 | 注册/登录/刷新/登出 |
-| user-service | ✅ 完成 | 7 | 用户资料 + API Key 管理 |
-| api-gateway | ✅ 完成 | 2+ | 路由代理 + 中间件 |
-| ai-orchestrator | ✅ 完成 | 3 | Chat + Skills 系统 |
+| api-gateway | ✅ 完成 | 5+ | 路由代理 + CORS + Rate Limit + Auth 中间件 |
+| auth-service | ✅ 完成 | 4 | 注册/登录/刷新/登出 + Token 服务 |
+| user-service | ✅ 完成 | 7 | 用户资料 + API Key 管理 + 加密存储 |
+| strategy-service | ✅ 完成 | 10+ | 策略 CRUD + 模板 + 执行 + Spirit 引擎 |
+| ai-orchestrator | ✅ 完成 | 5+ | Chat + LLM Router + Skills + 服务客户端 |
+
+### AI 引擎服务
+
+| 服务 | 状态 | 部署 | 说明 |
+|------|------|------|------|
+| nlp-processor | ✅ 完成 | 🚀 Railway | 意图识别 + 洞察生成 + 推理链 + LLM 路由 |
+| strategy-generator | ✅ 完成 | - | 策略生成 + 优化 + 验证 |
+| signal-analyzer | ✅ 完成 | - | 指标服务 + 信号聚合 |
+
+### 交易引擎服务
+
+| 服务 | 状态 | 说明 |
+|------|------|------|
+| order-executor | ✅ 完成 | Market/Limit/TWAP/Iceberg 执行器 + 订单队列 |
+| risk-manager | ✅ 完成 | 4 种风险规则 + 仓位/盈亏监控 + 告警服务 |
+| exchange-connector | ✅ 完成 | Binance + OKX + Bybit 连接器 + WebSocket 管理器 |
+
+### 数据管道服务
+
+| 服务 | 状态 | 部署 | 说明 |
+|------|------|------|------|
+| backtest-engine | ✅ 完成 | 🚀 Railway Ready | 事件驱动回测 + 绩效/风险指标 + 报告生成 |
+| market-data-collector | ✅ 完成 | - | K 线/订单簿/成交收集器 + TimescaleDB + Redis |
 
 ---
 
@@ -736,21 +759,42 @@ V3 设计系统定义的 MVP 核心场景：
 
 ## 技术资产统计
 
+### 前端资产 (Next.js 15 + React 19)
+
 | 类别 | 数量 | 状态 |
 |------|------|------|
-| Canvas 组件 | 12 | ✅ 完成 |
+| Canvas 组件 | 12+ | ✅ 完成 |
 | InsightType 类型 | 10+ | ✅ 完成 |
-| 参数控件 | 7 | ✅ 完成 |
+| A2UI 参数控件 | 7 | ✅ 完成 |
 | Zustand Store | 17 | ✅ 完成 |
-| Custom Hooks | 18 | ✅ 完成 |
-| 类型定义文件 | 14 | ✅ 完成 |
-| 页面路由 | 8 | ✅ 完成 |
-| 前端 API 端点 | 12+ | ✅ 完成 |
-| 后端服务 | 5 | ✅ 完成 |
-| 后端路由 | 20+ | ✅ 完成 |
-| UI 基础组件 | 15+ | ✅ 完成 |
-| 业务组件 | 50+ | ✅ 完成 |
-| **总计** | **200+** | ✅ |
+| Custom Hooks | 20+ | ✅ 完成 |
+| 类型定义文件 | 15+ | ✅ 完成 |
+| 页面路由 | 10+ | ✅ 完成 |
+| 前端 API 端点 | 15+ | ✅ 完成 |
+| UI 基础组件 | 20+ | ✅ 完成 |
+| 业务组件 | 100+ | ✅ 完成 |
+
+### 后端资产 (Node.js + Python FastAPI)
+
+| 类别 | 数量 | 状态 |
+|------|------|------|
+| Node.js 服务 | 5 | ✅ 完成 |
+| Python 服务 | 6 | ✅ 完成 |
+| 后端路由 | 40+ | ✅ 完成 |
+| 交易所连接器 | 3 | ✅ Binance/OKX/Bybit |
+| WebSocket 管理器 | 4 | ✅ 完成 |
+| 风险规则 | 4 | ✅ 完成 |
+| 策略模板 | 3 | ✅ Grid/DCA/Momentum |
+
+### 总体统计
+
+| 指标 | 数量 |
+|------|------|
+| 前端组件总数 | **130+** |
+| 后端服务总数 | **11** |
+| Python 源文件 | **70+** |
+| TypeScript 源文件 | **70+** |
+| **代码资产总计** | **300+** 文件 |
 
 ---
 
@@ -785,6 +829,38 @@ V3 设计系统定义的 MVP 核心场景：
 
 ---
 
+## 部署基础设施
+
+### 生产环境
+
+| 服务 | 平台 | URL | 状态 |
+|------|------|-----|------|
+| 前端 Web App | Vercel | https://web-app-psi-nine-46.vercel.app | ✅ 运行中 |
+| NLP Processor | Railway | https://delta-nlp-processor-production.up.railway.app | ✅ 运行中 |
+| Backtest Engine | Railway | 待部署 | 🟡 Ready |
+
+### 部署配置文件
+
+| 文件 | 位置 | 说明 |
+|------|------|------|
+| `vercel.json` | frontend/web-app/ | Vercel 部署配置 |
+| `railway.toml` | ai-engine/nlp-processor/ | Railway NLP 部署 |
+| `railway.toml` | data-pipeline/backtest-engine/ | Railway 回测部署 |
+| `Dockerfile` | ai-engine/nlp-processor/ | Python 3.11 容器 |
+| `Dockerfile` | data-pipeline/backtest-engine/ | Python 3.11 容器 |
+| `.env.example` | frontend/web-app/ | 环境变量模板 |
+
+### 环境变量
+
+| 变量 | 平台 | 说明 |
+|------|------|------|
+| `NLP_PROCESSOR_URL` | Vercel | Railway NLP 服务地址 |
+| `BACKTEST_ENGINE_URL` | Vercel | Railway 回测服务地址 |
+| `OPENROUTER_API_KEY` | Railway | AI 模型 API Key |
+| `CORS_ORIGINS` | Railway | 前端域名白名单 |
+
+---
+
 ## 更新日志
 
 | 日期 | 版本 | 变更内容 | 作者 |
@@ -793,6 +869,8 @@ V3 设计系统定义的 MVP 核心场景：
 | 2025-12-27 | 2.0 | 完整 V3 场景映射 (76 场景) | Claude |
 | 2025-12-27 | 2.1 | 新增 S46+ 推理链可视化 | Claude |
 | 2025-12-27 | 3.0 | **全面代码库扫描修正** - 覆盖率 44%→65%, MVP 75%→95% | Claude |
+| 2025-12-27 | 3.1 | S20/S45/S78 完成标记 | Claude |
+| 2025-12-28 | 3.2 | **生产部署完成** - Vercel + Railway 上线, 全量代码验证 | Claude |
 
 ---
 
@@ -800,3 +878,4 @@ V3 设计系统定义的 MVP 核心场景：
 - 每完成一个场景后更新对应状态
 - 每新增 EPIC 时确保与 V3 场景关联
 - 月度检视覆盖率变化
+- 部署变更需同步更新基础设施章节

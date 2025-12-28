@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo } from 'react'
 
 import {
   selectAccountByAgentId as _selectAccountByAgentId,
-  selectActiveAccount,
   selectAllAccounts,
   usePaperTradingStore,
 } from '@/store/paperTrading'
@@ -116,13 +115,11 @@ export function usePaperTrading(
     getAccountStats,
   } = usePaperTradingStore()
 
-  // 订阅账户数组以确保状态更新触发重渲染
+  // 订阅所有需要的状态以确保更新触发重渲染
   const accounts = usePaperTradingStore(selectAllAccounts)
+  const activeAccountId = usePaperTradingStore((state) => state.activeAccountId)
 
-  // 获取活跃账户
-  const activeAccount = usePaperTradingStore(selectActiveAccount)
-
-  // 确定当前使用的账户（使用 accounts 作为依赖确保实时更新）
+  // 确定当前使用的账户（统一使用 accounts 数组查找确保实时更新）
   const account = useMemo(() => {
     if (providedAccountId) {
       return accounts.find((acc) => acc.id === providedAccountId) || null
@@ -130,8 +127,12 @@ export function usePaperTrading(
     if (agentId) {
       return accounts.find((acc) => acc.agentId === agentId) || null
     }
-    return activeAccount
-  }, [providedAccountId, agentId, activeAccount, accounts])
+    // 使用 activeAccountId 从 accounts 中查找，而不是依赖单独的 activeAccount 订阅
+    if (activeAccountId) {
+      return accounts.find((acc) => acc.id === activeAccountId) || null
+    }
+    return null
+  }, [providedAccountId, agentId, activeAccountId, accounts])
 
   const accountId = account?.id || null
 
@@ -166,14 +167,29 @@ export function usePaperTrading(
 
   // ===== 交易操作 =====
 
+  // 辅助函数：获取当前有效的 accountId（支持实时获取最新状态）
+  const getEffectiveAccountId = useCallback(() => {
+    // 优先使用提供的 accountId
+    if (providedAccountId) return providedAccountId
+    // 其次使用 agentId 查找
+    if (agentId) {
+      const state = usePaperTradingStore.getState()
+      const acc = state.accounts.find((a) => a.agentId === agentId)
+      return acc?.id || null
+    }
+    // 最后使用 activeAccountId（从 store 实时获取以确保最新）
+    return usePaperTradingStore.getState().activeAccountId
+  }, [providedAccountId, agentId])
+
   const buy = useCallback(
     (symbol: string, size: number, currentPrice: number): PlaceOrderResult => {
-      if (!accountId) {
+      const effectiveAccountId = getEffectiveAccountId()
+      if (!effectiveAccountId) {
         return { success: false, error: '账户不存在' }
       }
 
       const params: PlaceOrderParams = {
-        accountId,
+        accountId: effectiveAccountId,
         symbol,
         side: 'buy',
         type: 'market',
@@ -182,17 +198,18 @@ export function usePaperTrading(
 
       return placeMarketOrder(params, currentPrice)
     },
-    [accountId, placeMarketOrder]
+    [getEffectiveAccountId, placeMarketOrder]
   )
 
   const sell = useCallback(
     (symbol: string, size: number, currentPrice: number): PlaceOrderResult => {
-      if (!accountId) {
+      const effectiveAccountId = getEffectiveAccountId()
+      if (!effectiveAccountId) {
         return { success: false, error: '账户不存在' }
       }
 
       const params: PlaceOrderParams = {
-        accountId,
+        accountId: effectiveAccountId,
         symbol,
         side: 'sell',
         type: 'market',
@@ -201,32 +218,42 @@ export function usePaperTrading(
 
       return placeMarketOrder(params, currentPrice)
     },
-    [accountId, placeMarketOrder]
+    [getEffectiveAccountId, placeMarketOrder]
   )
 
   const closePosition = useCallback(
     (positionId: string, currentPrice: number): ClosePositionResult => {
-      if (!accountId) {
+      const effectiveAccountId = getEffectiveAccountId()
+      if (!effectiveAccountId) {
         return { success: false, error: '账户不存在' }
       }
 
       const params: ClosePositionParams = {
-        accountId,
+        accountId: effectiveAccountId,
         positionId,
       }
 
       return storeClosePosition(params, currentPrice)
     },
-    [accountId, storeClosePosition]
+    [getEffectiveAccountId, storeClosePosition]
   )
+
+  // 辅助函数：获取当前有效的账户对象（支持实时获取最新状态）
+  const getEffectiveAccount = useCallback(() => {
+    const state = usePaperTradingStore.getState()
+    const effectiveAccountId = getEffectiveAccountId()
+    if (!effectiveAccountId) return null
+    return state.accounts.find((acc) => acc.id === effectiveAccountId) || null
+  }, [getEffectiveAccountId])
 
   const closeAllPositions = useCallback(
     (currentPrices: Record<string, number>): ClosePositionResult[] => {
-      if (!account) {
+      const currentAccount = getEffectiveAccount()
+      if (!currentAccount) {
         return [{ success: false, error: '账户不存在' }]
       }
 
-      return account.positions.map((pos) => {
+      return currentAccount.positions.map((pos) => {
         const currentPrice = currentPrices[pos.symbol]
         if (!currentPrice) {
           return { success: false, error: `未找到 ${pos.symbol} 的价格` }
@@ -234,42 +261,48 @@ export function usePaperTrading(
         return closePosition(pos.id, currentPrice)
       })
     },
-    [account, closePosition]
+    [getEffectiveAccount, closePosition]
   )
 
   // ===== 持仓更新 =====
 
   const updatePrice = useCallback(
     (symbol: string, currentPrice: number) => {
-      if (!accountId) return
-      updatePositionPrice(accountId, symbol, currentPrice)
+      const effectiveAccountId = getEffectiveAccountId()
+      if (!effectiveAccountId) return
+      updatePositionPrice(effectiveAccountId, symbol, currentPrice)
     },
-    [accountId, updatePositionPrice]
+    [getEffectiveAccountId, updatePositionPrice]
   )
 
   const updateAllPrices = useCallback(
     (priceMap: Record<string, number>) => {
-      if (!accountId) return
-      updateAllPositionPrices(accountId, priceMap)
+      const effectiveAccountId = getEffectiveAccountId()
+      if (!effectiveAccountId) return
+      updateAllPositionPrices(effectiveAccountId, priceMap)
     },
-    [accountId, updateAllPositionPrices]
+    [getEffectiveAccountId, updateAllPositionPrices]
   )
 
   // ===== 便捷方法 =====
 
+  // 使用 getEffectiveAccount 获取最新持仓数据，确保实时性
   const getPositionBySymbol = useCallback(
     (symbol: string) => {
-      if (!account) return undefined
-      return account.positions.find((p) => p.symbol === symbol)
+      const currentAccount = getEffectiveAccount()
+      if (!currentAccount) return undefined
+      return currentAccount.positions.find((p) => p.symbol === symbol)
     },
-    [account]
+    [getEffectiveAccount]
   )
 
   const hasPosition = useCallback(
     (symbol: string): boolean => {
-      return !!getPositionBySymbol(symbol)
+      const currentAccount = getEffectiveAccount()
+      if (!currentAccount) return false
+      return currentAccount.positions.some((p) => p.symbol === symbol)
     },
-    [getPositionBySymbol]
+    [getEffectiveAccount]
   )
 
   const canBuy = useCallback(
@@ -278,7 +311,8 @@ export function usePaperTrading(
       size: number,
       price: number
     ): { can: boolean; reason?: string } => {
-      if (!account) {
+      const currentAccount = getEffectiveAccount()
+      if (!currentAccount) {
         return { can: false, reason: '账户不存在' }
       }
 
@@ -286,7 +320,7 @@ export function usePaperTrading(
       const fee = orderValue * 0.001
       const totalCost = orderValue + fee
 
-      if (totalCost > account.currentBalance) {
+      if (totalCost > currentAccount.currentBalance) {
         return { can: false, reason: '余额不足' }
       }
 
@@ -296,16 +330,17 @@ export function usePaperTrading(
 
       return { can: true }
     },
-    [account]
+    [getEffectiveAccount]
   )
 
   const canSell = useCallback(
     (symbol: string, size: number): { can: boolean; reason?: string } => {
-      if (!account) {
+      const currentAccount = getEffectiveAccount()
+      if (!currentAccount) {
         return { can: false, reason: '账户不存在' }
       }
 
-      const position = getPositionBySymbol(symbol)
+      const position = currentAccount.positions.find((p) => p.symbol === symbol)
       if (!position) {
         return { can: false, reason: '无持仓' }
       }
@@ -316,7 +351,7 @@ export function usePaperTrading(
 
       return { can: true }
     },
-    [account, getPositionBySymbol]
+    [getEffectiveAccount]
   )
 
   // ===== 自动价格更新 (TODO: 集成 WebSocket) =====

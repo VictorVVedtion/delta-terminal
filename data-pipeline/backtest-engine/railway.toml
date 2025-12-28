@@ -1,0 +1,19 @@
+# Railway 部署配置 - Backtest Engine
+# https://docs.railway.com/reference/config-as-code
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "./Dockerfile"
+
+[deploy]
+startCommand = "uvicorn src.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# 环境变量说明 (实际值在 Railway Dashboard 配置):
+# - OPENROUTER_API_KEY: OpenRouter API 密钥 (用于 OKX 数据获取)
+# - ENVIRONMENT: production
+# - CORS_ORIGINS: 前端域名白名单
+# - LOG_LEVEL: INFO

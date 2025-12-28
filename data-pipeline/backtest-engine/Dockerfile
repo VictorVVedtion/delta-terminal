@@ -28,5 +28,8 @@ EXPOSE 8003
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8003}/health || exit 1
 
-# 启动命令
-CMD ["python", "-m", "src.main"]
+# 设置 PYTHONPATH
+ENV PYTHONPATH=/app
+
+# 启动命令 - 使用 shell 形式以支持环境变量展开
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8003}

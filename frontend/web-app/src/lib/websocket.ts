@@ -10,6 +10,7 @@ type WebSocketEventType =
   | 'order_update'
   | 'balance_update'
   | 'strategy_update'
+  | 'spirit_event'
 
 type WebSocketCallback = (data: any) => void
 
@@ -172,6 +173,15 @@ class WebSocketClient {
 
   subscribeStrategyUpdates(callback: WebSocketCallback) {
     this.on('strategy_update', callback)
+  }
+
+  // Spirit 系统事件
+  subscribeSpiritEvents(callback: WebSocketCallback) {
+    this.subscribe('spirit:events', 'spirit_event', callback)
+  }
+
+  unsubscribeSpiritEvents(callback: WebSocketCallback) {
+    this.unsubscribe('spirit:events', 'spirit_event', callback)
   }
 
   // 通用订阅方法

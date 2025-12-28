@@ -221,10 +221,10 @@ describe('Paper Trading System', () => {
 
       const stats = result.current.stats
 
-      // 买入: -5000 - 5 (手续费)
-      // 卖出: +5100 - 5.1 (手续费)
-      // 盈利: 5100 - 5.1 - 5000 - 5 = 89.9
-      expect(stats?.realizedPnl).toBeCloseTo(89.9, 1)
+      // realizedPnl 计算: (卖出价 - 买入价) * 数量 - 卖出手续费
+      // = (51000 - 50000) * 0.1 - 5.1 = 100 - 5.1 = 94.9
+      // 注意：买入手续费已经从余额中扣除，不计入 realizedPnl
+      expect(stats?.realizedPnl).toBeCloseTo(94.9, 1)
     })
 
     it('should calculate fees correctly', () => {

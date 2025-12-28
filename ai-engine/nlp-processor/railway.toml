@@ -1,0 +1,22 @@
+# Railway 部署配置 - NLP Processor
+# https://docs.railway.com/reference/config-as-code
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "./Dockerfile"
+
+[deploy]
+startCommand = "uvicorn src.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# 环境变量说明 (实际值在 Railway Dashboard 配置):
+# - OPENROUTER_API_KEY: OpenRouter API 密钥
+# - LLM_MODEL: 使用的模型 (默认 anthropic/claude-sonnet-4.5)
+# - ENVIRONMENT: production
+# - DATABASE_URL: PostgreSQL 连接字符串 (Railway 自动提供)
+# - REDIS_URL: Redis 连接字符串 (Railway 自动提供)
+# - SECRET_KEY: JWT 签名密钥
+# - CORS_ORIGINS: 前端域名白名单

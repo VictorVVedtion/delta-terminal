@@ -64,6 +64,15 @@ export const config = {
     tradingEngine: process.env.TRADING_ENGINE_URL || 'http://localhost:3003',
     dataService: process.env.DATA_SERVICE_URL || 'http://localhost:3004',
   },
+
+  // Redis 配置 (Spirit System)
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || '',
+    db: parseInt(process.env.REDIS_DB || '0', 10),
+  }
 };
+
 
 export default config;

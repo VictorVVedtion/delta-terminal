@@ -17,6 +17,7 @@ import { GlobalAgentStatus } from '@/components/system/GlobalAgentStatus'
 import { Button } from '@/components/ui/button'
 import { ConnectionIndicator } from '@/components/ui/connection-status'
 import { ThemeSwitcher } from '@/components/ui/theme-switcher'
+import { SpiritStatusBar } from '@/components/spirit/SpiritStatusBar'
 import { useHyperliquidPrice } from '@/hooks/useHyperliquidPrice'
 import { usePaperTradingStore } from '@/store/paperTrading'
 
@@ -45,19 +46,24 @@ export function Header() {
           </Link>
         </div>
 
-        {/* Search */}
-        <div className="flex-1 max-w-md">
+        {/* Spirit Status Bar (New Centerpiece) */}
+        <div className="hidden lg:flex flex-1 justify-center">
+          <SpiritStatusBar />
+        </div>
+
+        {/* Search (Hidden on smaller screens if Status Bar is present, or moved) */}
+        <div className="hidden xl:block flex-none w-64 mr-4">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="搜索交易对、策略..."
+              placeholder="搜索..."
               className="w-full pl-8 pr-4 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
 
-        {/* Paper Trading 状态卡片 - 明显的入口 */}
+        {/* Paper Trading 状态卡片 */}
         <div className="hidden md:block mx-4">
           <PaperTradingStatusCard
             isRunning={!!activeAccount}

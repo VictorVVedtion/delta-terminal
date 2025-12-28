@@ -9,7 +9,9 @@ import { PageErrorBoundary } from '@/components/error/ErrorBoundary';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { WebSocketProvider } from '@/components/providers/WebSocketProvider';
+import { SpiritConnectionProvider } from '@/components/providers/SpiritConnectionProvider';
 import { OnboardingTour } from '@/components/system/OnboardingTour';
+import { SpiritToastManager } from '@/components/spirit/SpiritToastManager';
 
 export const metadata: Metadata = {
   title: {
@@ -61,18 +63,22 @@ export default function RootLayout({
           <AuthProvider>
             <ThemeProvider>
               <WebSocketProvider>
-                {children}
-                {/* Story 5.1: Toast 通知容器 */}
-                <Toaster
-                  position="top-right"
-                  richColors
-                  closeButton
-                  toastOptions={{
-                    className: 'font-sans',
-                  }}
-                />
-                {/* Story 10.1: 新手引导 */}
-                <OnboardingTour />
+                <SpiritConnectionProvider>
+                  {children}
+                  {/* Spirit Event Toasts */}
+                  <SpiritToastManager />
+                  {/* Story 5.1: Toast 通知容器 */}
+                  <Toaster
+                    position="top-right"
+                    richColors
+                    closeButton
+                    toastOptions={{
+                      className: 'font-sans',
+                    }}
+                  />
+                  {/* Story 10.1: 新手引导 */}
+                  <OnboardingTour />
+                </SpiritConnectionProvider>
               </WebSocketProvider>
             </ThemeProvider>
           </AuthProvider>

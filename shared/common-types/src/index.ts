@@ -12,3 +12,4 @@ export * from './common.types';
 
 // A2UI System Types
 export * from './insight.types';
+export * from './spirit';

@@ -15,7 +15,6 @@ export default defineConfig({
       // or are missing dependencies / have complex retry logic
       '**/ChatInterface.test.tsx', // Needs Next.js useSearchParams mock
       '**/DeployCanvas.test.tsx',
-      '**/paperTrading.test.ts', // Needs proper position management mock
       '**/hyperliquid.test.ts',
     ],
     coverage: {
