@@ -1,8 +1,7 @@
 'use client'
 
 import { Activity, AlertTriangle, CheckCircle2, Clock, Terminal } from 'lucide-react'
-import { useSpiritStore } from '@/store/spiritStore'
-import { SpiritEvent } from '@/types/spirit'
+import { useSpiritStore, SpiritEvent } from '@/store/spiritStore'
 import { cn } from '@/lib/utils'
 
 function EventCard({ event }: { event: SpiritEvent }) {

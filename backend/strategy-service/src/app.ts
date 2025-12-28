@@ -47,7 +47,7 @@ export async function buildApp() {
   await fastify.register(cors as any, config.cors);
   await fastify.register(jwt as any, { secret: config.jwt.secret });
   await fastify.register(rateLimit as any, config.rateLimit);
-  await fastify.register(websocket);
+  await fastify.register(websocket as any);
 
   // JWT 认证装饰器
   fastify.decorate('authenticate', async function (request: any, reply: any) {

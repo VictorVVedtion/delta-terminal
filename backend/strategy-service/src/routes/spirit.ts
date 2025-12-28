@@ -103,29 +103,7 @@ export const spiritRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // WebSocket endpoint for real-time Spirit events
-  fastify.get('/spirit/ws', { websocket: true }, (socket, req) => {
-    fastify.log.info('Spirit WebSocket client connected');
-    clients.add(socket as unknown as WebSocket);
-
-    // Send current state on connect
-    socket.send(JSON.stringify({
-      type: 'init',
-      data: {
-        status: currentState.status,
-        lastHeartbeat: currentState.lastHeartbeat,
-        recentEvents: eventHistory.slice(0, 10)
-      }
-    }));
-
-    socket.on('close', () => {
-      fastify.log.info('Spirit WebSocket client disconnected');
-      clients.delete(socket as unknown as WebSocket);
-    });
-
-    socket.on('error', (err) => {
-      fastify.log.error({ err }, 'Spirit WebSocket error');
-      clients.delete(socket as unknown as WebSocket);
-    });
-  });
+  // WebSocket endpoint 已迁移至 Supabase Realtime
+  // 前端直接连接 Supabase Realtime 订阅 spirit_events 表的 INSERT 事件
+  // 保留此注释以供参考
 };

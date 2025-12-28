@@ -74,10 +74,38 @@ const visualConfig: Record<SpiritState, OrbProps> = {
   error: { primaryColor: '#ff0000', secondaryColor: '#550000', turbulence: 0.1, intensity: 0.8 }
 };
 
-export function SpiritOrb({ className }: { className?: string }) {
-  // 仅从 Store 读取状态，订阅由 SpiritConnectionProvider 管理
-  const currentState = useSpiritStore((s) => s.currentState);
-  const config = visualConfig[currentState] || visualConfig.dormant;
+interface SpiritOrbProps {
+  className?: string;
+  // 允许外部覆盖状态和颜色 (用于 ChatInterface 等场景)
+  state?: SpiritState | string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  turbulence?: number;
+  intensity?: number;
+}
+
+export function SpiritOrb({ 
+  className,
+  state,
+  primaryColor,
+  secondaryColor,
+  turbulence,
+  intensity
+}: SpiritOrbProps) {
+  // 从 Store 读取状态，订阅由 SpiritConnectionProvider 管理
+  const storeState = useSpiritStore((s) => s.currentState);
+  
+  // 如果传入了外部 state，使用它；否则使用 store 状态
+  const currentState = (state as SpiritState) || storeState;
+  const baseConfig = visualConfig[currentState] || visualConfig.dormant;
+  
+  // 允许外部覆盖配置
+  const config = {
+    primaryColor: primaryColor || baseConfig.primaryColor,
+    secondaryColor: secondaryColor || baseConfig.secondaryColor,
+    turbulence: turbulence ?? baseConfig.turbulence,
+    intensity: intensity ?? baseConfig.intensity,
+  };
 
   return (
     <div className={className}>

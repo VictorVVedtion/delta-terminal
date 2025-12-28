@@ -3,9 +3,11 @@
  *
  * 启动回测任务
  * 生产环境代理到 Python 回测引擎，开发环境返回模拟数据
+ *
+ * 更新：优先从 Binance 获取真实历史 K 线数据
  */
 
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 import type {
@@ -22,11 +24,123 @@ import type {
 // 回测引擎 API 地址（Railway 部署后设置）
 const BACKTEST_ENGINE_URL = process.env.BACKTEST_ENGINE_URL
 
-// 模拟回测计算延迟
-const SIMULATE_DELAY = 2000
+// Binance API 地址
+const BINANCE_API_URL = 'https://api.binance.com/api/v3/klines'
+
+// 模拟回测计算延迟 (保留供未来使用)
+const _SIMULATE_DELAY = 2000
 
 // ============================================================================
-// Mock Data Generators
+// Binance API - 获取真实历史 K 线数据
+// ============================================================================
+
+/**
+ * 将交易对转换为 Binance 格式 (BTC/USDT -> BTCUSDT)
+ */
+function toBinanceSymbol(symbol: string): string {
+  return symbol.replace('/', '').toUpperCase()
+}
+
+/**
+ * 将时间周期转换为 Binance 格式 (1h -> 1h, 15m -> 15m)
+ */
+function toBinanceInterval(timeframe: string): string {
+  const map: Record<string, string> = {
+    '1m': '1m',
+    '5m': '5m',
+    '15m': '15m',
+    '30m': '30m',
+    '1h': '1h',
+    '4h': '4h',
+    '1d': '1d',
+    '1w': '1w',
+  }
+  return map[timeframe] || '1h'
+}
+
+/**
+ * 从 Binance 获取历史 K 线数据
+ *
+ * @param symbol 交易对 (如 BTC/USDT)
+ * @param interval 时间周期 (如 1h)
+ * @param startTime 开始时间戳 (毫秒)
+ * @param endTime 结束时间戳 (毫秒)
+ * @returns K 线数据数组
+ */
+async function fetchBinanceKlines(
+  symbol: string,
+  interval: string,
+  startTime: number,
+  endTime: number
+): Promise<Candle[]> {
+  const binanceSymbol = toBinanceSymbol(symbol)
+  const binanceInterval = toBinanceInterval(interval)
+
+  const candles: Candle[] = []
+  let currentStartTime = startTime
+  const maxLimit = 1000 // Binance 单次最多返回 1000 条
+
+  console.log(`[Binance] 开始获取 ${binanceSymbol} ${binanceInterval} K 线数据...`)
+  console.log(
+    `[Binance] 时间范围: ${new Date(startTime).toISOString()} - ${new Date(endTime).toISOString()}`
+  )
+
+  while (currentStartTime < endTime) {
+    const url = new URL(BINANCE_API_URL)
+    url.searchParams.set('symbol', binanceSymbol)
+    url.searchParams.set('interval', binanceInterval)
+    url.searchParams.set('startTime', currentStartTime.toString())
+    url.searchParams.set('endTime', endTime.toString())
+    url.searchParams.set('limit', maxLimit.toString())
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[Binance] API 错误: ${response.status} ${errorText}`)
+      throw new Error(`Binance API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (!Array.isArray(data) || data.length === 0) {
+      break
+    }
+
+    // Binance K 线数据格式:
+    // [openTime, open, high, low, close, volume, closeTime, quoteVolume, trades, takerBuyBase, takerBuyQuote, ignore]
+    for (const kline of data) {
+      candles.push({
+        timestamp: kline[0], // openTime (毫秒)
+        open: parseFloat(kline[1]),
+        high: parseFloat(kline[2]),
+        low: parseFloat(kline[3]),
+        close: parseFloat(kline[4]),
+        volume: parseFloat(kline[5]),
+      })
+    }
+
+    // 更新下一批次的开始时间
+    const lastKline = data[data.length - 1]
+    currentStartTime = lastKline[6] + 1 // closeTime + 1
+
+    // 如果返回的数据少于 limit，说明已经没有更多数据
+    if (data.length < maxLimit) {
+      break
+    }
+  }
+
+  console.log(`[Binance] 成功获取 ${candles.length} 条 K 线数据`)
+
+  return candles
+}
+
+// ============================================================================
+// Mock Data Generators（降级方案）
 // ============================================================================
 
 /**
@@ -68,7 +182,10 @@ function getPriceRangeForSymbol(symbol: string): { base: number; volatility: num
   return { base: 100, volatility: 0.02 }
 }
 
-function generateCandles(
+/**
+ * 生成模拟 K 线数据（仅在无法获取真实数据时使用）
+ */
+function generateMockCandles(
   startTime: number,
   endTime: number,
   timeframe: string,
@@ -106,9 +223,43 @@ function generateCandles(
   return candles
 }
 
+/**
+ * 获取 K 线数据 - 优先使用 OKX 真实数据，降级使用模拟数据
+ */
+async function getCandles(
+  startTime: number,
+  endTime: number,
+  timeframe: string,
+  symbol: string
+): Promise<{ candles: Candle[]; isRealData: boolean }> {
+  try {
+    // 尝试从 OKX 获取真实数据 (无地域限制)
+    const candles = await fetchOkxKlines(symbol, timeframe, startTime, endTime)
+
+    if (candles.length > 0) {
+      return { candles, isRealData: true }
+    }
+
+    // 如果没有数据，使用模拟数据
+    console.warn(`[Backtest] 无法获取 ${symbol} 的真实数据，使用模拟数据`)
+    return {
+      candles: generateMockCandles(startTime, endTime, timeframe, symbol),
+      isRealData: false,
+    }
+  } catch (error) {
+    // 获取失败时使用模拟数据
+    console.error('[Backtest] 获取真实 K 线数据失败，降级使用模拟数据:', error)
+    return {
+      candles: generateMockCandles(startTime, endTime, timeframe, symbol),
+      isRealData: false,
+    }
+  }
+}
+
 function generateSignals(candles: Candle[], strategyName: string): ChartSignal[] {
   const signals: ChartSignal[] = []
-  const isGrid = strategyName.toLowerCase().includes('网格') || strategyName.toLowerCase().includes('grid')
+  const isGrid =
+    strategyName.toLowerCase().includes('网格') || strategyName.toLowerCase().includes('grid')
 
   // 确保生成足够多的信号用于可视化
   const signalProbability = isGrid ? 0.08 : 0.05 // 网格策略信号更频繁
@@ -141,7 +292,7 @@ function generateSignals(candles: Candle[], strategyName: string): ChartSignal[]
   // 确保至少有一些信号
   if (signals.length < 5 && candles.length > 20) {
     // 强制添加几个信号点
-    const indices = [10, 25, 40, 55, 70].filter(i => i < candles.length)
+    const indices = [10, 25, 40, 55, 70].filter((i) => i < candles.length)
     indices.forEach((idx, i) => {
       const candle = candles[idx]
       if (candle) {
@@ -150,7 +301,13 @@ function generateSignals(candles: Candle[], strategyName: string): ChartSignal[]
           timestamp: candle.timestamp,
           type,
           price: type === 'buy' ? candle.low : candle.high,
-          label: isGrid ? (type === 'buy' ? '网格买入' : '网格卖出') : (type === 'buy' ? '入场' : '出场'),
+          label: isGrid
+            ? type === 'buy'
+              ? '网格买入'
+              : '网格卖出'
+            : type === 'buy'
+              ? '入场'
+              : '出场',
         })
       }
     })
@@ -203,7 +360,7 @@ function generateTrades(signals: ChartSignal[]): BacktestTrade[] {
     const exit = signals[i + 1]
     if (!entry || !exit) break
 
-    const direction = entry.type === 'buy' ? 'long' : 'short' as const
+    const direction = entry.type === 'buy' ? 'long' : ('short' as const)
     const quantity = 0.1 + Math.random() * 0.4
     const pnl =
       direction === 'long'
@@ -249,12 +406,12 @@ function calculateStats(
   const days = equityCurve.length
   const annualizedReturn = (Math.pow(finalEquity / initialCapital, 365 / days) - 1) * 100
 
-  const avgWin = winningTrades.length > 0
-    ? winningTrades.reduce((s, t) => s + t.pnl, 0) / winningTrades.length
-    : 0
-  const avgLoss = losingTrades.length > 0
-    ? losingTrades.reduce((s, t) => s + t.pnl, 0) / losingTrades.length
-    : 0
+  const avgWin =
+    winningTrades.length > 0
+      ? winningTrades.reduce((s, t) => s + t.pnl, 0) / winningTrades.length
+      : 0
+  const avgLoss =
+    losingTrades.length > 0 ? losingTrades.reduce((s, t) => s + t.pnl, 0) / losingTrades.length : 0
 
   const totalFees = trades.reduce((s, t) => s + t.fee, 0)
 
@@ -272,8 +429,8 @@ function calculateStats(
     winRate: trades.length > 0 ? (winningTrades.length / trades.length) * 100 : 0,
     profitFactor:
       Math.abs(avgLoss) > 0
-        ? (winningTrades.reduce((s, t) => s + t.pnl, 0) /
-            Math.abs(losingTrades.reduce((s, t) => s + t.pnl, 0))) || 0
+        ? winningTrades.reduce((s, t) => s + t.pnl, 0) /
+            Math.abs(losingTrades.reduce((s, t) => s + t.pnl, 0)) || 0
         : 0,
     maxDrawdown,
     maxDrawdownDays: Math.floor(Math.random() * 10) + 1,
@@ -291,7 +448,9 @@ function calculateStats(
         ? trades.reduce((s, t) => {
             const exitTime = t.exitTime ?? t.entryTime
             return s + (exitTime - t.entryTime)
-          }, 0) / trades.length / 3600000
+          }, 0) /
+          trades.length /
+          3600000
         : 0,
     initialCapital,
     finalCapital: finalEquity,
@@ -351,9 +510,7 @@ export async function POST(request: NextRequest) {
               initial_capital: config.initialCapital,
               commission: 0.001,
               slippage: 0.0005,
-              parameters: Object.fromEntries(
-                config.parameters.map(p => [p.key, p.value])
-              ),
+              parameters: Object.fromEntries(config.parameters.map((p) => [p.key, p.value])),
             },
             data_source: 'mock',
           }),
@@ -373,17 +530,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 模拟回测计算时间（Mock 模式）
-    await new Promise((resolve) => setTimeout(resolve, SIMULATE_DELAY))
-
-    // 生成模拟数据
-    const candles = generateCandles(config.startDate, config.endDate, config.timeframe, config.symbol)
-    const signals = generateSignals(candles, config.strategyName)
-    const equityCurve = generateEquityCurve(
+    // 获取真实或模拟 K 线数据
+    console.log(`[Backtest] 开始回测: ${config.symbol} ${config.timeframe}`)
+    const { candles, isRealData } = await getCandles(
       config.startDate,
       config.endDate,
-      config.initialCapital
+      config.timeframe,
+      config.symbol
     )
+
+    console.log(`[Backtest] K 线数据: ${candles.length} 条, 真实数据: ${isRealData}`)
+
+    const signals = generateSignals(candles, config.strategyName)
+    const equityCurve = generateEquityCurve(config.startDate, config.endDate, config.initialCapital)
     const trades = generateTrades(signals)
     const stats = calculateStats(trades, equityCurve, config.initialCapital)
 
@@ -411,11 +570,7 @@ export async function POST(request: NextRequest) {
       equityCurve,
       chartData,
       benchmark: {
-        equityCurve: generateEquityCurve(
-          config.startDate,
-          config.endDate,
-          config.initialCapital
-        ),
+        equityCurve: generateEquityCurve(config.startDate, config.endDate, config.initialCapital),
         totalReturn: (Math.random() - 0.3) * 30,
       },
       period: {
@@ -441,12 +596,15 @@ export async function POST(request: NextRequest) {
 
 function generateAISummary(stats: BacktestStats): string {
   const performance = stats.totalReturn > 20 ? '优秀' : stats.totalReturn > 10 ? '良好' : '一般'
-  const risk = Math.abs(stats.maxDrawdown) < 10 ? '较低' : Math.abs(stats.maxDrawdown) < 20 ? '中等' : '较高'
+  const risk =
+    Math.abs(stats.maxDrawdown) < 10 ? '较低' : Math.abs(stats.maxDrawdown) < 20 ? '中等' : '较高'
 
-  return `该策略回测表现${performance}，总收益率 ${stats.totalReturn.toFixed(1)}%，年化收益 ${stats.annualizedReturn.toFixed(1)}%。` +
+  return (
+    `该策略回测表现${performance}，总收益率 ${stats.totalReturn.toFixed(1)}%，年化收益 ${stats.annualizedReturn.toFixed(1)}%。` +
     `胜率 ${stats.winRate.toFixed(1)}%，盈亏比 ${stats.profitFactor.toFixed(2)}。` +
     `最大回撤 ${stats.maxDrawdown.toFixed(1)}%，风险水平${risk}。` +
     `夏普比率 ${stats.sharpeRatio.toFixed(2)}，表明风险调整后收益${stats.sharpeRatio > 1.5 ? '较好' : '一般'}。`
+  )
 }
 
 function generateSuggestions(stats: BacktestStats): string[] {
@@ -534,7 +692,8 @@ function transformEngineResult(
 
   // 转换权益曲线
   const equityCurve: BacktestEquityPoint[] = engineResult.equity_curve.map((point, index, arr) => {
-    const prevEquity = index > 0 ? (arr[index - 1]?.equity ?? config.initialCapital) : config.initialCapital
+    const prevEquity =
+      index > 0 ? (arr[index - 1]?.equity ?? config.initialCapital) : config.initialCapital
     return {
       timestamp: new Date(point.timestamp).getTime(),
       equity: point.equity,
@@ -545,7 +704,7 @@ function transformEngineResult(
   })
 
   // 转换交易记录
-  const trades: BacktestTrade[] = engineResult.trades.map(trade => ({
+  const trades: BacktestTrade[] = engineResult.trades.map((trade) => ({
     id: trade.trade_id,
     entryTime: new Date(trade.entry_time).getTime(),
     exitTime: new Date(trade.exit_time).getTime(),
@@ -579,7 +738,7 @@ function transformEngineResult(
     avgHoldingTime: 0, // TODO: calculate from trades
     initialCapital: config.initialCapital,
     finalCapital: equityCurve[equityCurve.length - 1]?.equity ?? config.initialCapital,
-    peakCapital: Math.max(...equityCurve.map(p => p.equity)),
+    peakCapital: Math.max(...equityCurve.map((p) => p.equity)),
     totalFees: trades.reduce((sum, t) => sum + t.fee, 0),
   }
 

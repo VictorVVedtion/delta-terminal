@@ -29,7 +29,7 @@ export class SpiritDaemon {
     
     // 0. Register LLM Worker
     this.queue.registerWorker(QUEUE_NAMES.LLM_CALL, async (job) => {
-      const { signal, reason } = job.data;
+      const { signal, reason: _reason } = job.data;
       
       // Notify user that we are analyzing
       await this.emitter.publish(
@@ -38,7 +38,7 @@ export class SpiritDaemon {
         'analyzing',
         'Spirit Analyzing',
         'Consulting LLM for complex signal...',
-        { symbol: signal.symbol }
+        { symbol: signal.symbol, reason: _reason }
       );
       
       const analysis = await this.llm.analyzeSignal(signal);
