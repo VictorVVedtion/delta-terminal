@@ -24,42 +24,48 @@ import type {
 // 回测引擎 API 地址（Railway 部署后设置）
 const BACKTEST_ENGINE_URL = process.env.BACKTEST_ENGINE_URL
 
-// Binance API 地址
-const BINANCE_API_URL = 'https://api.binance.com/api/v3/klines'
+// OKX API 地址 (无地域限制，比 Binance 更通用)
+// 注意: history-candles 用于获取历史数据，candles 只返回最近的数据
+const OKX_API_URL = 'https://www.okx.com/api/v5/market/history-candles'
 
 // 模拟回测计算延迟 (保留供未来使用)
 const _SIMULATE_DELAY = 2000
 
 // ============================================================================
-// Binance API - 获取真实历史 K 线数据
+// OKX API - 获取真实历史 K 线数据 (无地域限制)
 // ============================================================================
 
 /**
- * 将交易对转换为 Binance 格式 (BTC/USDT -> BTCUSDT)
+ * 将交易对转换为 OKX 格式 (BTC/USDT -> BTC-USDT)
  */
-function toBinanceSymbol(symbol: string): string {
-  return symbol.replace('/', '').toUpperCase()
+function toOkxInstId(symbol: string): string {
+  return symbol.replace('/', '-').toUpperCase()
 }
 
 /**
- * 将时间周期转换为 Binance 格式 (1h -> 1h, 15m -> 15m)
+ * 将时间周期转换为 OKX 格式
+ * OKX 使用: 1m, 5m, 15m, 30m, 1H, 4H, 1D, 1W 等
  */
-function toBinanceInterval(timeframe: string): string {
+function toOkxBar(timeframe: string): string {
   const map: Record<string, string> = {
     '1m': '1m',
     '5m': '5m',
     '15m': '15m',
     '30m': '30m',
-    '1h': '1h',
-    '4h': '4h',
-    '1d': '1d',
-    '1w': '1w',
+    '1h': '1H',
+    '4h': '4H',
+    '1d': '1D',
+    '1w': '1W',
   }
-  return map[timeframe] || '1h'
+  return map[timeframe] || '1H'
 }
 
 /**
- * 从 Binance 获取历史 K 线数据
+ * 从 OKX 获取历史 K 线数据
+ *
+ * OKX API:
+ * - /api/v5/market/candles: 获取最近的 K 线数据 (最多 100 条)
+ * - /api/v5/market/history-candles: 获取更早的历史数据
  *
  * @param symbol 交易对 (如 BTC/USDT)
  * @param interval 时间周期 (如 1h)
@@ -67,76 +73,137 @@ function toBinanceInterval(timeframe: string): string {
  * @param endTime 结束时间戳 (毫秒)
  * @returns K 线数据数组
  */
-async function fetchBinanceKlines(
+async function fetchOkxKlines(
   symbol: string,
   interval: string,
   startTime: number,
   endTime: number
 ): Promise<Candle[]> {
-  const binanceSymbol = toBinanceSymbol(symbol)
-  const binanceInterval = toBinanceInterval(interval)
+  const instId = toOkxInstId(symbol)
+  const bar = toOkxBar(interval)
 
   const candles: Candle[] = []
-  let currentStartTime = startTime
-  const maxLimit = 1000 // Binance 单次最多返回 1000 条
+  const maxLimit = 100 // OKX 单次最多返回 100 条
 
-  console.log(`[Binance] 开始获取 ${binanceSymbol} ${binanceInterval} K 线数据...`)
+  console.log(`[OKX] 开始获取 ${instId} ${bar} K 线数据...`)
   console.log(
-    `[Binance] 时间范围: ${new Date(startTime).toISOString()} - ${new Date(endTime).toISOString()}`
+    `[OKX] 时间范围: ${new Date(startTime).toISOString()} - ${new Date(endTime).toISOString()}`
   )
 
-  while (currentStartTime < endTime) {
-    const url = new URL(BINANCE_API_URL)
-    url.searchParams.set('symbol', binanceSymbol)
-    url.searchParams.set('interval', binanceInterval)
-    url.searchParams.set('startTime', currentStartTime.toString())
-    url.searchParams.set('endTime', endTime.toString())
-    url.searchParams.set('limit', maxLimit.toString())
+  // 首先尝试获取最近的 K 线数据
+  const recentUrl = new URL('https://www.okx.com/api/v5/market/candles')
+  recentUrl.searchParams.set('instId', instId)
+  recentUrl.searchParams.set('bar', bar)
+  recentUrl.searchParams.set('limit', '300') // candles 端点支持最多 300 条
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        Accept: 'application/json',
-      },
+  console.log(`[OKX] 尝试获取最近 K 线数据...`)
+
+  try {
+    const recentResponse = await fetch(recentUrl.toString(), {
+      headers: { Accept: 'application/json' },
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`[Binance] API 错误: ${response.status} ${errorText}`)
-      throw new Error(`Binance API error: ${response.status}`)
+    if (recentResponse.ok) {
+      const recentResult = await recentResponse.json()
+      if (recentResult.code === '0' && Array.isArray(recentResult.data)) {
+        console.log(`[OKX] 最近数据: 获取 ${recentResult.data.length} 条`)
+        for (const kline of recentResult.data) {
+          const timestamp = parseInt(kline[0])
+          if (timestamp >= startTime && timestamp <= endTime) {
+            candles.push({
+              timestamp,
+              open: parseFloat(kline[1]),
+              high: parseFloat(kline[2]),
+              low: parseFloat(kline[3]),
+              close: parseFloat(kline[4]),
+              volume: parseFloat(kline[5]),
+            })
+          }
+        }
+      }
     }
+  } catch (error) {
+    console.error(`[OKX] 获取最近数据失败:`, error)
+  }
 
-    const data = await response.json()
+  // 然后获取历史数据
+  let currentBefore = candles.length > 0 ? Math.min(...candles.map((c) => c.timestamp)) : endTime
+  let requestCount = 0
+  const maxRequests = 50
 
-    if (!Array.isArray(data) || data.length === 0) {
-      break
-    }
+  while (currentBefore > startTime && requestCount < maxRequests) {
+    requestCount++
+    const historyUrl = new URL(OKX_API_URL) // history-candles
+    historyUrl.searchParams.set('instId', instId)
+    historyUrl.searchParams.set('bar', bar)
+    historyUrl.searchParams.set('before', currentBefore.toString())
+    historyUrl.searchParams.set('limit', maxLimit.toString())
 
-    // Binance K 线数据格式:
-    // [openTime, open, high, low, close, volume, closeTime, quoteVolume, trades, takerBuyBase, takerBuyQuote, ignore]
-    for (const kline of data) {
-      candles.push({
-        timestamp: kline[0], // openTime (毫秒)
-        open: parseFloat(kline[1]),
-        high: parseFloat(kline[2]),
-        low: parseFloat(kline[3]),
-        close: parseFloat(kline[4]),
-        volume: parseFloat(kline[5]),
+    console.log(`[OKX] 历史请求 #${requestCount}: before=${new Date(currentBefore).toISOString()}`)
+
+    try {
+      const response = await fetch(historyUrl.toString(), {
+        headers: { Accept: 'application/json' },
       })
-    }
 
-    // 更新下一批次的开始时间
-    const lastKline = data[data.length - 1]
-    currentStartTime = lastKline[6] + 1 // closeTime + 1
+      if (!response.ok) {
+        console.error(`[OKX] API 错误: ${response.status}`)
+        break
+      }
 
-    // 如果返回的数据少于 limit，说明已经没有更多数据
-    if (data.length < maxLimit) {
+      const result = await response.json()
+
+      if (result.code !== '0') {
+        console.error(`[OKX] API 业务错误: ${result.code} ${result.msg}`)
+        break
+      }
+
+      if (!Array.isArray(result.data) || result.data.length === 0) {
+        console.log(`[OKX] 历史请求 #${requestCount}: 没有更多数据`)
+        break
+      }
+
+      console.log(`[OKX] 历史请求 #${requestCount}: 获取 ${result.data.length} 条数据`)
+
+      for (const kline of result.data) {
+        const timestamp = parseInt(kline[0])
+        if (timestamp >= startTime && timestamp <= endTime) {
+          candles.push({
+            timestamp,
+            open: parseFloat(kline[1]),
+            high: parseFloat(kline[2]),
+            low: parseFloat(kline[3]),
+            close: parseFloat(kline[4]),
+            volume: parseFloat(kline[5]),
+          })
+        }
+      }
+
+      const oldestKline = result.data[result.data.length - 1]
+      const oldestTimestamp = parseInt(oldestKline[0])
+
+      if (oldestTimestamp <= startTime || result.data.length < maxLimit) {
+        break
+      }
+
+      currentBefore = oldestTimestamp
+    } catch (error) {
+      console.error(`[OKX] 历史请求 #${requestCount} 失败:`, error)
       break
     }
   }
 
-  console.log(`[Binance] 成功获取 ${candles.length} 条 K 线数据`)
+  // 按时间正序排列
+  candles.sort((a, b) => a.timestamp - b.timestamp)
 
-  return candles
+  // 去重
+  const uniqueCandles = candles.filter(
+    (candle, index, self) => index === self.findIndex((c) => c.timestamp === candle.timestamp)
+  )
+
+  console.log(`[OKX] 成功获取 ${uniqueCandles.length} 条 K 线数据`)
+
+  return uniqueCandles
 }
 
 // ============================================================================
