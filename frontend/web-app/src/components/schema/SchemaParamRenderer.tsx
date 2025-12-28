@@ -10,16 +10,16 @@
 
 'use client'
 
-import React, { useMemo, useCallback, useState } from 'react'
-import { ChevronDown, ChevronUp, Calculator, Lock, AlertCircle, AlertTriangle } from 'lucide-react'
+import { AlertCircle, AlertTriangle,Calculator, ChevronDown, ChevronUp, Lock } from 'lucide-react'
+import React, { useCallback, useMemo, useState } from 'react'
 
 import { ParamControl } from '@/components/a2ui/controls/ParamControl'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { cn } from '@/lib/utils'
 import { evaluateCondition } from '@/lib/schema'
+import { cn } from '@/lib/utils'
 import type { InsightParam, ParamValue } from '@/types/insight'
-import type { ParamGroup, ParamSchemaField, PARAM_GROUP_CONFIG } from '@/types/strategy-schema'
+import type { ParamGroup, ParamSchemaField } from '@/types/strategy-schema'
 
 // =============================================================================
 // Types
@@ -132,8 +132,8 @@ export function SchemaParamRenderer({
     const sortedGroups = Array.from(groups.entries()).sort((a, b) => {
       if (a[0] === '_advanced') return 1
       if (b[0] === '_advanced') return -1
-      const orderA = GROUP_CONFIG[a[0] as ParamGroup]?.order ?? 99
-      const orderB = GROUP_CONFIG[b[0] as ParamGroup]?.order ?? 99
+      const orderA = GROUP_CONFIG[a[0] as ParamGroup].order ?? 99
+      const orderB = GROUP_CONFIG[b[0] as ParamGroup].order ?? 99
       return orderA - orderB
     })
 

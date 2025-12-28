@@ -10,7 +10,8 @@
  * @module S45 网络断线处理
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef,useState } from 'react'
+
 import { useOnlineStatus } from './useOnlineStatus'
 
 export interface QueuedRequest {
@@ -263,7 +264,7 @@ export function useOfflineQueue(options: UseOfflineQueueOptions = {}) {
   // 恢复在线时自动处理队列
   useEffect(() => {
     if (isConnected && queue.length > 0 && !isProcessing) {
-      processQueue()
+      void processQueue()
     }
   }, [isConnected, queue.length, isProcessing, processQueue])
 

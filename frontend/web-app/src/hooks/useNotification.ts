@@ -10,16 +10,17 @@
  * - 声音提醒
  */
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef,useState } from 'react'
+
 import type {
-  NotificationData,
-  UrgentNotification,
-  NotificationFilter,
-  NotificationStats,
-  NotificationPreferences,
   NotificationCategory,
+  NotificationData,
+  NotificationFilter,
+  NotificationPreferences,
+  NotificationStats,
+  UrgentNotification,
 } from '@/types/notification'
-import { isUrgentNotification, PRIORITY_CONFIG } from '@/types/notification'
+import { isUrgentNotification } from '@/types/notification'
 
 // =============================================================================
 // Default Preferences
@@ -245,7 +246,7 @@ export function useNotification(options: UseNotificationOptions = {}): UseNotifi
 
     // 紧急通知特殊处理
     if (isUrgentNotification(notification)) {
-      const urgentNotif = notification as UrgentNotification
+      const urgentNotif = notification
       if (urgentNotif.priority === 'critical') {
         playSound('critical')
       } else {

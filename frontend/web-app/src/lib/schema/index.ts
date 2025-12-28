@@ -4,27 +4,27 @@
 
 // Registry
 export {
-  schemaRegistry,
-  getStrategySchema,
-  getRegisteredStrategyTypes,
-  resolveAIParams,
-  getDefaultStrategyParams,
   detectStrategyType,
+  getDefaultStrategyParams,
+  getRegisteredStrategyTypes,
+  getStrategySchema,
+  resolveAIParams,
+  schemaRegistry,
 } from './registry'
 
 // Compute Engine
 export {
-  computeFieldValue,
   computeAllDerivedFields,
-  validateFormula,
+  computeFieldValue,
   getFormulaVariables,
+  validateFormula,
 } from './compute-engine'
 
 // Validator
 export {
-  validateSchema,
-  validateFieldValue,
   evaluateCondition,
+  validateFieldValue,
+  validateSchema,
 } from './schema-validator'
 
 // Schemas

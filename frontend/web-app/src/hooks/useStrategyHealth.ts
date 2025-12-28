@@ -12,23 +12,23 @@
  * - 活跃度 (activity)
  */
 
-import { useMemo, useCallback } from 'react'
-import type { StrategyMetrics } from '@/types/insight'
+import { useCallback,useMemo } from 'react'
+
 import type {
-  StrategyHealthScore,
-  DimensionScore,
-  HealthIndicator,
-  HealthDimension,
-  DecayWarning,
   DecayIndicator,
-  DecayType,
   DecaySeverity,
+  DecayWarning,
+  DimensionScore,
+  HealthDimension,
+  HealthIndicator,
+  StrategyHealthScore,
 } from '@/types/health'
 import {
-  getHealthStatus,
-  getHealthGrade,
   DIMENSION_LABELS,
+  getHealthGrade,
+  getHealthStatus,
 } from '@/types/health'
+import type { StrategyMetrics } from '@/types/insight'
 
 // =============================================================================
 // Configuration Constants

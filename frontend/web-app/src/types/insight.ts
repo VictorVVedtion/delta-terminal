@@ -8,6 +8,8 @@
  * Core Philosophy: "AI Proposer, Human Approver"
  */
 
+import type { ReasoningChain, ReasoningDisplayMode } from './reasoning'
+
 // =============================================================================
 // Insight Types
 // =============================================================================
@@ -275,7 +277,7 @@ export interface InsightData {
    * AI 推理链数据 (可选)
    * 展示 AI 的思考过程，让用户可以介入任意推理步骤
    */
-  reasoning_chain?: import('./reasoning').ReasoningChain;
+  reasoning_chain?: ReasoningChain;
   /**
    * 是否默认展示推理链
    */
@@ -283,7 +285,7 @@ export interface InsightData {
   /**
    * 推理链展示模式
    */
-  reasoning_display_mode?: import('./reasoning').ReasoningDisplayMode;
+  reasoning_display_mode?: ReasoningDisplayMode;
 }
 
 export interface RiskAlertInsight extends InsightData {
@@ -380,16 +382,17 @@ export interface ClarificationOption {
  * 追问分类 (与后端 ClarificationCategory 同步)
  */
 export type ClarificationCategory =
-  | 'trading_pair'         // 交易对选择
-  | 'strategy_type'        // 策略类型
-  | 'risk_preference'      // 风险偏好
-  | 'timeframe'            // 时间周期
-  | 'entry_condition'      // 入场条件
-  | 'exit_condition'       // 出场条件
-  | 'position_size'        // 仓位大小偏好
-  | 'market_context'       // 市场环境偏好
-  | 'capital_allocation'   // 资金配置 (保留兼容)
-  | 'general';             // 一般问题
+  | 'trading_pair'           // 交易对选择
+  | 'strategy_type'          // 策略类型
+  | 'strategy_perspective'   // 策略角度 (抄底/追涨的判断方式)
+  | 'risk_preference'        // 风险偏好
+  | 'timeframe'              // 时间周期
+  | 'entry_condition'        // 入场条件
+  | 'exit_condition'         // 出场条件
+  | 'position_size'          // 仓位大小偏好
+  | 'market_context'         // 市场环境偏好
+  | 'capital_allocation'     // 资金配置 (保留兼容)
+  | 'general';               // 一般问题
 
 /**
  * AI 追问 Insight 数据

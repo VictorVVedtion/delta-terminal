@@ -7,11 +7,12 @@
 'use client'
 
 import { useMemo } from 'react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+
 import { Badge } from '@/components/ui/badge'
-import type { NotificationData, NotificationAction } from '@/types/notification'
-import { PRIORITY_CONFIG, CATEGORY_CONFIG, isUrgentNotification } from '@/types/notification'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import type { NotificationAction,NotificationData } from '@/types/notification'
+import { CATEGORY_CONFIG, isUrgentNotification,PRIORITY_CONFIG } from '@/types/notification'
 
 export interface NotificationItemProps {
   /** 通知数据 */

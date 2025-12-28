@@ -8,7 +8,7 @@
  * 4. 与现有 InsightParam 兼容
  */
 
-import type { Constraint, ParamConfig, ParamLevel, ParamType, ParamValue } from './insight'
+import type { Constraint, InsightParam, ParamConfig, ParamLevel, ParamType, ParamValue } from './insight'
 
 // =============================================================================
 // 策略类型枚举
@@ -238,7 +238,7 @@ export interface AIParamValues {
  */
 export interface SchemaResolveResult {
   /** 解析后的参数列表 */
-  params: import('./insight').InsightParam[]
+  params: InsightParam[]
   /** 验证错误 */
   errors: string[]
   /** 验证警告 */

@@ -12,8 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { schemaRegistry, computeAllDerivedFields } from '@/lib/schema'
-import { useParamConstraints } from './useParamConstraints'
+import { computeAllDerivedFields,schemaRegistry } from '@/lib/schema'
 import type { InsightParam, ParamValue } from '@/types/insight'
 import type {
   AIParamValues,
@@ -22,6 +21,8 @@ import type {
   ParamValidationResult,
   StrategyType,
 } from '@/types/strategy-schema'
+
+import { useParamConstraints } from './useParamConstraints'
 
 // =============================================================================
 // Types

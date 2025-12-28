@@ -4,29 +4,29 @@
  * 策略 Schema 的中央注册表，管理所有策略类型的 Schema 定义
  */
 
+import type { InsightParam, ParamValue } from '@/types/insight'
 import type {
-  StrategySchema,
-  StrategyType,
   AIParamValues,
   ComputeContext,
-  SchemaResolveResult,
   ParamSchemaField,
+  SchemaResolveResult,
+  StrategySchema,
+  StrategyType,
 } from '@/types/strategy-schema'
-import type { InsightParam, ParamValue } from '@/types/insight'
-import { computeAllDerivedFields } from './compute-engine'
-import { validateSchema, evaluateCondition } from './schema-validator'
 
+import { computeAllDerivedFields } from './compute-engine'
+import { evaluateCondition,validateSchema } from './schema-validator'
+import { DCA_STRATEGY_SCHEMA } from './schemas/dca.schema'
 // Import all schemas
 import { GRID_STRATEGY_SCHEMA } from './schemas/grid.schema'
 import { RSI_REVERSAL_SCHEMA } from './schemas/rsi.schema'
-import { DCA_STRATEGY_SCHEMA } from './schemas/dca.schema'
 
 // =============================================================================
 // Schema Registry Class
 // =============================================================================
 
 class StrategySchemaRegistry {
-  private schemas: Map<StrategyType, StrategySchema> = new Map()
+  private schemas = new Map<StrategyType, StrategySchema>()
   private initialized = false
 
   constructor() {

@@ -9,7 +9,7 @@
  * @module S45 网络断线处理
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef,useState } from 'react'
 
 export interface NetworkStatus {
   /** 浏览器报告的在线状态 */
@@ -134,7 +134,7 @@ export function useOnlineStatus(options: UseOnlineStatusOptions = {}): NetworkSt
       setStatus(prev => {
         if (prev.isConnected !== isConnected) {
           if (isConnected) {
-            handleOnline()
+            void handleOnline()
           } else {
             handleOffline()
           }
@@ -144,10 +144,10 @@ export function useOnlineStatus(options: UseOnlineStatusOptions = {}): NetworkSt
     }
 
     // 初始检测
-    runPing()
+    void runPing()
 
-    // 定期检测
-    pingIntervalRef.current = setInterval(runPing, config.pingInterval)
+    // 定期检测 - 使用同步包装器调用异步函数
+    pingIntervalRef.current = setInterval(() => { void runPing() }, config.pingInterval)
 
     return () => {
       if (pingIntervalRef.current) {
@@ -158,7 +158,7 @@ export function useOnlineStatus(options: UseOnlineStatusOptions = {}): NetworkSt
 
   // 监听浏览器 online/offline 事件
   useEffect(() => {
-    const onOnline = () => handleOnline()
+    const onOnline = () => { void handleOnline() }
     const onOffline = () => handleOffline()
 
     window.addEventListener('online', onOnline)

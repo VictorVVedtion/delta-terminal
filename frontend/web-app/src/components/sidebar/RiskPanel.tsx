@@ -3,6 +3,7 @@
 import { AlertTriangle, ChevronDown, Shield } from 'lucide-react'
 import React, { useMemo, useState } from 'react'
 
+import { TermTooltip } from '@/components/common/TermTooltip'
 import { cn } from '@/lib/utils'
 import { type RiskOverview,useAgentStore } from '@/store/agent'
 import { usePaperTradingStore } from '@/store/paperTrading'
@@ -118,7 +119,9 @@ export function RiskPanel() {
             <>
               {/* 保证金率 */}
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-muted-foreground">保证金率</span>
+                <TermTooltip term="marginRate" showIcon={false} className="text-muted-foreground">
+                  保证金率
+                </TermTooltip>
                 <span
                   className={cn(
                     'font-semibold font-mono',
@@ -135,7 +138,9 @@ export function RiskPanel() {
 
               {/* 总敞口 */}
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-muted-foreground">总敞口</span>
+                <TermTooltip term="exposure" showIcon={false} className="text-muted-foreground">
+                  总敞口
+                </TermTooltip>
                 <span className="font-semibold font-mono">
                   {riskOverview.totalExposure > 0 ? `$${riskOverview.totalExposure.toLocaleString()}` : '—'}
                 </span>
@@ -143,7 +148,9 @@ export function RiskPanel() {
 
               {/* 最大回撤 */}
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-muted-foreground">最大回撤</span>
+                <TermTooltip term="maxDrawdown" showIcon={false} className="text-muted-foreground">
+                  最大回撤
+                </TermTooltip>
                 <span className="font-mono text-red-500">
                   {riskOverview.maxDrawdown > 0 ? `-${riskOverview.maxDrawdown.toFixed(1)}%` : '—'}
                 </span>

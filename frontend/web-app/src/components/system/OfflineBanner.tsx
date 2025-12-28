@@ -12,11 +12,12 @@
 
 'use client'
 
+import { AlertTriangle,Clock, RefreshCw, WifiOff } from 'lucide-react'
 import React from 'react'
-import { WifiOff, RefreshCw, Clock, AlertTriangle } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { cn } from '@/lib/utils'
 
 interface OfflineBannerProps {
   className?: string

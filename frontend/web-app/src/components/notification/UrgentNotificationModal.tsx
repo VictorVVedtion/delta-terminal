@@ -8,12 +8,13 @@
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { cn } from '@/lib/utils'
+import { useCallback,useEffect, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import type { UrgentNotification, NotificationAction } from '@/types/notification'
-import { PRIORITY_CONFIG, CATEGORY_CONFIG } from '@/types/notification'
+import { Card, CardContent, CardFooter,CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import type { NotificationAction,UrgentNotification } from '@/types/notification'
+import { CATEGORY_CONFIG,PRIORITY_CONFIG } from '@/types/notification'
 
 export interface UrgentNotificationModalProps {
   /** 紧急通知 */
@@ -39,7 +40,7 @@ export function UrgentNotificationModal({
 
   // 初始化倒计时
   useEffect(() => {
-    if (!notification || !notification.timeoutSeconds) {
+    if (!notification?.timeoutSeconds) {
       setCountdown(null)
       return
     }

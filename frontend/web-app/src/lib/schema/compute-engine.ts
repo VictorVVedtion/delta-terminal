@@ -146,7 +146,7 @@ function evaluateFormula(
  * @returns 包含计算字段的完整参数值
  */
 export function computeAllDerivedFields(
-  fields: Array<{ key: string; formula?: string; computed?: boolean }>,
+  fields: { key: string; formula?: string; computed?: boolean }[],
   params: Record<string, ParamValue>,
   context: ComputeContext = {}
 ): Record<string, ParamValue> {

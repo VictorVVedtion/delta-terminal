@@ -45,6 +45,7 @@ const CATEGORY_CONFIG: Record<
 > = {
   trading_pair: { icon: '💱', label: '交易对', color: 'text-blue-500' },
   strategy_type: { icon: '🎯', label: '策略类型', color: 'text-green-500' },
+  strategy_perspective: { icon: '🧭', label: '策略角度', color: 'text-amber-500' },
   risk_preference: { icon: '⚖️', label: '风险偏好', color: 'text-orange-500' },
   timeframe: { icon: '⏱️', label: '时间周期', color: 'text-purple-500' },
   entry_condition: { icon: '📈', label: '入场条件', color: 'text-cyan-500' },

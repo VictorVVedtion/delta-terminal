@@ -1,8 +1,14 @@
 'use client'
 
-import { TrendingDown,TrendingUp } from 'lucide-react'
+import { HelpCircle, TrendingDown,TrendingUp } from 'lucide-react'
 import React from 'react'
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useAgentStore } from '@/store/agent'
 
@@ -35,6 +41,18 @@ export function PnLPanel() {
           <span className="text-[10px] text-muted-foreground font-medium">
             总盈亏
           </span>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-[200px]">
+                <p className="text-xs">
+                  所有策略的累计盈亏总和，包括已实现和未实现的收益
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* 主数值 */}

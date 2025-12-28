@@ -9,6 +9,7 @@
 'use client'
 
 import { useMemo } from 'react'
+
 import { cn } from '@/lib/utils'
 import type { HealthGrade, HealthStatus } from '@/types/health'
 import { GRADE_COLORS, HEALTH_STATUS_COLORS } from '@/types/health'
@@ -74,7 +75,7 @@ export function HealthScoreRing({
     }
     return (
       <span className="text-red-500 text-xs ml-1">
-        ↓ {change !== undefined && change.toFixed(1)}
+        ↓ {change?.toFixed(1)}
       </span>
     )
   }, [trend, change])

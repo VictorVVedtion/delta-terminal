@@ -7,6 +7,6 @@
 export {
   GridVisualization,
   GridVisualizationCompact,
-  type GridVisualizationProps,
   type GridVisualizationCompactProps,
+  type GridVisualizationProps,
 } from './GridVisualization'
