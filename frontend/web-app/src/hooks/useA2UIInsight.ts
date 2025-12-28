@@ -143,7 +143,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
   /**
    * 延迟函数
    */
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
   /**
    * 调用后端 API 获取 InsightData (带超时和重试)
@@ -160,12 +160,20 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         headers.Authorization = `Bearer ${accessToken}`
       }
 
+      // 优先使用显式传递的 collectedParams，避免 React 状态竞态条件
+      const explicitCollectedParams = context?.collectedParams as
+        | Record<string, unknown>
+        | undefined
+      const mergedCollectedParams = explicitCollectedParams
+        ? { ...state.collectedParams, ...explicitCollectedParams }
+        : state.collectedParams
+
       const requestBody = JSON.stringify({
         message,
         conversationId: state.conversationId,
         context: {
           ...context,
-          collectedParams: state.collectedParams,
+          collectedParams: mergedCollectedParams,
         },
       })
 
@@ -226,11 +234,14 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
 
       // Debug: 打印 API 返回的 insight.params
       if (insight?.params) {
-        console.log('[useA2UIInsight] API response insight.params:', insight.params.map(p => ({
-          key: p.key,
-          value: p.value,
-          type: typeof p.value,
-        })))
+        console.log(
+          '[useA2UIInsight] API response insight.params:',
+          insight.params.map((p) => ({
+            key: p.key,
+            value: p.value,
+            type: typeof p.value,
+          }))
+        )
       }
 
       // 检查是否是澄清类型
@@ -250,9 +261,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         isLoading: false,
         error: null,
         // 更新多步骤引导状态
-        currentStep: clarification
-          ? prev.currentStep + 1
-          : prev.currentStep,
+        currentStep: clarification ? prev.currentStep + 1 : prev.currentStep,
         remainingQuestions: clarification?.remainingQuestions ?? 0,
         // 保留已收集的参数
         collectedParams: clarification?.collectedParams
@@ -274,10 +283,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
    * 发送消息并获取 InsightData
    */
   const sendMessage = useCallback(
-    async (
-      message: string,
-      context?: Record<string, unknown>
-    ): Promise<InsightData | null> => {
+    async (message: string, context?: Record<string, unknown>): Promise<InsightData | null> => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }))
       setStoreLoading(true)
 
@@ -294,8 +300,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
 
         return handleResponse(response)
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : '请求失败'
+        const errorMessage = error instanceof Error ? error.message : '请求失败'
         setState((prev) => ({
           ...prev,
           isLoading: false,
@@ -330,9 +335,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
           // 找到选中的选项标签
           const selectedLabels = answer.selectedOptions
             .map((optId) => {
-              const option = state.clarification?.options.find(
-                (o) => o.id === optId
-              )
+              const option = state.clarification?.options.find((o) => o.id === optId)
               return option?.label
             })
             .filter(Boolean)
@@ -341,9 +344,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         }
 
         if (answer.customText) {
-          answerText = answerText
-            ? `${answerText}; ${answer.customText}`
-            : answer.customText
+          answerText = answerText ? `${answerText}; ${answer.customText}` : answer.customText
         }
 
         // 更新已收集的参数
@@ -358,10 +359,13 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         }))
 
         // 发送回答给后端继续对话
+        // 注意：必须显式传递 collectedParams，因为 setState 是异步的
+        // fetchInsight 使用 state.collectedParams 可能还是旧值
         const response = await fetchInsight(answerText, {
           isFollowUp: true,
           previousQuestion: state.clarification.question,
           category: state.clarification.category,
+          collectedParams: newCollectedParams, // 显式传递最新的参数
         })
 
         if (!response) {
@@ -374,8 +378,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
 
         return handleResponse(response)
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : '提交回答失败'
+        const errorMessage = error instanceof Error ? error.message : '提交回答失败'
         setState((prev) => ({
           ...prev,
           isLoading: false,
@@ -447,11 +450,7 @@ export function isClarificationInsight(
  */
 export function needsApproval(insight: InsightData | null): boolean {
   if (!insight) return false
-  const approvalTypes: InsightType[] = [
-    'strategy_create',
-    'strategy_modify',
-    'risk_alert',
-  ]
+  const approvalTypes: InsightType[] = ['strategy_create', 'strategy_modify', 'risk_alert']
   return approvalTypes.includes(insight.type)
 }
 
