@@ -3,20 +3,25 @@
 
 echo "🔍 Running pre-commit checks..."
 
-# Run type check on backend
-echo "📦 Checking backend types..."
-cd backend/ai-orchestrator && npm run build --silent 2>&1 || {
-  echo "❌ Backend TypeScript compilation failed!"
+# Run lint-staged for code formatting and linting
+echo "🎨 Running lint-staged..."
+npx lint-staged || {
+  echo "❌ Lint-staged checks failed!"
   exit 1
 }
-cd ../..
 
-# Run type check on frontend
-echo "📦 Checking frontend types..."
-cd frontend/web-app && npm run type-check --silent 2>&1 || {
-  echo "❌ Frontend TypeScript compilation failed!"
+# Run type check across all workspaces using Turborepo
+echo "📦 Type checking all workspaces..."
+npx turbo run type-check --filter='[HEAD^1]' --continue || {
+  echo "❌ Type check failed in one or more workspaces!"
   exit 1
 }
-cd ../..
+
+# Run linting across all workspaces using Turborepo
+echo "🔍 Linting all workspaces..."
+npx turbo run lint --filter='[HEAD^1]' --continue || {
+  echo "❌ Linting failed in one or more workspaces!"
+  exit 1
+}
 
 echo "✅ All pre-commit checks passed!"
