@@ -443,6 +443,7 @@ class ClarificationCategory(str, Enum):
 
     TRADING_PAIR = "trading_pair"  # Which trading pair?
     STRATEGY_TYPE = "strategy_type"  # What type of strategy?
+    STRATEGY_PERSPECTIVE = "strategy_perspective"  # Strategy angle/perspective (抄底/追涨的判断角度)
     RISK_PREFERENCE = "risk_preference"  # Risk tolerance level
     TIMEFRAME = "timeframe"  # Trading timeframe
     ENTRY_CONDITION = "entry_condition"  # Entry logic clarification

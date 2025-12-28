@@ -47,6 +47,12 @@ from ..models.insight_schemas import (
     create_insight_id,
 )
 from ..models.schemas import IntentType, Message
+from ..models.strategy_perspectives import (
+    TradingConcept,
+    get_recommended_perspectives,
+    perspective_to_clarification_option,
+    detect_trading_concept,
+)
 from ..prompts.insight_prompts import (
     BACKTEST_INSIGHT_PROMPT,
     CLARIFICATION_PROMPT,
@@ -57,8 +63,10 @@ from ..prompts.insight_prompts import (
     RISK_ANALYSIS_PROMPT,
     STRATEGY_INSIGHT_PROMPT,
 )
+from .llm_router import LLMRouter, get_llm_router
 from .llm_service import LLMService, get_llm_service
 from .reasoning_service import ReasoningChainService, get_reasoning_service
+from ..models.llm_routing import LLMTaskType
 
 logger = logging.getLogger(__name__)
 
@@ -92,16 +100,107 @@ class InsightGeneratorService:
         "strategy_type": ["策略", "网格", "RSI", "MACD", "趋势", "均线", "布林", "定投"],
     }
 
-    def __init__(self, llm_service: LLMService, reasoning_service: Optional[ReasoningChainService] = None):
+    def __init__(
+        self,
+        llm_service: LLMService,
+        reasoning_service: Optional[ReasoningChainService] = None,
+        llm_router: Optional[LLMRouter] = None,
+        user_id: Optional[str] = None,
+    ):
         """
         Initialize the service
 
         Args:
-            llm_service: LLM service instance
+            llm_service: LLM service instance (deprecated, use llm_router)
             reasoning_service: Reasoning chain service instance (optional)
+            llm_router: LLM router for task-based model selection (recommended)
+            user_id: User ID for loading user-specific model preferences
         """
         self.llm_service = llm_service
         self.reasoning_service = reasoning_service
+        self.llm_router = llm_router
+        self.user_id = user_id
+
+        # Log which routing mode is active
+        if self.llm_router:
+            logger.info("InsightGeneratorService: Using LLMRouter for task-based model selection")
+        else:
+            logger.info("InsightGeneratorService: Using legacy LLMService (single model)")
+
+    # =========================================================================
+    # 统一 LLM 调用方法 (支持 Router 和 Service)
+    # =========================================================================
+
+    async def _generate_json(
+        self,
+        messages: List[Dict[str, str]],
+        system: Optional[str],
+        task: LLMTaskType,
+        temperature: float = 0.3,
+    ) -> Dict[str, Any]:
+        """
+        统一的 JSON 生成方法
+
+        如果配置了 LLMRouter，使用任务路由选择模型；
+        否则回退到 LLMService 单模型调用。
+
+        Args:
+            messages: 消息列表
+            system: 系统提示词
+            task: 任务类型 (用于模型路由)
+            temperature: 温度参数
+
+        Returns:
+            解析后的 JSON 对象
+        """
+        if self.llm_router:
+            return await self.llm_router.generate_json(
+                messages=messages,
+                task=task,
+                system=system,
+                user_id=self.user_id,
+                temperature=temperature,
+            )
+        else:
+            return await self.llm_service.generate_json_response(
+                messages=messages,
+                system=system,
+                temperature=temperature,
+            )
+
+    async def _generate_text(
+        self,
+        messages: List[Dict[str, str]],
+        system: Optional[str],
+        task: LLMTaskType,
+        temperature: float = 0.7,
+    ) -> str:
+        """
+        统一的文本生成方法
+
+        Args:
+            messages: 消息列表
+            system: 系统提示词
+            task: 任务类型 (用于模型路由)
+            temperature: 温度参数
+
+        Returns:
+            生成的文本
+        """
+        if self.llm_router:
+            return await self.llm_router.generate(
+                messages=messages,
+                task=task,
+                system=system,
+                user_id=self.user_id,
+                temperature=temperature,
+            )
+        else:
+            return await self.llm_service.generate_response(
+                messages=messages,
+                system=system,
+                temperature=temperature,
+            )
 
     def _assess_intent_completeness(
         self,
@@ -229,6 +328,28 @@ class InsightGeneratorService:
                 except Exception as e:
                     logger.warning(f"Failed to generate reasoning chain: {e}")
 
+            # =================================================================
+            # A2UI 分层澄清机制 - Level 1: 策略角度推荐
+            # =================================================================
+            # 核心逻辑：当用户表达了交易概念（如"抄底"）但未指定具体策略逻辑时，
+            # 优先推荐合适的策略角度，帮助用户理清交易思路。
+            if intent == IntentType.CREATE_STRATEGY:
+                needs_perspective, concept = self._check_perspective_needed(
+                    user_input, entities
+                )
+                if needs_perspective and concept is not None:
+                    logger.info(
+                        f"Detected trading concept '{concept.value}' without specific indicators, "
+                        "generating perspective recommendation"
+                    )
+                    insight = await self._generate_perspective_insight(
+                        user_input, concept, chat_history, context or {}
+                    )
+                    return self._attach_reasoning_chain(insight, reasoning_chain)
+
+            # =================================================================
+            # A2UI 分层澄清机制 - Level 2: 技术参数补全
+            # =================================================================
             # A2UI Core: Check intent completeness before proceeding
             is_complete, missing_params, has_abstract = self._assess_intent_completeness(
                 user_input, intent, entities
@@ -326,10 +447,11 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        # Call LLM for JSON response
-        response = await self.llm_service.generate_json_response(
+        # Call LLM for JSON response (使用任务路由选择模型)
+        response = await self._generate_json(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.STRATEGY_GENERATION,
             temperature=0.3,
         )
 
@@ -363,9 +485,10 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        response = await self.llm_service.generate_json_response(
+        response = await self._generate_json(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.STRATEGY_GENERATION,
             temperature=0.3,
         )
 
@@ -434,9 +557,10 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        response = await self.llm_service.generate_json_response(
+        response = await self._generate_json(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.INSIGHT_GENERATION,
             temperature=0.3,
         )
 
@@ -486,9 +610,10 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        response = await self.llm_service.generate_json_response(
+        response = await self._generate_json(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.INSIGHT_GENERATION,
             temperature=0.3,
         )
 
@@ -552,9 +677,10 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        response = await self.llm_service.generate_json_response(
+        response = await self._generate_json(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.MARKET_ANALYSIS,
             temperature=0.3,
         )
 
@@ -584,10 +710,11 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        # For general chat, we may get plain text response
-        response_text = await self.llm_service.generate_response(
+        # For general chat, we may get plain text response (使用简单对话模型)
+        response_text = await self._generate_text(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.SIMPLE_CHAT,
             temperature=0.7,
         )
 
@@ -597,6 +724,129 @@ class InsightGeneratorService:
             type=InsightType.STRATEGY_CREATE,  # Default type
             params=[],
             explanation=response_text,
+            created_at=datetime.now().isoformat(),
+        )
+
+    # =========================================================================
+    # 策略角度推荐相关方法 (A2UI 分层澄清机制 - Level 1)
+    # =========================================================================
+
+    def _check_perspective_needed(
+        self,
+        user_input: str,
+        entities: Dict[str, Any],
+    ) -> tuple[bool, Optional[TradingConcept]]:
+        """
+        检查是否需要策略角度推荐
+
+        分层澄清的核心判断逻辑：
+        - 用户表达了交易概念（抄底、追涨等）
+        - 但没有指定具体的技术指标或策略逻辑
+
+        Args:
+            user_input: 用户输入文本
+            entities: 已提取的实体
+
+        Returns:
+            (是否需要推荐, 检测到的交易概念)
+        """
+        # 检测交易概念
+        concept = detect_trading_concept(user_input)
+
+        if concept is None:
+            return False, None
+
+        # 检查是否已经有具体的技术指标关键词
+        technical_keywords = [
+            "RSI", "MACD", "KDJ", "BOLL", "布林", "EMA", "SMA", "MA",
+            "均线", "金叉", "死叉", "背离", "超卖", "超买",
+            "低于", "高于", "突破", "跌破", "触及",
+        ]
+
+        user_input_upper = user_input.upper()
+        for keyword in technical_keywords:
+            if keyword.upper() in user_input_upper:
+                logger.debug(f"User already has technical indicator: {keyword}")
+                return False, concept
+
+        # 检查是否已经有入场/出场条件
+        if entities.get("entry_conditions") or entities.get("indicators"):
+            logger.debug("User already has entry conditions in entities")
+            return False, concept
+
+        # 需要推荐策略角度
+        logger.info(f"Needs perspective recommendation for concept: {concept.value}")
+        return True, concept
+
+    async def _generate_perspective_insight(
+        self,
+        user_input: str,
+        concept: TradingConcept,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+    ) -> ClarificationInsight:
+        """
+        生成策略角度推荐 ClarificationInsight
+
+        根据用户的交易概念，推荐合适的策略角度供选择。
+
+        Args:
+            user_input: 用户输入文本
+            concept: 检测到的交易概念
+            chat_history: 对话历史
+            context: 上下文信息
+
+        Returns:
+            ClarificationInsight with strategy perspective options
+        """
+        # 获取推荐的策略角度（最多4个）
+        perspectives = get_recommended_perspectives(concept, max_count=4)
+
+        # 转换为 ClarificationOption
+        options = [
+            ClarificationOption(
+                id=p.id,
+                label=p.label,
+                description=p.description,
+                icon=p.icon if p.icon else None,
+                recommended=p.recommended,
+            )
+            for p in perspectives
+        ]
+
+        # 根据交易概念生成问题和说明
+        concept_labels = {
+            TradingConcept.BOTTOM_FISHING: "抄底",
+            TradingConcept.TREND_FOLLOWING: "趋势跟踪",
+            TradingConcept.BREAKOUT: "突破交易",
+            TradingConcept.MEAN_REVERSION: "均值回归",
+            TradingConcept.MOMENTUM: "动量交易",
+            TradingConcept.RANGE_TRADING: "区间交易",
+            TradingConcept.SHORT_SELL: "做空",
+            TradingConcept.SWING_TRADE: "波段交易",
+            TradingConcept.SCALPING: "超短线",
+            TradingConcept.DIP_BUYING: "回调买入",
+        }
+
+        concept_label = concept_labels.get(concept, "交易")
+
+        # 创建 ClarificationInsight
+        return ClarificationInsight(
+            id=create_insight_id(),
+            type=InsightType.CLARIFICATION,
+            params=[],
+            question=f"{concept_label}可以从几个角度判断入场时机，您想用哪些？",
+            category=ClarificationCategory.STRATEGY_PERSPECTIVE,
+            option_type=ClarificationOptionType.MULTI,  # 允许多选
+            options=options,
+            allow_custom_input=True,
+            custom_input_placeholder="或描述您想用的其他判断方式...",
+            context_hint=f"选择适合您的策略角度，我会根据您的选择配置具体的技术指标参数",
+            collected_params=context.get("collected_params", {}),
+            remaining_questions=2,  # 预估还需要2个问题（symbol, timeframe）
+            explanation=f"我理解您想进行{concept_label}操作！为了帮您创建最合适的策略，"
+                        f"请先选择您偏好的判断角度。您可以选择多个角度组合使用，"
+                        f"也可以输入其他您熟悉的判断方式。",
             created_at=datetime.now().isoformat(),
         )
 
@@ -646,10 +896,11 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        # Call LLM to generate clarification
-        response = await self.llm_service.generate_json_response(
+        # Call LLM to generate clarification (使用澄清任务模型)
+        response = await self._generate_json(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.CLARIFICATION,
             temperature=0.5,
         )
 
@@ -795,9 +1046,10 @@ class InsightGeneratorService:
                 role = "user" if msg.type == "human" else msg.type
                 messages.append({"role": role, "content": str(msg.content)})
 
-        response = await self.llm_service.generate_json_response(
+        response = await self._generate_json(
             messages=messages,
             system=system_msg,
+            task=LLMTaskType.COMPLEX_REASONING,  # 风险告警需要更复杂的推理
             temperature=0.2,  # Lower temperature for risk alerts
         )
 
@@ -1166,17 +1418,32 @@ class InsightGeneratorService:
 # =============================================================================
 
 
-async def get_insight_service(include_reasoning: bool = True) -> InsightGeneratorService:
+async def get_insight_service(
+    include_reasoning: bool = True,
+    use_router: bool = True,
+    user_id: Optional[str] = None,
+) -> InsightGeneratorService:
     """
     Get insight generator service instance
 
     Args:
         include_reasoning: Whether to include reasoning chain service (A2UI 2.0)
+        use_router: Whether to use LLMRouter for task-based model selection
+        user_id: User ID for loading user-specific model preferences
 
     Returns:
         InsightGeneratorService instance
     """
     llm_service = get_llm_service()
+
+    # 初始化 LLM Router (多模型任务路由)
+    llm_router = None
+    if use_router:
+        try:
+            llm_router = get_llm_router()
+            logger.info("LLM Router initialized for task-based model selection")
+        except Exception as e:
+            logger.warning(f"Failed to initialize LLM Router, falling back to single model: {e}")
 
     # A2UI 2.0: Initialize reasoning service for transparent AI
     reasoning_service = None
@@ -1187,4 +1454,9 @@ async def get_insight_service(include_reasoning: bool = True) -> InsightGenerato
         except Exception as e:
             logger.warning(f"Failed to initialize reasoning service: {e}")
 
-    return InsightGeneratorService(llm_service, reasoning_service)
+    return InsightGeneratorService(
+        llm_service=llm_service,
+        reasoning_service=reasoning_service,
+        llm_router=llm_router,
+        user_id=user_id,
+    )

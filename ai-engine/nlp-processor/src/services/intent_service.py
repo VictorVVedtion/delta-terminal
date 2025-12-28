@@ -2,26 +2,60 @@
 
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..models.schemas import IntentRecognitionRequest, IntentRecognitionResponse, IntentType
+from ..models.strategy_perspectives import (
+    TradingConcept,
+    detect_trading_concept,
+    TRADING_CONCEPT_KEYWORDS,
+)
+from ..models.llm_routing import LLMTaskType
 from ..prompts.strategy_prompts import INTENT_RECOGNITION_PROMPT
 from .llm_service import LLMService, get_llm_service
+from .llm_router import LLMRouter, get_llm_router
 
 logger = logging.getLogger(__name__)
+
+
+# 技术指标关键词 - 如果用户提到这些，说明已经有具体策略逻辑
+TECHNICAL_INDICATOR_KEYWORDS: List[str] = [
+    # 技术指标
+    "RSI", "MACD", "KDJ", "BOLL", "布林", "EMA", "SMA", "MA",
+    "均线", "移动平均", "金叉", "死叉", "背离",
+    # 具体条件
+    "超卖", "超买", "低于", "高于", "突破", "跌破",
+    "触及", "接近", "大于", "小于",
+    # 具体数值
+    "30", "70", "80", "20",  # RSI 常用阈值
+]
 
 
 class IntentService:
     """意图识别服务"""
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(
+        self,
+        llm_service: LLMService,
+        llm_router: Optional[LLMRouter] = None,
+        user_id: Optional[str] = None,
+    ):
         """
         初始化意图服务
 
         Args:
-            llm_service: LLM 服务实例
+            llm_service: LLM 服务实例 (deprecated, use llm_router)
+            llm_router: LLM 路由服务实例 (推荐)
+            user_id: 用户 ID (用于加载用户特定配置)
         """
         self.llm_service = llm_service
+        self.llm_router = llm_router
+        self.user_id = user_id
+
+        if self.llm_router:
+            logger.info("IntentService: Using LLMRouter for task-based model selection")
+        else:
+            logger.info("IntentService: Using legacy LLMService (single model)")
 
     async def recognize_intent(
         self, request: IntentRecognitionRequest
@@ -198,6 +232,91 @@ class IntentService:
             entities["query_type"] = "history"
 
         return entities
+
+    # =========================================================================
+    # 策略角度推荐相关方法 (A2UI 分层澄清机制)
+    # =========================================================================
+
+    def detect_trading_concept_from_text(self, text: str) -> Optional[TradingConcept]:
+        """
+        从用户输入文本中检测交易概念
+
+        Args:
+            text: 用户输入文本
+
+        Returns:
+            检测到的交易概念，未检测到返回 None
+        """
+        return detect_trading_concept(text)
+
+    def has_specific_indicator(self, text: str) -> bool:
+        """
+        检查用户是否已经提到了具体的技术指标或交易条件
+
+        如果用户已经有具体的策略逻辑，就不需要推荐策略角度
+
+        Args:
+            text: 用户输入文本
+
+        Returns:
+            是否包含具体技术指标
+        """
+        text_upper = text.upper()
+
+        for keyword in TECHNICAL_INDICATOR_KEYWORDS:
+            if keyword.upper() in text_upper:
+                logger.debug(f"Found technical indicator keyword: {keyword}")
+                return True
+
+        return False
+
+    def needs_perspective_recommendation(
+        self,
+        text: str,
+        intent: IntentType,
+        entities: Dict[str, Any]
+    ) -> Tuple[bool, Optional[TradingConcept]]:
+        """
+        判断是否需要策略角度推荐
+
+        分层澄清机制的核心逻辑：
+        - Level 1: 如果用户表达了交易概念但没有具体指标 → 推荐策略角度
+        - Level 2: 如果用户已经有策略角度但缺少技术参数 → 询问技术参数
+
+        Args:
+            text: 用户输入文本
+            intent: 已识别的意图
+            entities: 已提取的实体
+
+        Returns:
+            (是否需要推荐, 检测到的交易概念)
+        """
+        # 只对创建策略的意图进行策略角度推荐
+        if intent != IntentType.CREATE_STRATEGY:
+            return False, None
+
+        # 检测交易概念
+        concept = self.detect_trading_concept_from_text(text)
+
+        if concept is None:
+            # 没有检测到交易概念，不需要推荐角度
+            logger.debug("No trading concept detected, skipping perspective recommendation")
+            return False, None
+
+        # 检查是否已经有具体的技术指标
+        if self.has_specific_indicator(text):
+            # 用户已经有具体策略逻辑，不需要推荐角度
+            logger.debug(f"User already has specific indicators, skipping perspective recommendation")
+            return False, concept
+
+        # 检查是否已经有入场条件实体
+        if entities.get("entry_conditions") or entities.get("indicators"):
+            logger.debug("User already has entry conditions, skipping perspective recommendation")
+            return False, concept
+
+        # 需要推荐策略角度
+        logger.info(f"Needs perspective recommendation for concept: {concept}")
+        return True, concept
 
 
 async def get_intent_service() -> IntentService:

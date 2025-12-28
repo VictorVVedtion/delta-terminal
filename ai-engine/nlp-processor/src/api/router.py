@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from .endpoints import chat, insight, parse
+from .endpoints import chat, insight, models, parse
 
 # 创建主路由
 api_router = APIRouter(prefix="/api/v1")
@@ -11,3 +11,4 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(chat.router)
 api_router.include_router(parse.router)
 api_router.include_router(insight.router)
+api_router.include_router(models.router)
