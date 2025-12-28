@@ -17,6 +17,7 @@ from ...models.schemas import (
     Conversation,
     IntentRecognitionRequest,
     IntentType,
+    Message,
     MessageRole,
 )
 from ...services.insight_service import InsightGeneratorService, get_insight_service
@@ -72,11 +73,30 @@ async def send_message(
 
         conversation = await conversation_store.get_conversation(conversation_id)
         if not conversation:
+            # 对话不存在 - 可能是 MemoryStore 丢失或 Redis 未配置
+            # 尝试从请求中恢复对话历史 (前端 fallback)
+            context = request.context or {}
+            chat_history_raw = context.get("chatHistory", [])
+
+            # 重建消息历史
+            restored_messages = []
+            if chat_history_raw and isinstance(chat_history_raw, list):
+                logger.info(
+                    f"Restoring conversation from frontend chatHistory: "
+                    f"{len(chat_history_raw)} messages"
+                )
+                for msg in chat_history_raw:
+                    if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                        role = MessageRole.USER if msg["role"] == "user" else MessageRole.ASSISTANT
+                        restored_messages.append(
+                            Message(role=role, content=msg["content"])
+                        )
+
             conversation = Conversation(
                 conversation_id=conversation_id,
                 user_id=request.user_id,
-                messages=[],
-                context=request.context or {},
+                messages=restored_messages,
+                context=context,
             )
 
         # 添加用户消息到历史

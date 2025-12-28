@@ -36,6 +36,12 @@ interface InsightApiResponse {
   error?: string
 }
 
+/** Chat history message for context preservation */
+interface ChatHistoryMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 interface UseA2UIInsightState {
   /** 当前 Insight */
   insight: InsightData | null
@@ -168,12 +174,17 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         ? { ...state.collectedParams, ...explicitCollectedParams }
         : state.collectedParams
 
+      // 提取 chatHistory 用于无 Redis 环境的上下文恢复
+      const chatHistory = context?.chatHistory as ChatHistoryMessage[] | undefined
+
       const requestBody = JSON.stringify({
         message,
         conversationId: state.conversationId,
         context: {
           ...context,
           collectedParams: mergedCollectedParams,
+          // 传递完整对话历史作为 fallback (用于无 Redis 的 Railway 部署)
+          chatHistory: chatHistory || [],
         },
       })
 

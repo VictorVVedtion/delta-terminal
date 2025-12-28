@@ -1,7 +1,32 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { BarChart2, Bot, Brain, Check, ChevronDown, Coins, Globe, Library, type LucideIcon, MessageSquare, Microscope, Network, Rocket, Scale, Search, Send, Settings2, Sparkles, Target, Terminal, User, Wind, X, Zap } from 'lucide-react'
+import {
+  BarChart2,
+  Bot,
+  Brain,
+  Check,
+  ChevronDown,
+  Coins,
+  Globe,
+  Library,
+  type LucideIcon,
+  MessageSquare,
+  Microscope,
+  Network,
+  Rocket,
+  Scale,
+  Search,
+  Send,
+  Settings2,
+  Sparkles,
+  Target,
+  Terminal,
+  User,
+  Wind,
+  X,
+  Zap,
+} from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import React from 'react'
 
@@ -10,17 +35,17 @@ import { AttributionCanvas } from '@/components/canvas/AttributionCanvas'
 import { BacktestCanvas } from '@/components/canvas/BacktestCanvas'
 import { CanvasPanel } from '@/components/canvas/CanvasPanel'
 import { ComparisonCanvas } from '@/components/canvas/ComparisonCanvas'
-import type { DeployConfig } from '@/components/canvas/DeployCanvas';
+import type { DeployConfig } from '@/components/canvas/DeployCanvas'
 import { DeployCanvas } from '@/components/canvas/DeployCanvas'
-import type { StrategyStatus } from '@/components/canvas/MonitorCanvas';
-import { MonitorCanvas  } from '@/components/canvas/MonitorCanvas'
+import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
+import { MonitorCanvas } from '@/components/canvas/MonitorCanvas'
 import { SensitivityCanvas } from '@/components/canvas/SensitivityCanvas'
 import { VersionHistoryCanvas } from '@/components/canvas/VersionHistoryCanvas'
 import { InsightMessage } from '@/components/insight'
 import { EmergencyActions } from '@/components/intervention/EmergencyActions'
 import { SpiritBeam } from '@/components/spirit/SpiritBeam'
 import { SpiritOrb } from '@/components/spirit/SpiritOrb'
-import { InsightCardLoading , useInsightLoadingState } from '@/components/thinking'
+import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MagneticButton } from '@/components/ui/magnetic-button'
@@ -33,12 +58,12 @@ import { useSpiritController } from '@/hooks/useSpiritController'
 import type { StrategyTemplate } from '@/lib/templates/strategies'
 import { cn } from '@/lib/utils'
 import { useMarketStore } from '@/store'
-import { type Agent,useAgentStore } from '@/store/agent'
+import { type Agent, useAgentStore } from '@/store/agent'
 import { useAIStore } from '@/store/ai'
 import { useAnalysisStore } from '@/store/analysis'
 import { useModeStore } from '@/store/mode'
 import { usePaperTradingStore } from '@/store/paperTrading'
-import type { SimplePreset } from '@/types/ai';
+import type { SimplePreset } from '@/types/ai'
 import { SIMPLE_PRESETS } from '@/types/ai'
 import type { BacktestConfig } from '@/types/backtest'
 import type {
@@ -51,17 +76,32 @@ import type {
   InsightCardStatus,
   InsightData,
   InsightParam,
-  SensitivityInsightData} from '@/types/insight';
-import {
-  isClarificationInsight
+  SensitivityInsightData,
 } from '@/types/insight'
+import { isClarificationInsight } from '@/types/insight'
 import type { EmergencyAction } from '@/types/intervention'
 import type { ResearchReport } from '@/types/research'
 
 import { TemplateSelector } from './TemplateSelector'
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  Brain, Sparkles, Zap, Rocket, Wind, Target, Coins, Library, Globe, Network, Bot, Terminal, Search, BarChart2, MessageSquare, Scale, Microscope
+  Brain,
+  Sparkles,
+  Zap,
+  Rocket,
+  Wind,
+  Target,
+  Coins,
+  Library,
+  Globe,
+  Network,
+  Bot,
+  Terminal,
+  Search,
+  BarChart2,
+  MessageSquare,
+  Scale,
+  Microscope,
 }
 
 // =============================================================================
@@ -156,10 +196,7 @@ export function ChatInterface({
   const agentId = searchParams.get('agent')
   const { addAgent, agents, updatePnLDashboard } = useAgentStore()
 
-  const activeAgent = React.useMemo(() =>
-    agents.find(a => a.id === agentId),
-    [agents, agentId]
-  )
+  const activeAgent = React.useMemo(() => agents.find((a) => a.id === agentId), [agents, agentId])
 
   // ==========================================================================
   // Mode & Persona State
@@ -275,8 +312,11 @@ export function ChatInterface({
   const [canvasLoading, setCanvasLoading] = React.useState(false)
   // Canvas backtest state - 用于 CanvasPanel 中的回测功能
   const [canvasBacktesting, setCanvasBacktesting] = React.useState(false)
-  const [canvasBacktestPassed, setCanvasBacktestPassed] = React.useState<boolean | undefined>(undefined)
-  const [canvasBacktestResult, setCanvasBacktestResult] = React.useState<BacktestInsightData | null>(null)
+  const [canvasBacktestPassed, setCanvasBacktestPassed] = React.useState<boolean | undefined>(
+    undefined
+  )
+  const [canvasBacktestResult, setCanvasBacktestResult] =
+    React.useState<BacktestInsightData | null>(null)
 
   // ==========================================================================
   // Story 1.3: Deployment State
@@ -362,12 +402,16 @@ export function ChatInterface({
   })
 
   // Story 1.3: Spirit Neural Link (Reactive Orb)
-  const lastMessageWithInsight = messages.slice().reverse().find(m => m.insight)
-  const { state: orbState, colors: orbColors, turbulence: orbTurbulence, intensity: orbIntensity } = useSpiritController(
-    lastMessageWithInsight?.insight,
-    isLoading || isThinking,
-    activeAgent
-  )
+  const lastMessageWithInsight = messages
+    .slice()
+    .reverse()
+    .find((m) => m.insight)
+  const {
+    state: orbState,
+    colors: orbColors,
+    turbulence: orbTurbulence,
+    intensity: orbIntensity,
+  } = useSpiritController(lastMessageWithInsight?.insight, isLoading || isThinking, activeAgent)
 
   // ==========================================================================
   // Story 2.3: useBacktest Hook
@@ -444,18 +488,19 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     setMessages((prev) => [...prev, errorMessage])
   }, [])
 
-  const handleMonitorStatusChange = React.useCallback((status: StrategyStatus) => {
-    const currentState = monitorStateRef.current
-    const strategyName = currentState.strategy?.name || '策略'
+  const handleMonitorStatusChange = React.useCallback(
+    (status: StrategyStatus) => {
+      const currentState = monitorStateRef.current
+      const strategyName = currentState.strategy?.name || '策略'
 
-    // Add status change message to chat
-    let statusMessage: Message | null = null
+      // Add status change message to chat
+      let statusMessage: Message | null = null
 
-    if (status === 'paused') {
-      statusMessage = {
-        id: `monitor_paused_${Date.now()}`,
-        role: 'assistant',
-        content: `⏸️ 策略 "${strategyName}" 已暂停运行。
+      if (status === 'paused') {
+        statusMessage = {
+          id: `monitor_paused_${Date.now()}`,
+          role: 'assistant',
+          content: `⏸️ 策略 "${strategyName}" 已暂停运行。
 
 当前状态：
 - 持仓已保留，不会自动平仓
@@ -463,24 +508,24 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 - 可随时恢复运行
 
 需要恢复运行吗？`,
-        timestamp: Date.now(),
-      }
-    } else if (status === 'running') {
-      statusMessage = {
-        id: `monitor_resumed_${Date.now()}`,
-        role: 'assistant',
-        content: `▶️ 策略 "${strategyName}" 已恢复运行。
+          timestamp: Date.now(),
+        }
+      } else if (status === 'running') {
+        statusMessage = {
+          id: `monitor_resumed_${Date.now()}`,
+          role: 'assistant',
+          content: `▶️ 策略 "${strategyName}" 已恢复运行。
 
 策略将继续按照设定的参数执行交易。`,
-        timestamp: Date.now(),
-      }
-    } else if (status === 'stopped') {
-      const pnl = currentState.pnl
-      const metrics = currentState.metrics
-      statusMessage = {
-        id: `monitor_stopped_${Date.now()}`,
-        role: 'assistant',
-        content: `🛑 策略 "${strategyName}" 已停止。
+          timestamp: Date.now(),
+        }
+      } else if (status === 'stopped') {
+        const pnl = currentState.pnl
+        const metrics = currentState.metrics
+        statusMessage = {
+          id: `monitor_stopped_${Date.now()}`,
+          role: 'assistant',
+          content: `🛑 策略 "${strategyName}" 已停止。
 
 最终统计：
 - 总盈亏: ${pnl ? (pnl.total >= 0 ? '+' : '') + pnl.total.toFixed(2) : '0.00'} USDT
@@ -488,24 +533,26 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 - 总交易: ${metrics?.totalTrades ?? 0} 次
 
 策略已完全停止，需要重新部署才能再次运行。`,
-        timestamp: Date.now(),
+          timestamp: Date.now(),
+        }
+        // Close monitor canvas when stopped
+        setMonitorOpen(false)
       }
-      // Close monitor canvas when stopped
-      setMonitorOpen(false)
-    }
 
-    if (statusMessage) {
-      setMessages((prev) => [...prev, statusMessage])
-    }
+      if (statusMessage) {
+        setMessages((prev) => [...prev, statusMessage])
+      }
 
-    // Notify parent
-    onStrategyStatusChange?.(monitorAgentId, status)
-  }, [monitorAgentId, onStrategyStatusChange])
+      // Notify parent
+      onStrategyStatusChange?.(monitorAgentId, status)
+    },
+    [monitorAgentId, onStrategyStatusChange]
+  )
 
   const {
     state: monitorState,
     isRunning: _isMonitorRunning, // Reserved for future use
-    isPaused: _isMonitorPaused,   // Reserved for future use
+    isPaused: _isMonitorPaused, // Reserved for future use
     pauseAgent,
     resumeAgent,
     stopAgent,
@@ -538,11 +585,14 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   // ==========================================================================
 
   // A2UI: Handle insight expand to Canvas
-  const handleInsightExpand = React.useCallback((insight: InsightData) => {
-    setCanvasInsight(insight)
-    setCanvasOpen(true)
-    onInsightExpand?.(insight)
-  }, [onInsightExpand])
+  const handleInsightExpand = React.useCallback(
+    (insight: InsightData) => {
+      setCanvasInsight(insight)
+      setCanvasOpen(true)
+      onInsightExpand?.(insight)
+    },
+    [onInsightExpand]
+  )
 
   // A2UI: Handle Canvas close
   const handleCanvasClose = React.useCallback(() => {
@@ -556,376 +606,407 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   }, [])
 
   // A2UI: Handle Canvas backtest - 在 CanvasPanel 中运行回测
-  const handleCanvasBacktest = React.useCallback(async (insight: InsightData, params: InsightParam[]) => {
-    setCanvasBacktesting(true)
-    setCanvasBacktestResult(null)
+  const handleCanvasBacktest = React.useCallback(
+    async (insight: InsightData, params: InsightParam[]) => {
+      setCanvasBacktesting(true)
+      setCanvasBacktestResult(null)
 
-    try {
-      // 生成回测任务 ID
-      const jobId = `bt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      try {
+        // 生成回测任务 ID
+        const jobId = `bt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
-      // 提取目标信息
-      const symbol = insight.target?.symbol || 'BTC/USDT'
-      const timeframe = params.find(p => p.key === 'timeframe')?.value as string || '1h'
+        // 提取目标信息
+        const symbol = insight.target?.symbol || 'BTC/USDT'
+        const timeframe = (params.find((p) => p.key === 'timeframe')?.value as string) || '1h'
 
-      // 从参数提取回测天数，或根据 timeframe 设置合理默认值
-      const backtestDaysParam = params.find(p => p.key === 'backtestDays')?.value as number
-      let backtestDays = backtestDaysParam || 90 // 默认 90 天
+        // 从参数提取回测天数，或根据 timeframe 设置合理默认值
+        const backtestDaysParam = params.find((p) => p.key === 'backtestDays')?.value as number
+        let backtestDays = backtestDaysParam || 90 // 默认 90 天
 
-      // 如果没有明确指定，根据 timeframe 调整
-      if (!backtestDaysParam) {
-        switch (timeframe) {
-          case '1m':
-          case '5m':
-            backtestDays = 7 // 分钟级别用 7 天
-            break
-          case '15m':
-          case '30m':
-            backtestDays = 30 // 15/30 分钟用 30 天
-            break
-          case '1h':
-          case '4h':
-            backtestDays = 90 // 小时级别用 90 天
-            break
-          case '1d':
-            backtestDays = 365 // 日线用 1 年
-            break
-          default:
-            backtestDays = 90
+        // 如果没有明确指定，根据 timeframe 调整
+        if (!backtestDaysParam) {
+          switch (timeframe) {
+            case '1m':
+            case '5m':
+              backtestDays = 7 // 分钟级别用 7 天
+              break
+            case '15m':
+            case '30m':
+              backtestDays = 30 // 15/30 分钟用 30 天
+              break
+            case '1h':
+            case '4h':
+              backtestDays = 90 // 小时级别用 90 天
+              break
+            case '1d':
+              backtestDays = 365 // 日线用 1 年
+              break
+            default:
+              backtestDays = 90
+          }
         }
-      }
 
-      // 提取初始资金
-      const initialCapital = (params.find(p => p.key === 'investment')?.value as number) ||
-        (params.find(p => p.key === 'initialCapital')?.value as number) ||
-        10000
+        // 提取初始资金
+        const initialCapital =
+          (params.find((p) => p.key === 'investment')?.value as number) ||
+          (params.find((p) => p.key === 'initialCapital')?.value as number) ||
+          10000
 
-      // 调用回测 API
-      const response = await fetch('/api/backtest/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobId,
-          config: {
-            strategyName: insight.target?.name || '策略回测',
-            strategyDescription: insight.explanation || 'AI 生成的交易策略',
-            symbol,
-            timeframe,
-            startDate: Date.now() - backtestDays * 24 * 60 * 60 * 1000,
-            endDate: Date.now(),
-            initialCapital,
-            parameters: params.map(p => ({
-              name: p.key,
-              value: p.value,
-              type: p.type,
-            })),
-          },
-        }),
-      })
+        // 调用回测 API
+        const response = await fetch('/api/backtest/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId,
+            config: {
+              strategyName: insight.target?.name || '策略回测',
+              strategyDescription: insight.explanation || 'AI 生成的交易策略',
+              symbol,
+              timeframe,
+              startDate: Date.now() - backtestDays * 24 * 60 * 60 * 1000,
+              endDate: Date.now(),
+              initialCapital,
+              parameters: params.map((p) => ({
+                name: p.key,
+                value: p.value,
+                type: p.type,
+              })),
+            },
+          }),
+        })
 
-      if (!response.ok) {
-        throw new Error('回测请求失败')
-      }
+        if (!response.ok) {
+          throw new Error('回测请求失败')
+        }
 
-      const result = await response.json() as BacktestInsightData
+        const result = (await response.json()) as BacktestInsightData
 
-      // 保存回测结果
-      setCanvasBacktestResult(result)
+        // 保存回测结果
+        setCanvasBacktestResult(result)
 
-      // 判断回测是否通过 (基于夏普比率和总收益)
-      const passed = result.stats.sharpeRatio >= 0.5 && result.stats.totalReturn > 0
-      setCanvasBacktestPassed(passed)
+        // 判断回测是否通过 (基于夏普比率和总收益)
+        const passed = result.stats.sharpeRatio >= 0.5 && result.stats.totalReturn > 0
+        setCanvasBacktestPassed(passed)
 
-      if (passed) {
-        notify('success', '回测通过', {
-          description: `收益率 ${result.stats.totalReturn.toFixed(1)}%，夏普比率 ${result.stats.sharpeRatio.toFixed(2)}`,
+        if (passed) {
+          notify('success', '回测通过', {
+            description: `收益率 ${result.stats.totalReturn.toFixed(1)}%，夏普比率 ${result.stats.sharpeRatio.toFixed(2)}`,
+            source: 'ChatInterface',
+          })
+        } else {
+          notify('warning', '回测未通过', {
+            description: `收益率 ${result.stats.totalReturn.toFixed(1)}%，建议调整参数后重试`,
+            source: 'ChatInterface',
+          })
+        }
+      } catch (error) {
+        setCanvasBacktestPassed(false)
+        notify('error', '回测失败', {
+          description: error instanceof Error ? error.message : '请检查网络连接',
           source: 'ChatInterface',
         })
-      } else {
-        notify('warning', '回测未通过', {
-          description: `收益率 ${result.stats.totalReturn.toFixed(1)}%，建议调整参数后重试`,
-          source: 'ChatInterface',
-        })
+      } finally {
+        setCanvasBacktesting(false)
       }
-    } catch (error) {
-      setCanvasBacktestPassed(false)
-      notify('error', '回测失败', {
-        description: error instanceof Error ? error.message : '请检查网络连接',
-        source: 'ChatInterface',
-      })
-    } finally {
-      setCanvasBacktesting(false)
-    }
-  }, [])
+    },
+    []
+  )
 
   // A2UI: Handle insight approval (from Canvas or InsightCard)
   // 连接完整流程: InsightCard 批准 → 创建 Agent
-  const handleInsightApprove = React.useCallback((insight: InsightData, params: InsightParam[]) => {
-    // Show loading state if Canvas is open
-    if (canvasOpen) {
-      setCanvasLoading(true)
-    }
+  const handleInsightApprove = React.useCallback(
+    (insight: InsightData, params: InsightParam[]) => {
+      // Show loading state if Canvas is open
+      if (canvasOpen) {
+        setCanvasLoading(true)
+      }
 
-    // 立即执行批准逻辑（无模拟延迟）
-    // Update the message status
-    setMessages(prev => prev.map(msg =>
-      msg.insight?.id === insight.id
-        ? { ...msg, insightStatus: 'approved' as InsightCardStatus }
-        : msg
-    ))
+      // 立即执行批准逻辑（无模拟延迟）
+      // Update the message status
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.insight?.id === insight.id
+            ? { ...msg, insightStatus: 'approved' as InsightCardStatus }
+            : msg
+        )
+      )
 
-    // =========================================================================
-    // 核心: 根据 InsightType 执行不同的批准逻辑
-    // =========================================================================
-    const now = Date.now()
-    let confirmContent = ''
+      // =========================================================================
+      // 核心: 根据 InsightType 执行不同的批准逻辑
+      // =========================================================================
+      const now = Date.now()
+      let confirmContent = ''
 
-    switch (insight.type) {
-      case 'strategy_create':
-      case 'strategy_modify': {
-        // 创建/修改策略 → 添加到 AgentStore
-        const newAgent: Agent = {
-          id: `agent_${now}`,
-          name: insight.target?.name ?? '新策略',
-          symbol: insight.target?.symbol ?? 'BTC/USDT',
-          status: 'shadow', // 新创建的策略默认为 shadow 模式
-          pnl: 0,
-          pnlPercent: 0,
-          trades: 0,
-          winRate: 0,
-          createdAt: now,
-          updatedAt: now,
-          backtestId: insight.id,
+      switch (insight.type) {
+        case 'strategy_create':
+        case 'strategy_modify': {
+          // 创建/修改策略 → 添加到 AgentStore
+          const newAgent: Agent = {
+            id: `agent_${now}`,
+            name: insight.target?.name ?? '新策略',
+            symbol: insight.target?.symbol ?? 'BTC/USDT',
+            status: 'shadow', // 新创建的策略默认为 shadow 模式
+            pnl: 0,
+            pnlPercent: 0,
+            trades: 0,
+            winRate: 0,
+            createdAt: now,
+            updatedAt: now,
+            backtestId: insight.id,
+          }
+          addAgent(newAgent)
+
+          // 重新计算 PnL 仪表盘
+          const allAgents = [...agents, newAgent]
+          const totalPnL = allAgents.reduce((sum, a) => sum + a.pnl, 0)
+          const totalCapital = getTotalInitialCapital() || 10000
+          const totalPnLPercent = totalCapital > 0 ? (totalPnL / totalCapital) * 100 : 0
+
+          updatePnLDashboard({
+            totalPnL,
+            totalPnLPercent,
+            todayPnL: allAgents
+              .filter((a) => a.updatedAt > now - 24 * 60 * 60 * 1000)
+              .reduce((sum, a) => sum + a.pnl, 0),
+            todayPnLPercent: 0,
+            weekPnL: allAgents
+              .filter((a) => a.updatedAt > now - 7 * 24 * 60 * 60 * 1000)
+              .reduce((sum, a) => sum + a.pnl, 0),
+            monthPnL: totalPnL,
+          })
+
+          confirmContent = `✅ 策略已批准并创建！您可以在左侧边栏查看新创建的 Agent。\n\n使用的参数：\n${params.map((p) => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
+          break
         }
-        addAgent(newAgent)
 
-        // 重新计算 PnL 仪表盘
-        const allAgents = [...agents, newAgent]
-        const totalPnL = allAgents.reduce((sum, a) => sum + a.pnl, 0)
-        const totalCapital = getTotalInitialCapital() || 10000
-        const totalPnLPercent = totalCapital > 0 ? (totalPnL / totalCapital) * 100 : 0
+        case 'trade_signal': {
+          // 交易信号 → 记录确认（实际下单需要集成交易引擎）
+          const direction = (insight as unknown as { direction?: string }).direction ?? 'unknown'
+          const symbol = insight.target?.symbol ?? 'BTC/USDT'
+          confirmContent = `✅ 交易信号已确认！\n\n• 交易对: ${symbol}\n• 方向: ${direction === 'long' ? '做多' : direction === 'short' ? '做空' : '平仓'}\n\n⚠️ 请在交易面板执行实际下单操作。`
+          notify('success', '交易信号已确认', { description: `${symbol} ${direction}` })
+          break
+        }
 
-        updatePnLDashboard({
-          totalPnL,
-          totalPnLPercent,
-          todayPnL: allAgents.filter(a => a.updatedAt > now - 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
-          todayPnLPercent: 0,
-          weekPnL: allAgents.filter(a => a.updatedAt > now - 7 * 24 * 60 * 60 * 1000).reduce((sum, a) => sum + a.pnl, 0),
-          monthPnL: totalPnL,
-        })
+        case 'risk_alert': {
+          // 风险警告 → 确认已知悉
+          const alertType = (insight as unknown as { alertType?: string }).alertType ?? '风险提醒'
+          confirmContent = `✅ 风险警告已确认！\n\n• 类型: ${alertType}\n• 操作: 已记录确认\n\n请根据建议采取相应的风险缓解措施。`
+          notify('warning', '风险警告已确认', { description: alertType })
+          break
+        }
 
-        confirmContent = `✅ 策略已批准并创建！您可以在左侧边栏查看新创建的 Agent。\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
-        break
+        case 'comparison': {
+          // 策略对比 → 记录选择
+          confirmContent = `✅ 策略对比结果已确认！\n\n对比分析已保存，您可以根据结果调整策略配置。`
+          break
+        }
+
+        case 'batch_adjust': {
+          // 批量调整 → 应用到多个策略
+          const affectedCount = params.length
+          confirmContent = `✅ 批量调整已应用！\n\n• 影响参数: ${affectedCount} 个\n• 调整内容:\n${params.map((p) => `  • ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
+          notify('success', '批量调整已应用', { description: `${affectedCount} 个参数已更新` })
+          break
+        }
+
+        default:
+          // 其他类型的通用确认
+          confirmContent = `✅ 操作已确认！\n\n使用的参数：\n${params.map((p) => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
       }
 
-      case 'trade_signal': {
-        // 交易信号 → 记录确认（实际下单需要集成交易引擎）
-        const direction = (insight as unknown as { direction?: string }).direction ?? 'unknown'
-        const symbol = insight.target?.symbol ?? 'BTC/USDT'
-        confirmContent = `✅ 交易信号已确认！\n\n• 交易对: ${symbol}\n• 方向: ${direction === 'long' ? '做多' : direction === 'short' ? '做空' : '平仓'}\n\n⚠️ 请在交易面板执行实际下单操作。`
-        notify('success', '交易信号已确认', { description: `${symbol} ${direction}` })
-        break
+      // Close Canvas and reset loading
+      setCanvasLoading(false)
+      setCanvasOpen(false)
+      setCanvasInsight(null)
+
+      // Add confirmation message
+      const confirmMessage: Message = {
+        id: `confirm_${now}`,
+        role: 'assistant',
+        content: confirmContent,
+        timestamp: now,
       }
+      setMessages((prev) => [...prev, confirmMessage])
 
-      case 'risk_alert': {
-        // 风险警告 → 确认已知悉
-        const alertType = (insight as unknown as { alertType?: string }).alertType ?? '风险提醒'
-        confirmContent = `✅ 风险警告已确认！\n\n• 类型: ${alertType}\n• 操作: 已记录确认\n\n请根据建议采取相应的风险缓解措施。`
-        notify('warning', '风险警告已确认', { description: alertType })
-        break
-      }
-
-      case 'comparison': {
-        // 策略对比 → 记录选择
-        confirmContent = `✅ 策略对比结果已确认！\n\n对比分析已保存，您可以根据结果调整策略配置。`
-        break
-      }
-
-      case 'batch_adjust': {
-        // 批量调整 → 应用到多个策略
-        const affectedCount = params.length
-        confirmContent = `✅ 批量调整已应用！\n\n• 影响参数: ${affectedCount} 个\n• 调整内容:\n${params.map(p => `  • ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
-        notify('success', '批量调整已应用', { description: `${affectedCount} 个参数已更新` })
-        break
-      }
-
-      default:
-        // 其他类型的通用确认
-        confirmContent = `✅ 操作已确认！\n\n使用的参数：\n${params.map(p => `• ${p.label}: ${String(p.value)}${p.config.unit ?? ''}`).join('\n')}`
-    }
-
-    // Close Canvas and reset loading
-    setCanvasLoading(false)
-    setCanvasOpen(false)
-    setCanvasInsight(null)
-
-    // Add confirmation message
-    const confirmMessage: Message = {
-      id: `confirm_${now}`,
-      role: 'assistant',
-      content: confirmContent,
-      timestamp: now,
-    }
-    setMessages(prev => [...prev, confirmMessage])
-
-    // Notify parent
-    onInsightApprove?.(insight, params)
-  }, [canvasOpen, onInsightApprove, addAgent, agents, updatePnLDashboard, getTotalInitialCapital])
+      // Notify parent
+      onInsightApprove?.(insight, params)
+    },
+    [canvasOpen, onInsightApprove, addAgent, agents, updatePnLDashboard, getTotalInitialCapital]
+  )
 
   // A2UI: Handle insight rejection (from Canvas or InsightCard)
-  const handleInsightReject = React.useCallback((insight: InsightData) => {
-    // Update the message status
-    setMessages(prev => prev.map(msg =>
-      msg.insight?.id === insight.id
-        ? { ...msg, insightStatus: 'rejected' as InsightCardStatus }
-        : msg
-    ))
+  const handleInsightReject = React.useCallback(
+    (insight: InsightData) => {
+      // Update the message status
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.insight?.id === insight.id
+            ? { ...msg, insightStatus: 'rejected' as InsightCardStatus }
+            : msg
+        )
+      )
 
-    // Close Canvas if open
-    setCanvasOpen(false)
-    setCanvasInsight(null)
+      // Close Canvas if open
+      setCanvasOpen(false)
+      setCanvasInsight(null)
 
-    // Add rejection message
-    const rejectMessage: Message = {
-      id: `reject_${Date.now()}`,
-      role: 'assistant',
-      content: '已拒绝此策略建议。您可以告诉我您想要调整的方向，我会重新为您生成策略提案。',
-      timestamp: Date.now(),
-    }
-    setMessages(prev => [...prev, rejectMessage])
+      // Add rejection message
+      const rejectMessage: Message = {
+        id: `reject_${Date.now()}`,
+        role: 'assistant',
+        content: '已拒绝此策略建议。您可以告诉我您想要调整的方向，我会重新为您生成策略提案。',
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, rejectMessage])
 
-    // Notify parent
-    onInsightReject?.(insight)
-  }, [onInsightReject])
+      // Notify parent
+      onInsightReject?.(insight)
+    },
+    [onInsightReject]
+  )
 
   // ==========================================================================
   // EPIC-010 S10.2: Clarification Answer Handler
   // ==========================================================================
-  const handleClarificationAnswer = React.useCallback(async (
-    insight: ClarificationInsight,
-    answer: ClarificationAnswer
-  ) => {
-    // Update message status to answered
-    setMessages(prev => prev.map(msg =>
-      msg.insight?.id === insight.id
-        ? { ...msg, insightStatus: 'approved' as InsightCardStatus }
-        : msg
-    ))
+  const handleClarificationAnswer = React.useCallback(
+    async (insight: ClarificationInsight, answer: ClarificationAnswer) => {
+      // Update message status to answered
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.insight?.id === insight.id
+            ? { ...msg, insightStatus: 'approved' as InsightCardStatus }
+            : msg
+        )
+      )
 
-    // Build answer text for display
-    // selectedOptions is string[] of option IDs, we need to find their labels
-    const answerText = answer.customText
-      ? answer.customText
-      : answer.selectedOptions
-        .map(optId => insight.options.find(opt => opt.id === optId)?.label || optId)
-        .join('、')
+      // Build answer text for display
+      // selectedOptions is string[] of option IDs, we need to find their labels
+      const answerText = answer.customText
+        ? answer.customText
+        : answer.selectedOptions
+            .map((optId) => insight.options.find((opt) => opt.id === optId)?.label || optId)
+            .join('、')
 
-    // Add user's answer as a message
-    const answerMessage: Message = {
-      id: `clarification_answer_${Date.now()}`,
-      role: 'user',
-      content: answerText,
-      timestamp: Date.now(),
-    }
-    setMessages(prev => [...prev, answerMessage])
-
-    // Send answer to backend (NLP Processor) and continue the conversation
-    try {
-      setIsLoading(true)
-
-      // =======================================================================
-      // 阶段 1: 通过 NLP Processor 继续多步骤引导
-      // =======================================================================
-      console.log('[ChatInterface] Clarification: Sending answer to NLP Processor...')
-
-      const nlpResult = await sendToNLP(answerText, {
-        isFollowUp: true,
-        previousQuestion: insight.question,
-        category: insight.category,
-        collectedParams: collectedParams,
-        marketData: getMarketContext(),
-      })
-
-      // 如果 NLP 返回另一个 ClarificationInsight，继续引导
-      if (nlpResult && isClarificationInsight(nlpResult)) {
-        console.log('[ChatInterface] NLP returned another ClarificationInsight:', nlpResult)
-
-        const nextClarificationMessage: Message = {
-          id: `clarification_${Date.now()}`,
-          role: 'assistant',
-          content: nlpResult.question,
-          timestamp: Date.now(),
-          insight: nlpResult,
-          insightStatus: 'pending',
-        }
-        setMessages(prev => [...prev, nextClarificationMessage])
-        setIsLoading(false)
-        return // 等待下一个回答
-      }
-
-      // 如果 NLP 返回其他类型的 InsightData，直接使用
-      if (nlpResult) {
-        console.log('[ChatInterface] NLP returned final InsightData:', nlpResult)
-
-        const nlpInsightMessage: Message = {
-          id: `nlp_insight_${Date.now()}`,
-          role: 'assistant',
-          content: nlpResult.explanation || nlpMessage,
-          timestamp: Date.now(),
-          insight: nlpResult,
-          insightStatus: 'pending',
-        }
-        setMessages(prev => [...prev, nlpInsightMessage])
-        setIsLoading(false)
-        return
-      }
-
-      // =======================================================================
-      // NLP Processor 未返回结构化数据 - 显示纯文本回复
-      // A2UI 优化: 所有 InsightData 必须来自 NLP Processor，不再双重调用 LLM
-      // =======================================================================
-      console.log('[ChatInterface] Clarification: NLP did not return InsightData after answer')
-
-      const fallbackMessage: Message = {
-        id: `text_${Date.now()}`,
-        role: 'assistant',
-        content: nlpMessage || '感谢你的回答！我正在处理你的需求，但目前无法生成完整的策略建议。请尝试提供更多细节。',
+      // Add user's answer as a message
+      const answerMessage: Message = {
+        id: `clarification_answer_${Date.now()}`,
+        role: 'user',
+        content: answerText,
         timestamp: Date.now(),
       }
-      setMessages(prev => [...prev, fallbackMessage])
-    } catch (error) {
-      console.error('[ChatInterface] Failed to send clarification answer:', error)
-      notify('error', '发送回答失败', {
-        description: '请稍后重试',
-        source: 'ChatInterface',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [sendToNLP, collectedParams, nlpMessage, getMarketContext])
+      setMessages((prev) => [...prev, answerMessage])
+
+      // Send answer to backend (NLP Processor) and continue the conversation
+      try {
+        setIsLoading(true)
+
+        // =======================================================================
+        // 阶段 1: 通过 NLP Processor 继续多步骤引导
+        // =======================================================================
+        console.log('[ChatInterface] Clarification: Sending answer to NLP Processor...')
+
+        // 构建对话历史 (用于无 Redis 环境的上下文恢复)
+        const chatHistory = messages
+          .filter((m) => m.role === 'user' || m.role === 'assistant')
+          .map((m) => ({ role: m.role, content: m.content }))
+
+        const nlpResult = await sendToNLP(answerText, {
+          isFollowUp: true,
+          previousQuestion: insight.question,
+          category: insight.category,
+          collectedParams: collectedParams,
+          marketData: getMarketContext(),
+          chatHistory,
+        })
+
+        // 如果 NLP 返回另一个 ClarificationInsight，继续引导
+        if (nlpResult && isClarificationInsight(nlpResult)) {
+          console.log('[ChatInterface] NLP returned another ClarificationInsight:', nlpResult)
+
+          const nextClarificationMessage: Message = {
+            id: `clarification_${Date.now()}`,
+            role: 'assistant',
+            content: nlpResult.question,
+            timestamp: Date.now(),
+            insight: nlpResult,
+            insightStatus: 'pending',
+          }
+          setMessages((prev) => [...prev, nextClarificationMessage])
+          setIsLoading(false)
+          return // 等待下一个回答
+        }
+
+        // 如果 NLP 返回其他类型的 InsightData，直接使用
+        if (nlpResult) {
+          console.log('[ChatInterface] NLP returned final InsightData:', nlpResult)
+
+          const nlpInsightMessage: Message = {
+            id: `nlp_insight_${Date.now()}`,
+            role: 'assistant',
+            content: nlpResult.explanation || nlpMessage,
+            timestamp: Date.now(),
+            insight: nlpResult,
+            insightStatus: 'pending',
+          }
+          setMessages((prev) => [...prev, nlpInsightMessage])
+          setIsLoading(false)
+          return
+        }
+
+        // =======================================================================
+        // NLP Processor 未返回结构化数据 - 显示纯文本回复
+        // A2UI 优化: 所有 InsightData 必须来自 NLP Processor，不再双重调用 LLM
+        // =======================================================================
+        console.log('[ChatInterface] Clarification: NLP did not return InsightData after answer')
+
+        const fallbackMessage: Message = {
+          id: `text_${Date.now()}`,
+          role: 'assistant',
+          content:
+            nlpMessage ||
+            '感谢你的回答！我正在处理你的需求，但目前无法生成完整的策略建议。请尝试提供更多细节。',
+          timestamp: Date.now(),
+        }
+        setMessages((prev) => [...prev, fallbackMessage])
+      } catch (error) {
+        console.error('[ChatInterface] Failed to send clarification answer:', error)
+        notify('error', '发送回答失败', {
+          description: '请稍后重试',
+          source: 'ChatInterface',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [sendToNLP, collectedParams, nlpMessage, getMarketContext]
+  )
 
   // ==========================================================================
   // EPIC-010 S10.3: Template Selection Handler
   // ==========================================================================
-  const handleTemplateSelect = React.useCallback((template: StrategyTemplate, insight: InsightData) => {
-    // Add template info message
-    const templateMessage: Message = {
-      id: `template_${Date.now()}`,
-      role: 'assistant',
-      content: `📚 已加载「${template.name}」模板\n\n${template.description}\n\n适用场景：${template.marketConditions.join('、')}\n\n你可以在侧边面板中调整参数，或直接批准创建策略。`,
-      timestamp: Date.now(),
-      insight,
-      insightStatus: 'pending',
-    }
-    setMessages(prev => [...prev, templateMessage])
+  const handleTemplateSelect = React.useCallback(
+    (template: StrategyTemplate, insight: InsightData) => {
+      // Add template info message
+      const templateMessage: Message = {
+        id: `template_${Date.now()}`,
+        role: 'assistant',
+        content: `📚 已加载「${template.name}」模板\n\n${template.description}\n\n适用场景：${template.marketConditions.join('、')}\n\n你可以在侧边面板中调整参数，或直接批准创建策略。`,
+        timestamp: Date.now(),
+        insight,
+        insightStatus: 'pending',
+      }
+      setMessages((prev) => [...prev, templateMessage])
 
-    // Auto-expand Canvas for parameter adjustment
-    setCanvasInsight(insight)
-    setCanvasOpen(true)
+      // Auto-expand Canvas for parameter adjustment
+      setCanvasInsight(insight)
+      setCanvasOpen(true)
 
-    // Close template selector
-    setTemplateSelectorOpen(false)
-  }, [])
+      // Close template selector
+      setTemplateSelectorOpen(false)
+    },
+    []
+  )
 
   // ==========================================================================
   // Story 1.3: Deployment Handlers
@@ -934,48 +1015,54 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   /**
    * Trigger deployment or backtest canvas when insight contains actions
    */
-  const handleInsightAction = React.useCallback((insight: InsightData, action: InsightActionType) => {
-    if (action === 'deploy_paper' || action === 'deploy_live') {
-      const strategyId = insight.target?.strategy_id || insight.id
-      setDeployStrategyId(strategyId)
-      setDeployMode(action === 'deploy_paper' ? 'paper' : 'live')
-      setDeployOpen(true)
-      onDeployRequest?.(action === 'deploy_paper' ? 'paper' : 'live', strategyId)
-    } else if (action === 'run_backtest') {
-      // Story 2.3: Handle backtest action
-      const strategyId = insight.target?.strategy_id || insight.id
-      setBacktestStrategyId(strategyId)
-      setBacktestInsight(insight)
-      setBacktestOpen(true)
-      onBacktestRequest?.(strategyId)
-    } else if (action === 'stop_agent') {
-      // Story 3.3: Handle monitor/stop_agent action
-      const agentId = insight.target?.agent_id || insight.target?.strategy_id || insight.id
-      setMonitorAgentId(agentId)
-      setMonitorOpen(true)
-      onMonitorRequest?.(agentId)
-    } else if (action === 'modify_params') {
-      // Handle modify_params: Open canvas for parameter editing
-      setCanvasInsight(insight)
-      setCanvasOpen(true)
-      notify('info', '参数修改', {
-        description: '请在侧边面板中调整策略参数',
-        source: 'ChatInterface',
-      })
-    }
-  }, [onDeployRequest, onBacktestRequest, onMonitorRequest])
+  const handleInsightAction = React.useCallback(
+    (insight: InsightData, action: InsightActionType) => {
+      if (action === 'deploy_paper' || action === 'deploy_live') {
+        const strategyId = insight.target?.strategy_id || insight.id
+        setDeployStrategyId(strategyId)
+        setDeployMode(action === 'deploy_paper' ? 'paper' : 'live')
+        setDeployOpen(true)
+        onDeployRequest?.(action === 'deploy_paper' ? 'paper' : 'live', strategyId)
+      } else if (action === 'run_backtest') {
+        // Story 2.3: Handle backtest action
+        const strategyId = insight.target?.strategy_id || insight.id
+        setBacktestStrategyId(strategyId)
+        setBacktestInsight(insight)
+        setBacktestOpen(true)
+        onBacktestRequest?.(strategyId)
+      } else if (action === 'stop_agent') {
+        // Story 3.3: Handle monitor/stop_agent action
+        const agentId = insight.target?.agent_id || insight.target?.strategy_id || insight.id
+        setMonitorAgentId(agentId)
+        setMonitorOpen(true)
+        onMonitorRequest?.(agentId)
+      } else if (action === 'modify_params') {
+        // Handle modify_params: Open canvas for parameter editing
+        setCanvasInsight(insight)
+        setCanvasOpen(true)
+        notify('info', '参数修改', {
+          description: '请在侧边面板中调整策略参数',
+          source: 'ChatInterface',
+        })
+      }
+    },
+    [onDeployRequest, onBacktestRequest, onMonitorRequest]
+  )
 
   /**
    * Handle deploy from DeployCanvas
    */
-  const handleDeploy = React.useCallback(async (config: DeployConfig) => {
-    setDeployLoading(true)
-    try {
-      await deploy(config)
-    } catch {
-      // Error handled in useDeployment onError callback
-    }
-  }, [deploy])
+  const handleDeploy = React.useCallback(
+    async (config: DeployConfig) => {
+      setDeployLoading(true)
+      try {
+        await deploy(config)
+      } catch {
+        // Error handled in useDeployment onError callback
+      }
+    },
+    [deploy]
+  )
 
   /**
    * Handle deploy canvas close
@@ -999,7 +1086,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
     // Extract config from insight params
     const getParamValue = <T,>(key: string, defaultValue: T): T => {
-      const param = params.find(p => p.key === key)
+      const param = params.find((p) => p.key === key)
       return param ? (param.value as T) : defaultValue
     }
 
@@ -1007,14 +1094,15 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       name: target?.name || '策略回测',
       symbol: target?.symbol || 'BTC/USDT',
       strategyType: 'custom',
-      startDate: getParamValue('start_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] || ''),
+      startDate: getParamValue(
+        'start_date',
+        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] || ''
+      ),
       endDate: getParamValue('end_date', new Date().toISOString().split('T')[0] || ''),
       initialCapital: getParamValue('initial_capital', 10000),
       feeRate: getParamValue('fee_rate', 0.1),
       slippage: getParamValue('slippage', 0.05),
-      params: Object.fromEntries(
-        params.map(p => [p.key, p.value])
-      ),
+      params: Object.fromEntries(params.map((p) => [p.key, p.value])),
     }
   }, [])
 
@@ -1068,24 +1156,29 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   // (使用全局 store 的 close handlers，open handlers 在 AgentList 中触发)
   // ==========================================================================
 
-  const handleEmergencyAction = React.useCallback(async (action: EmergencyAction) => {
-    notifyWarning(`紧急操作: ${action}`, { description: '操作已记录，等待执行' })
-    // TODO: Integrate with actual emergency action API
-    closeEmergencyActions()
-  }, [closeEmergencyActions])
+  const handleEmergencyAction = React.useCallback(
+    async (action: EmergencyAction) => {
+      notifyWarning(`紧急操作: ${action}`, { description: '操作已记录，等待执行' })
+      // TODO: Integrate with actual emergency action API
+      closeEmergencyActions()
+    },
+    [closeEmergencyActions]
+  )
 
   /**
    * Check if insight has deploy, backtest, or monitor actions and trigger corresponding canvas
    * EPIC-008: Also auto-trigger analysis canvas based on insight type
    */
   React.useEffect(() => {
+    // Guard: exit early if no messages
+    if (messages.length === 0) return
+
     // Auto-detect actions from insights
     const lastMessage = messages[messages.length - 1]
-    if (lastMessage.insight?.actions) {
+    if (lastMessage?.insight?.actions) {
       // Check for deploy actions
       const deployAction = lastMessage.insight.actions.find(
-        (a): a is 'deploy_paper' | 'deploy_live' =>
-          a === 'deploy_paper' || a === 'deploy_live'
+        (a): a is 'deploy_paper' | 'deploy_live' => a === 'deploy_paper' || a === 'deploy_live'
       )
       if (deployAction) {
         handleInsightAction(lastMessage.insight, deployAction)
@@ -1111,7 +1204,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     }
 
     // EPIC-008: Auto-trigger analysis canvas based on insight type
-    if (lastMessage.insight) {
+    if (lastMessage?.insight) {
       const insight = lastMessage.insight
 
       // Sensitivity analysis
@@ -1135,7 +1228,13 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         return
       }
     }
-  }, [messages, handleInsightAction, openSensitivityAnalysis, openAttributionAnalysis, openComparisonAnalysis])
+  }, [
+    messages,
+    handleInsightAction,
+    openSensitivityAnalysis,
+    openAttributionAnalysis,
+    openComparisonAnalysis,
+  ])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1165,8 +1264,14 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       // =======================================================================
       console.log('[ChatInterface] Phase 1: Sending to NLP Processor for intent analysis...')
 
+      // 构建对话历史 (用于无 Redis 环境的上下文恢复)
+      const chatHistory = messages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map((m) => ({ role: m.role, content: m.content }))
+
       const nlpResult = await sendToNLP(userInput, {
         marketData: getMarketContext(),
+        chatHistory,
       })
 
       // 如果 NLP Processor 返回 ClarificationInsight，直接显示澄清问题卡片
@@ -1210,9 +1315,11 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       console.log('[ChatInterface] NLP did not return InsightData, using text response')
 
       // 使用 NLP 返回的消息作为回复
-      const fallbackContent = nlpMessage || (nlpError
-        ? `⚠️ **AI 服务连接异常**\n\n${nlpError}\n\n**可能的原因：**\n• 后端 NLP 服务未启动\n• API 地址配置错误\n• 网络连接问题\n\n请联系管理员或稍后重试。`
-        : '我理解了你的需求！让我来帮你分析一下。\n\n**请提供更多细节，例如：**\n• 📈 交易什么币种？(如 BTC/USDT)\n• 📊 使用什么指标？(如 RSI、MACD、均线)\n• 🎯 入场和出场条件是什么？\n• 💰 预期的风险收益比？\n\n这样我可以为你生成更精准的策略建议！')
+      const fallbackContent =
+        nlpMessage ||
+        (nlpError
+          ? `⚠️ **AI 服务连接异常**\n\n${nlpError}\n\n**可能的原因：**\n• 后端 NLP 服务未启动\n• API 地址配置错误\n• 网络连接问题\n\n请联系管理员或稍后重试。`
+          : '我理解了你的需求！让我来帮你分析一下。\n\n**请提供更多细节，例如：**\n• 📈 交易什么币种？(如 BTC/USDT)\n• 📊 使用什么指标？(如 RSI、MACD、均线)\n• 🎯 入场和出场条件是什么？\n• 💰 预期的风险收益比？\n\n这样我可以为你生成更精准的策略建议！')
       const fallbackMessage: Message = {
         id: `text_${Date.now()}`,
         role: 'assistant',
@@ -1220,7 +1327,6 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         timestamp: Date.now(),
       }
       setMessages((prev) => [...prev, fallbackMessage])
-
     } catch (error) {
       console.error('[ChatInterface] AI Error:', error)
       const errorMessage: Message = {
@@ -1244,22 +1350,21 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   ]
 
   return (
-    <div className={cn(
-      'chat-interface flex flex-col h-full transition-all duration-300 ease-out',
-      (canvasOpen || deployOpen || backtestOpen || monitorOpen) && 'lg:mr-[520px]',
-    )}>
+    <div
+      className={cn(
+        'chat-interface flex h-full flex-col transition-all duration-300 ease-out',
+        (canvasOpen || deployOpen || backtestOpen || monitorOpen) && 'lg:mr-[520px]'
+      )}
+    >
       {/* Chat Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl relative overflow-hidden">
+      <header className="relative flex items-center justify-between overflow-hidden border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl">
         {/* Spirit Beam Effect (Projecting downwards) */}
-        <SpiritBeam
-          isActive={isLoading || isThinking}
-          color={orbColors.primary}
-        />
+        <SpiritBeam isActive={isLoading || isThinking} color={orbColors.primary} />
 
-        <div className="flex items-center gap-3 relative z-10">
+        <div className="relative z-10 flex items-center gap-3">
           <div className="flex items-center gap-2">
             <SpiritOrb
-              className="w-8 h-8 pointer-events-none"
+              className="pointer-events-none h-8 w-8"
               state={orbState as any} // Cast to match SpiritOrb specific string literals
               primaryColor={orbColors.primary}
               secondaryColor={orbColors.secondary}
@@ -1272,13 +1377,15 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setPresetMenuOpen(!presetMenuOpen); }}
-                className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setPresetMenuOpen(!presetMenuOpen)
+                }}
+                className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
               >
                 <span className="text-sm">
                   {(() => {
                     const Icon = ICON_MAP[currentPresetConfig.icon] || Sparkles
-                    return <Icon className="w-4 h-4" />
+                    return <Icon className="h-4 w-4" />
                   })()}
                 </span>
                 <span className="text-xs">{currentPresetConfig.name}</span>
@@ -1288,10 +1395,12 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 <>
                   <div
                     className="fixed inset-0 z-40"
-                    onClick={() => { setPresetMenuOpen(false); }}
+                    onClick={() => {
+                      setPresetMenuOpen(false)
+                    }}
                   />
-                  <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-popover border border-border rounded-lg shadow-lg py-1">
-                    <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">
+                  <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-border bg-popover py-1 shadow-lg">
+                    <div className="mb-1 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
                       选择 AI 模型预设
                     </div>
                     {(Object.keys(SIMPLE_PRESETS) as SimplePreset[]).map((preset) => {
@@ -1305,35 +1414,35 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                             setPresetMenuOpen(false)
                           }}
                           className={cn(
-                            'w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-secondary/50 transition-colors',
+                            'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-secondary/50',
                             isActive && 'bg-primary/10'
                           )}
                         >
                           <span className="text-lg">
                             {(() => {
                               const Icon = ICON_MAP[presetConfig.icon] || Sparkles
-                              return <Icon className="w-5 h-5" />
+                              return <Icon className="h-5 w-5" />
                             })()}
                           </span>
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium">{presetConfig.name}</span>
                               {isActive && <Check className="h-3 w-3 text-primary" />}
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="truncate text-xs text-muted-foreground">
                               {presetConfig.defaultModel.split('/')[1]}
                             </p>
                           </div>
                         </button>
                       )
                     })}
-                    <div className="border-t border-border mt-1 pt-1">
+                    <div className="mt-1 border-t border-border pt-1">
                       <button
                         onClick={() => {
                           setPresetMenuOpen(false)
                           setConfigPanelOpen(true)
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-muted-foreground"
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left text-muted-foreground transition-colors hover:bg-secondary/50"
                       >
                         <Settings2 className="h-4 w-4" />
                         <span className="text-sm">高级设置...</span>
@@ -1349,26 +1458,30 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => { setConfigPanelOpen(true); }}
+            onClick={() => {
+              setConfigPanelOpen(true)
+            }}
             className="h-8 w-8"
             title="AI 设置"
           >
             <Settings2 className="h-4 w-4" />
           </Button>
           <Badge variant={canUseAI ? 'success' : 'secondary'} className="gap-1">
-            <div className={cn(
-              'h-2 w-2 rounded-full',
-              canUseAI ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
-            )} />
-            {canUseAI ? currentPresetConfig.defaultModel.split('/')[1] : (disabledReason || '不可用')}
+            <div
+              className={cn(
+                'h-2 w-2 rounded-full',
+                canUseAI ? 'animate-pulse bg-green-400' : 'bg-gray-400'
+              )}
+            />
+            {canUseAI ? currentPresetConfig.defaultModel.split('/')[1] : disabledReason || '不可用'}
           </Badge>
         </div>
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-          {messages.map((message) => (
+      <div className="scrollbar-thin flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+          {messages.map((message) =>
             // A2UI: Use InsightMessage for messages with InsightData
             message.insight ? (
               <InsightMessage
@@ -1384,16 +1497,21 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
             ) : (
               <ChatMessage key={message.id} message={message} />
             )
-          ))}
+          )}
           {/* S71: 流式渲染 - 3 阶段加载 */}
           {(isLoading || isThinking) && (
             <div className="flex gap-3">
               {/* AI Avatar */}
-              <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center">
-                <SpiritOrb className="w-8 h-8" state="thinking" primaryColor="#a855f7" secondaryColor="#fbbf24" />
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
+                <SpiritOrb
+                  className="h-8 w-8"
+                  state="thinking"
+                  primaryColor="#a855f7"
+                  secondaryColor="#fbbf24"
+                />
               </div>
               {/* InsightCard 3 阶段加载: skeleton → thinking → filling */}
-              <div className="flex-1 max-w-xl">
+              <div className="max-w-xl flex-1">
                 <InsightCardLoading state={loadingState} />
               </div>
             </div>
@@ -1404,15 +1522,19 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
       {/* Quick Prompts - 显示直到有足够对话 */}
       {messages.length <= 3 && (
-        <div className="max-w-3xl mx-auto w-full px-4 pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-muted-foreground">{messages.length === 1 ? '快速开始:' : '继续探索:'}</div>
+        <div className="mx-auto w-full max-w-3xl px-4 pb-2">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {messages.length === 1 ? '快速开始:' : '继续探索:'}
+            </div>
             {/* EPIC-010 S10.3: Template Button */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setTemplateSelectorOpen(true); }}
-              className="text-xs gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+              onClick={() => {
+                setTemplateSelectorOpen(true)
+              }}
+              className="gap-1.5 text-xs hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
             >
               <Sparkles className="h-3 w-3" />
               从模板开始
@@ -1424,8 +1546,10 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 key={index}
                 variant="outline"
                 size="sm"
-                onClick={() => { setInput(prompt); }}
-                className="text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                onClick={() => {
+                  setInput(prompt)
+                }}
+                className="text-xs hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
               >
                 {prompt}
               </Button>
@@ -1436,26 +1560,28 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
       {/* Input Area */}
       <div className="border-t border-border bg-background">
-        <div className="max-w-3xl mx-auto px-4 py-4">
+        <div className="mx-auto max-w-3xl px-4 py-4">
           <form onSubmit={handleSubmit} className="flex gap-3">
             <motion.div
-              className="flex-1 relative"
+              className="relative flex-1"
               initial={false}
               animate={{
                 scale: input.trim() ? 1.01 : 1,
               }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             >
               <input
                 value={input}
-                onChange={(e) => { setInput(e.target.value); }}
+                onChange={(e) => {
+                  setInput(e.target.value)
+                }}
                 placeholder="描述你想要的交易策略..."
                 disabled={isLoading || isThinking}
                 className={cn(
-                  'w-full h-12 px-4 pr-12 rounded-xl',
-                  'bg-card border border-border',
+                  'h-12 w-full rounded-xl px-4 pr-12',
+                  'border border-border bg-card',
                   'text-sm placeholder:text-muted-foreground',
-                  'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
+                  'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50',
                   'disabled:opacity-50',
                   'transition-all duration-200',
                   'shadow-sm focus:shadow-lg' // Add shadow on focus
@@ -1474,7 +1600,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
               </div>
             </motion.div>
           </form>
-          <p className="text-xs text-center text-muted-foreground mt-2">
+          <p className="mt-2 text-center text-xs text-muted-foreground">
             Delta AI 可能会产生错误。请核实重要信息。
           </p>
         </div>
@@ -1486,7 +1612,9 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         isOpen={canvasOpen}
         onClose={handleCanvasClose}
         onApprove={handleInsightApprove}
-        onReject={(insight) => { handleInsightReject(insight); }}
+        onReject={(insight) => {
+          handleInsightReject(insight)
+        }}
         onBacktest={handleCanvasBacktest}
         isLoading={canvasLoading}
         isBacktesting={canvasBacktesting}
@@ -1497,10 +1625,18 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {/* Story 1.3: Deploy Canvas */}
       <DeployCanvas
         strategyId={deployStrategyId}
-        strategyName={messages.find(m => m.insight?.target?.strategy_id === deployStrategyId)?.insight?.target?.name}
-        symbol={messages.find(m => m.insight?.target?.strategy_id === deployStrategyId)?.insight?.target?.symbol}
+        strategyName={
+          messages.find((m) => m.insight?.target?.strategy_id === deployStrategyId)?.insight?.target
+            ?.name
+        }
+        symbol={
+          messages.find((m) => m.insight?.target?.strategy_id === deployStrategyId)?.insight?.target
+            ?.symbol
+        }
         mode={deployMode}
-        backtestResult={backtestResult || { passed: true, expectedReturn: 0, maxDrawdown: 0, winRate: 0 }}
+        backtestResult={
+          backtestResult || { passed: true, expectedReturn: 0, maxDrawdown: 0, winRate: 0 }
+        }
         paperPerformance={paperPerformance || undefined}
         isOpen={deployOpen}
         onDeploy={handleDeploy}
@@ -1533,8 +1669,18 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
             maxDrawdown: backtestState.result?.metrics.maxDrawdown ?? 0,
             sharpeRatio: backtestState.result?.metrics.sharpeRatio ?? 0,
             totalTrades: backtestState.result?.metrics.totalTrades ?? 0,
-            winningTrades: Math.round((backtestState.result?.metrics.winRate ?? 0) * (backtestState.result?.metrics.totalTrades ?? 0) / 100),
-            losingTrades: (backtestState.result?.metrics.totalTrades ?? 0) - Math.round((backtestState.result?.metrics.winRate ?? 0) * (backtestState.result?.metrics.totalTrades ?? 0) / 100),
+            winningTrades: Math.round(
+              ((backtestState.result?.metrics.winRate ?? 0) *
+                (backtestState.result?.metrics.totalTrades ?? 0)) /
+                100
+            ),
+            losingTrades:
+              (backtestState.result?.metrics.totalTrades ?? 0) -
+              Math.round(
+                ((backtestState.result?.metrics.winRate ?? 0) *
+                  (backtestState.result?.metrics.totalTrades ?? 0)) /
+                  100
+              ),
             avgProfit: backtestState.result?.metrics.avgWin ?? 0,
             avgLoss: backtestState.result?.metrics.avgLoss ?? 0,
           }}
@@ -1573,14 +1719,16 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
           pnl={monitorState.pnl || { daily: 0, total: 0, unrealized: 0, realized: 0 }}
           positions={monitorState.positions}
           recentTrades={monitorState.recentTrades}
-          metrics={monitorState.metrics || {
-            winRate: 0,
-            avgHoldTime: '0h',
-            maxDrawdown: 0,
-            totalTrades: 0,
-            winningTrades: 0,
-            losingTrades: 0,
-          }}
+          metrics={
+            monitorState.metrics || {
+              winRate: 0,
+              avgHoldTime: '0h',
+              maxDrawdown: 0,
+              totalTrades: 0,
+              winningTrades: 0,
+              losingTrades: 0,
+            }
+          }
           isLoading={monitorState.isLoading}
         />
       )}
@@ -1625,8 +1773,8 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {/* EPIC-009: Emergency Actions Panel */}
       {emergencyActionsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md bg-background rounded-lg shadow-xl border p-4">
-            <div className="flex justify-between items-center mb-4">
+          <div className="w-full max-w-md rounded-lg border bg-background p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
               <h3 className="font-semibold">紧急操作</h3>
               <Button variant="ghost" size="sm" onClick={closeEmergencyActions}>
                 <X className="h-4 w-4" />
@@ -1644,8 +1792,12 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {/* AI Config Panel */}
       {configPanelOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-2xl max-h-[80vh] overflow-auto bg-background rounded-lg shadow-xl border">
-            <AIConfigPanel onClose={() => { setConfigPanelOpen(false); }} />
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg border bg-background shadow-xl">
+            <AIConfigPanel
+              onClose={() => {
+                setConfigPanelOpen(false)
+              }}
+            />
           </div>
         </div>
       )}
@@ -1653,7 +1805,9 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       {/* EPIC-010 S10.3: Template Selector Modal */}
       <TemplateSelector
         isOpen={templateSelectorOpen}
-        onClose={() => { setTemplateSelectorOpen(false); }}
+        onClose={() => {
+          setTemplateSelectorOpen(false)
+        }}
         onSelect={handleTemplateSelect}
       />
     </div>
@@ -1676,8 +1830,8 @@ function ChatMessage({ message }: ChatMessageProps) {
       {/* Avatar */}
       <div
         className={cn(
-          'flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center',
-          isUser ? 'bg-primary' : 'bg-muted',
+          'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full',
+          isUser ? 'bg-primary' : 'bg-muted'
         )}
       >
         {isUser ? (
@@ -1688,22 +1842,18 @@ function ChatMessage({ message }: ChatMessageProps) {
       </div>
 
       {/* Message Content */}
-      <div className={cn('flex-1 max-w-[85%]', isUser && 'flex justify-end')}>
+      <div className={cn('max-w-[85%] flex-1', isUser && 'flex justify-end')}>
         <div
           className={cn(
             'inline-block rounded-2xl px-4 py-3',
-            isUser
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card border border-border',
+            isUser ? 'bg-primary text-primary-foreground' : 'border border-border bg-card'
           )}
         >
-          <div className="text-sm whitespace-pre-wrap leading-relaxed">
-            {message.content}
-          </div>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
           <div
             className={cn(
-              'text-xs mt-2',
-              isUser ? 'text-primary-foreground/70' : 'text-muted-foreground',
+              'mt-2 text-xs',
+              isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
             )}
           >
             {new Date(message.timestamp).toLocaleTimeString('zh-CN', {

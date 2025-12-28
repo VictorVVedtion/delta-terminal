@@ -93,10 +93,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const body: InsightRequest = await request.json()
 
     if (!body.message.trim()) {
-      return Response.json(
-        { success: false, error: '消息内容不能为空' },
-        { status: 400 }
-      )
+      return Response.json({ success: false, error: '消息内容不能为空' }, { status: 400 })
     }
 
     // 检查后端服务配置
@@ -104,7 +101,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return Response.json(
         {
           success: false,
-          error: '后端服务未配置，请设置 NLP_PROCESSOR_URL 环境变量'
+          error: '后端服务未配置，请设置 NLP_PROCESSOR_URL 环境变量',
         },
         { status: 503 }
       )
@@ -117,6 +114,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     // collectedParams 可能在 body 顶层或 context 中
     const collectedParams = body.collectedParams || body.context?.collectedParams || {}
     const isFollowUp = body.context?.isFollowUp || false
+    // chatHistory 用于无 Redis 环境的对话上下文恢复
+    const chatHistory = body.context?.chatHistory || []
 
     const backendRequest = {
       message: body.message,
@@ -128,6 +127,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         collected_params: collectedParams,
         // 传递多步骤引导标志
         isFollowUp: isFollowUp,
+        // 传递对话历史用于上下文恢复 (Railway 无 Redis fallback)
+        chatHistory: chatHistory,
       },
     }
 
