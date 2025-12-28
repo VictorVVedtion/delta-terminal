@@ -9,19 +9,19 @@ import { TradeHistory } from '@/components/trading/TradeHistory'
 import { TradingView } from '@/components/trading/TradingView'
 
 export default function TradingPage() {
-  // 模拟数据
+  // 模拟数据 - 价格基于 2025年12月 BTC 价格范围
   const tradingViewData = {
     symbol: 'BTC/USDT',
-    price: 43256.78,
+    price: 95256.78,
     change24h: 2.34,
-    high24h: 44120.45,
-    low24h: 42890.23,
+    high24h: 96120.45,
+    low24h: 94890.23,
     volume24h: 2340000000,
   }
 
   const orderBookData = {
     asks: Array.from({ length: 20 }, (_, i) => ({
-      price: 43260 + i * 10,
+      price: 95260 + i * 10,
       amount: Math.random() * 2,
       total: 0,
     })).map(order => ({
@@ -29,7 +29,7 @@ export default function TradingPage() {
       total: order.price * order.amount,
     })),
     bids: Array.from({ length: 20 }, (_, i) => ({
-      price: 43250 - i * 10,
+      price: 95250 - i * 10,
       amount: Math.random() * 2,
       total: 0,
     })).map(order => ({
@@ -37,7 +37,7 @@ export default function TradingPage() {
       total: order.price * order.amount,
     })),
     spread: 10,
-    spreadPercent: 0.023,
+    spreadPercent: 0.010,
   }
 
   const tradesData = Array.from({ length: 20 }, (_, i) => ({
@@ -45,7 +45,7 @@ export default function TradingPage() {
     timestamp: Date.now() - i * 5 * 60 * 1000,
     symbol: 'BTC/USDT',
     side: (i % 2 === 0 ? 'buy' : 'sell') as 'buy' | 'sell',
-    price: 43200 + Math.random() * 100,
+    price: 95200 + Math.random() * 500,
     amount: Math.random() * 0.5,
     total: 0,
     fee: 0,
@@ -80,7 +80,7 @@ export default function TradingPage() {
             <OrderBook {...orderBookData} />
             <OrderForm
               symbol="BTC/USDT"
-              currentPrice={43256.78}
+              currentPrice={95256.78}
               balance={10000}
             />
           </div>

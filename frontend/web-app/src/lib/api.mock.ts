@@ -518,24 +518,24 @@ export const mockPnLData = {
 }
 
 /**
- * Mock 持仓数据
+ * Mock 持仓数据 - 价格基于 2025年12月市场行情
  */
 export const mockPositions = [
   {
     symbol: 'BTC',
     amount: 0.05,
-    avgPrice: 42000,
-    currentPrice: 43500,
-    unrealizedPnl: 75,
-    unrealizedPnlPercent: 3.57,
+    avgPrice: 92000,
+    currentPrice: 95500,
+    unrealizedPnl: 175,
+    unrealizedPnlPercent: 3.80,
   },
   {
     symbol: 'ETH',
     amount: 0.5,
-    avgPrice: 2200,
-    currentPrice: 2280,
-    unrealizedPnl: 40,
-    unrealizedPnlPercent: 3.64,
+    avgPrice: 3350,
+    currentPrice: 3480,
+    unrealizedPnl: 65,
+    unrealizedPnlPercent: 3.88,
   },
 ]
 
@@ -548,9 +548,9 @@ export const mockTrades = [
     timestamp: Date.now() - 1 * 60 * 60 * 1000,
     symbol: 'BTC/USDT',
     side: 'buy' as const,
-    price: 43200,
+    price: 95200,
     amount: 0.02,
-    fee: 0.86,
+    fee: 1.90,
     realizedPnl: 0,
   },
   {
@@ -558,9 +558,9 @@ export const mockTrades = [
     timestamp: Date.now() - 3 * 60 * 60 * 1000,
     symbol: 'BTC/USDT',
     side: 'sell' as const,
-    price: 43800,
+    price: 95800,
     amount: 0.015,
-    fee: 0.66,
+    fee: 1.44,
     realizedPnl: 12.50,
   },
   {
@@ -568,9 +568,9 @@ export const mockTrades = [
     timestamp: Date.now() - 6 * 60 * 60 * 1000,
     symbol: 'ETH/USDT',
     side: 'buy' as const,
-    price: 2250,
+    price: 3450,
     amount: 0.3,
-    fee: 0.68,
+    fee: 1.04,
     realizedPnl: 0,
   },
   {
@@ -578,9 +578,9 @@ export const mockTrades = [
     timestamp: Date.now() - 12 * 60 * 60 * 1000,
     symbol: 'BTC/USDT',
     side: 'buy' as const,
-    price: 42500,
+    price: 94500,
     amount: 0.025,
-    fee: 1.06,
+    fee: 2.36,
     realizedPnl: 0,
   },
   {
@@ -588,9 +588,9 @@ export const mockTrades = [
     timestamp: Date.now() - 24 * 60 * 60 * 1000,
     symbol: 'ETH/USDT',
     side: 'sell' as const,
-    price: 2320,
+    price: 3520,
     amount: 0.2,
-    fee: 0.46,
+    fee: 0.70,
     realizedPnl: 24.00,
   },
 ]
