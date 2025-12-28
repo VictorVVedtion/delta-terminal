@@ -39,13 +39,13 @@ export const GRID_STRATEGY_SCHEMA: StrategySchema = {
       key: 'upperBound',
       label: '价格上界',
       type: 'number',
-      defaultValue: 0,
+      defaultValue: 105000, // BTC/USDT 当前市场价格参考上界
       required: true,
       level: 1,
       group: 'basic',
       order: 2,
       config: { min: 0, step: 0.01, unit: 'USDT', precision: 2 },
-      description: '网格的价格上限，超过此价格策略暂停买入',
+      description: '网格的价格上限，超过此价格策略暂停买入（AI 会根据实时行情自动调整）',
       constraints: [
         {
           type: 'dependency',
@@ -60,13 +60,13 @@ export const GRID_STRATEGY_SCHEMA: StrategySchema = {
       key: 'lowerBound',
       label: '价格下界',
       type: 'number',
-      defaultValue: 0,
+      defaultValue: 85000, // BTC/USDT 当前市场价格参考下界
       required: true,
       level: 1,
       group: 'basic',
       order: 3,
       config: { min: 0, step: 0.01, unit: 'USDT', precision: 2 },
-      description: '网格的价格下限，低于此价格策略暂停卖出',
+      description: '网格的价格下限，低于此价格策略暂停卖出（AI 会根据实时行情自动调整）',
     },
     {
       key: 'gridCount',

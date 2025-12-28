@@ -1,4 +1,4 @@
-import { getDeviceId,supabaseClient } from '@/lib/supabase'
+import { getDeviceId, getSupabaseClient } from '@/lib/supabase'
 import type { PaperAccount, PaperPosition, PaperTrade } from '@/types/paperTrading'
 
 const TABLE_NAME = 'paper_accounts'
@@ -51,6 +51,11 @@ function normalizeRow(row: SupabasePaperAccountRow): PaperAccount {
 }
 
 export async function persistAccountsToSupabase(accounts: PaperAccount[]): Promise<SyncResult> {
+  const client = getSupabaseClient()
+  if (!client) {
+    return { success: false, error: 'Supabase 未配置' }
+  }
+
   const deviceId = getDeviceId()
   if (!deviceId) {
     return { success: false, error: '设备 ID 未就绪，无法同步' }
@@ -58,7 +63,7 @@ export async function persistAccountsToSupabase(accounts: PaperAccount[]): Promi
 
   const payload = accounts.map((account) => buildPayload(account, deviceId))
 
-  const { error } = await supabaseClient
+  const { error } = await client
     .from(TABLE_NAME)
     .upsert(payload, { onConflict: 'id' })
 
@@ -70,12 +75,17 @@ export async function persistAccountsToSupabase(accounts: PaperAccount[]): Promi
 }
 
 export async function fetchRemoteAccountsFromSupabase(): Promise<PaperAccount[]> {
+  const client = getSupabaseClient()
+  if (!client) {
+    return []
+  }
+
   const deviceId = getDeviceId()
   if (!deviceId) {
     return []
   }
 
-  const { data, error } = await supabaseClient
+  const { data, error } = await client
     .from(TABLE_NAME)
     .select('*')
     .eq('device_id', deviceId)
@@ -87,4 +97,3 @@ export async function fetchRemoteAccountsFromSupabase(): Promise<PaperAccount[]>
 
   return (data as SupabasePaperAccountRow[] ?? []).map((row) => normalizeRow(row))
 }
-

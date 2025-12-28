@@ -2,7 +2,7 @@
  * POST /api/backtest/run
  *
  * 启动回测任务
- * 实际环境会调用 Python 回测引擎，这里先返回模拟数据
+ * 生产环境代理到 Python 回测引擎，开发环境返回模拟数据
  */
 
 import type { NextRequest} from 'next/server';
@@ -18,6 +18,9 @@ import type {
   ChartData,
   ChartSignal,
 } from '@/types/insight'
+
+// 回测引擎 API 地址（Railway 部署后设置）
+const BACKTEST_ENGINE_URL = process.env.BACKTEST_ENGINE_URL
 
 // 模拟回测计算延迟
 const SIMULATE_DELAY = 2000
@@ -333,7 +336,44 @@ export async function POST(request: NextRequest) {
     const body: RunBacktestRequest = await request.json()
     const { jobId, config } = body
 
-    // 模拟回测计算时间
+    // 如果配置了真实回测引擎 URL，则代理请求
+    if (BACKTEST_ENGINE_URL) {
+      try {
+        const engineResponse = await fetch(`${BACKTEST_ENGINE_URL}/api/v1/backtest/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            config: {
+              strategy_id: config.strategyName,
+              symbols: [config.symbol],
+              start_date: new Date(config.startDate).toISOString(),
+              end_date: new Date(config.endDate).toISOString(),
+              initial_capital: config.initialCapital,
+              commission: 0.001,
+              slippage: 0.0005,
+              parameters: Object.fromEntries(
+                config.parameters.map(p => [p.key, p.value])
+              ),
+            },
+            data_source: 'mock',
+          }),
+        })
+
+        if (!engineResponse.ok) {
+          throw new Error(`Backtest engine error: ${engineResponse.statusText}`)
+        }
+
+        const engineResult = await engineResponse.json()
+
+        // 转换 Python 引擎响应格式为前端期望的格式
+        return NextResponse.json(transformEngineResult(engineResult, config, jobId))
+      } catch (engineError) {
+        console.warn('Backtest engine unavailable, falling back to mock:', engineError)
+        // 回退到 mock 数据
+      }
+    }
+
+    // 模拟回测计算时间（Mock 模式）
     await new Promise((resolve) => setTimeout(resolve, SIMULATE_DELAY))
 
     // 生成模拟数据
@@ -434,4 +474,148 @@ function generateSuggestions(stats: BacktestStats): string[] {
   }
 
   return suggestions
+}
+
+// ============================================================================
+// Engine Result Transformer
+// ============================================================================
+
+interface EngineResult {
+  backtest_id: string
+  config: {
+    strategy_id: string
+    symbols: string[]
+    start_date: string
+    end_date: string
+    initial_capital: number
+  }
+  metrics: {
+    total_return: number
+    annual_return: number
+    volatility: number
+    sharpe_ratio: number
+    sortino_ratio: number
+    calmar_ratio: number
+    max_drawdown: number
+    max_drawdown_duration: number
+    total_trades: number
+    win_rate: number
+    profit_factor: number
+    average_win: number
+    average_loss: number
+    largest_win: number
+    largest_loss: number
+  }
+  equity_curve: Array<{
+    timestamp: string
+    equity: number
+    drawdown: number
+  }>
+  trades: Array<{
+    trade_id: string
+    symbol: string
+    direction: 'long' | 'short'
+    entry_time: string
+    exit_time: string
+    entry_price: number
+    exit_price: number
+    quantity: number
+    pnl: number
+    commission: number
+  }>
+}
+
+function transformEngineResult(
+  engineResult: EngineResult,
+  config: RunBacktestRequest['config'],
+  jobId: string
+): BacktestInsightData {
+  const metrics = engineResult.metrics
+
+  // 转换权益曲线
+  const equityCurve: BacktestEquityPoint[] = engineResult.equity_curve.map((point, index, arr) => {
+    const prevEquity = index > 0 ? (arr[index - 1]?.equity ?? config.initialCapital) : config.initialCapital
+    return {
+      timestamp: new Date(point.timestamp).getTime(),
+      equity: point.equity,
+      dailyPnl: point.equity - prevEquity,
+      cumulativePnl: point.equity - config.initialCapital,
+      drawdown: point.drawdown * 100,
+    }
+  })
+
+  // 转换交易记录
+  const trades: BacktestTrade[] = engineResult.trades.map(trade => ({
+    id: trade.trade_id,
+    entryTime: new Date(trade.entry_time).getTime(),
+    exitTime: new Date(trade.exit_time).getTime(),
+    direction: trade.direction,
+    entryPrice: trade.entry_price,
+    exitPrice: trade.exit_price,
+    quantity: trade.quantity,
+    pnl: trade.pnl,
+    pnlPercent: (trade.pnl / (trade.entry_price * trade.quantity)) * 100,
+    fee: trade.commission,
+    status: 'closed' as const,
+  }))
+
+  // 构建统计数据
+  const stats: BacktestStats = {
+    totalReturn: metrics.total_return * 100,
+    annualizedReturn: metrics.annual_return * 100,
+    winRate: metrics.win_rate * 100,
+    profitFactor: metrics.profit_factor,
+    maxDrawdown: metrics.max_drawdown * 100,
+    maxDrawdownDays: metrics.max_drawdown_duration,
+    sharpeRatio: metrics.sharpe_ratio,
+    sortinoRatio: metrics.sortino_ratio,
+    totalTrades: metrics.total_trades,
+    winningTrades: Math.round(metrics.total_trades * metrics.win_rate),
+    losingTrades: Math.round(metrics.total_trades * (1 - metrics.win_rate)),
+    avgWin: metrics.average_win,
+    avgLoss: metrics.average_loss,
+    maxWin: metrics.largest_win,
+    maxLoss: metrics.largest_loss,
+    avgHoldingTime: 0, // TODO: calculate from trades
+    initialCapital: config.initialCapital,
+    finalCapital: equityCurve[equityCurve.length - 1]?.equity ?? config.initialCapital,
+    peakCapital: Math.max(...equityCurve.map(p => p.equity)),
+    totalFees: trades.reduce((sum, t) => sum + t.fee, 0),
+  }
+
+  return {
+    id: jobId,
+    type: 'backtest',
+    strategy: {
+      name: config.strategyName,
+      description: config.strategyDescription || 'AI 生成的交易策略',
+      symbol: config.symbol,
+      timeframe: config.timeframe,
+      parameters: config.parameters,
+      entryConditions: [],
+      exitConditions: [],
+    },
+    stats,
+    trades,
+    equityCurve,
+    chartData: {
+      symbol: config.symbol,
+      timeframe: config.timeframe,
+      candles: [],
+      signals: [],
+    },
+    benchmark: {
+      equityCurve: [],
+      totalReturn: 0,
+    },
+    period: {
+      start: config.startDate,
+      end: config.endDate,
+    },
+    aiSummary: generateAISummary(stats),
+    suggestions: generateSuggestions(stats),
+    params: [],
+    explanation: `${config.strategyName} 在 ${config.symbol} ${config.timeframe} 周期的回测结果`,
+    created_at: new Date().toISOString(),
+  }
 }

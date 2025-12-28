@@ -25,6 +25,7 @@ import React from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { getSmartDefaultValue } from '@/lib/param-defaults'
 import { cn } from '@/lib/utils'
 import type {
   ImpactMetric,
@@ -55,6 +56,10 @@ export function InsightCard({
   const keyParams = insight.params
     .filter(p => p.level === 1)
     .slice(0, 3)
+
+  // Get symbol for smart defaults
+  const symbolParam = insight.params.find(p => p.key === 'symbol')
+  const symbol = typeof symbolParam?.value === 'string' ? symbolParam.value : undefined
 
   // Get key metrics from impact
   const keyMetrics = insight.impact?.metrics.slice(0, 2) || []
@@ -116,7 +121,7 @@ export function InsightCard({
         {keyParams.length > 0 && !compact && (
           <div className="flex flex-wrap gap-2">
             {keyParams.map(param => (
-              <ParamPreview key={param.key} param={param} />
+              <ParamPreview key={param.key} param={param} symbol={symbol} />
             ))}
           </div>
         )}
@@ -237,8 +242,8 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   )
 }
 
-function ParamPreview({ param }: { param: InsightParam }) {
-  const displayValue = formatParamValue(param)
+function ParamPreview({ param, symbol }: { param: InsightParam; symbol?: string | undefined }) {
+  const displayValue = formatParamValue(param, symbol)
 
   return (
     <div className="flex items-center gap-1 px-2 py-1 bg-muted rounded-md text-xs">
@@ -247,7 +252,7 @@ function ParamPreview({ param }: { param: InsightParam }) {
       <span className="font-medium">{displayValue}</span>
       {param.old_value != null && (
         <span className="text-muted-foreground line-through ml-1">
-          {formatParamValue({ ...param, value: param.old_value })}
+          {formatParamValue({ ...param, value: param.old_value }, symbol)}
         </span>
       )}
     </div>
@@ -358,8 +363,18 @@ function getInsightTypeInfo(type: InsightType) {
   return typeMap[type] || typeMap.strategy_create
 }
 
-function formatParamValue(param: InsightParam): string {
-  const value = param.value
+// getSmartDefaultValue 已提取到 @/lib/param-defaults 共享模块
+
+function formatParamValue(param: InsightParam, symbol?: string): string {
+  let value = param.value
+
+  // 对于数值类型，尝试获取智能默认值
+  if (typeof value === 'number' && (value === 0 || value === undefined || value === null)) {
+    const smartValue = getSmartDefaultValue(param.key, value, symbol)
+    if (smartValue !== undefined && smartValue !== value) {
+      value = smartValue
+    }
+  }
 
   if (typeof value === 'boolean') {
     return value ? '启用' : '禁用'

@@ -13,7 +13,7 @@ import {
   User,
 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 
 import { AIConfigPanel } from '@/components/ai/AIConfigPanel'
 import {
@@ -662,7 +662,7 @@ function AppearanceSettingsSection() {
 // 有效的 tab 值
 const VALID_TABS = ['exchanges', 'ai', 'notifications', 'security', 'profile', 'appearance']
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
 
@@ -766,5 +766,13 @@ export default function SettingsPage() {
         </Card>
       </div>
     </MainLayout>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">加载中...</div>}>
+      <SettingsContent />
+    </Suspense>
   )
 }

@@ -24,6 +24,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { GridVisualization } from '@/components/visualization'
 import { useParamConstraints } from '@/hooks/useParamConstraints'
 import { notify } from '@/lib/notification'
+import { getSmartDefaultValue, logSmartDefault } from '@/lib/param-defaults'
 import { computeAllDerivedFields,detectStrategyType, schemaRegistry } from '@/lib/schema'
 import { cn } from '@/lib/utils'
 import type { BacktestInsightData, ImpactMetric,InsightData, InsightParam, ParamValue } from '@/types/insight'
@@ -93,31 +94,64 @@ export function CanvasPanel({
   // Check if we're using schema-based rendering
   const useSchemaMode = schemaFields.length > 0
 
+  // 智能默认值包装函数：处理 ParamValue 类型
+  const applySmartDefault = React.useCallback((key: string, currentValue: ParamValue, symbol?: string): ParamValue => {
+    // 只对数值类型应用智能默认值
+    if (typeof currentValue !== 'number' && currentValue !== undefined && currentValue !== null) {
+      return currentValue
+    }
+
+    const numValue = typeof currentValue === 'number' ? currentValue : undefined
+    const smartValue = getSmartDefaultValue(key, numValue, symbol)
+
+    // 如果值发生变化，记录调试日志
+    if (smartValue !== numValue) {
+      logSmartDefault('CanvasPanel', key, currentValue, smartValue, symbol)
+    }
+
+    return smartValue ?? currentValue
+  }, [])
+
   // Reset edited params when insight changes
   React.useEffect(() => {
     if (insight) {
+      // Debug: 打印接收到的 insight.params
+      console.log('[CanvasPanel] Received insight.params:', insight.params?.map(p => ({
+        key: p.key,
+        value: p.value,
+        type: typeof p.value,
+      })))
+
+      // 获取交易对符号（用于智能默认值）
+      const symbolParam = insight.params.find(p => p.key === 'symbol')
+      const symbol = typeof symbolParam?.value === 'string' ? symbolParam.value : undefined
+
       // 如果有 Schema，使用 Schema 来补全和计算字段
       if (useSchemaMode && schemaFields.length > 0) {
         const paramsObj: Record<string, ParamValue> = {}
         for (const param of insight.params) {
-          paramsObj[param.key] = param.value
+          // 应用智能默认值
+          paramsObj[param.key] = applySmartDefault(param.key, param.value, symbol)
         }
+        console.log('[CanvasPanel] paramsObj from insight (with smart defaults):', paramsObj)
         // 计算派生字段
         const computed = computeAllDerivedFields(schemaFields, paramsObj, {})
-        // 更新参数
+        // 更新参数（使用智能默认值）
         const updatedParams = insight.params.map(p => ({
           ...p,
-          value: computed[p.key] ?? p.value,
+          value: computed[p.key] ?? applySmartDefault(p.key, p.value, symbol),
         }))
         // 添加 Schema 中有但 insight 中没有的字段
         const existingKeys = new Set(updatedParams.map(p => p.key))
         for (const field of schemaFields) {
           if (!existingKeys.has(field.key)) {
+            // 对新添加的字段也应用智能默认值
+            const smartValue = applySmartDefault(field.key, computed[field.key] ?? field.defaultValue, symbol)
             const param: InsightParam = {
               key: field.key,
               label: field.label,
               type: field.type,
-              value: computed[field.key] ?? field.defaultValue,
+              value: smartValue,
               level: field.level,
               config: field.config,
             }
@@ -135,10 +169,15 @@ export function CanvasPanel({
         }
         setEditedParams(updatedParams)
       } else {
-        setEditedParams(insight.params)
+        // 非 Schema 模式也应用智能默认值
+        const updatedParams = insight.params.map(p => ({
+          ...p,
+          value: applySmartDefault(p.key, p.value, symbol),
+        }))
+        setEditedParams(updatedParams)
       }
     }
-  }, [insight, useSchemaMode, schemaFields])
+  }, [insight, useSchemaMode, schemaFields, applySmartDefault])
 
   // Separate core (L1) and advanced (L2) params
   const coreParams = React.useMemo(

@@ -39,68 +39,87 @@ export default function BacktestPage() {
     setCurrentBacktest(backtestId, config)
 
     try {
+      // 将前端表单数据转换为 API 期望的格式
+      const apiPayload = {
+        jobId: backtestId,
+        config: {
+          strategyName: config.name || config.strategyType,
+          strategyDescription: `${config.strategyType} 策略回测`,
+          symbol: config.symbol,
+          timeframe: '1h', // 默认 1 小时
+          startDate: new Date(config.startDate).getTime(),
+          endDate: new Date(config.endDate).getTime(),
+          initialCapital: config.initialCapital,
+          parameters: Object.entries(config.params || {}).map(([name, value]) => ({
+            name,
+            value: Number(value),
+            description: name,
+          })),
+        },
+      }
+
       // 调用真实的回测 API
       const response = await fetch('/api/backtest/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
+        body: JSON.stringify(apiPayload),
       })
 
       if (!response.ok) {
         throw new Error(`回测失败: ${response.statusText}`)
       }
 
-      // 处理 SSE 流式响应
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
+      // 解析 JSON 响应
+      const result = await response.json()
 
-      if (!reader) {
-        throw new Error('无法读取响应流')
+      // 检查是否有错误
+      if (result.error) {
+        setError(result.error)
+        return
       }
 
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6)
-
-          if (data === '[DONE]') continue
-
-          try {
-            const event = JSON.parse(data)
-
-            switch (event.type) {
-              case 'progress':
-                updateStatus({
-                  progress: event.progress,
-                  stage: event.stage,
-                })
-                break
-              case 'result':
-                setResult(event.result)
-                setActiveTab('results')
-                break
-              case 'error':
-                setError(event.error)
-                break
-            }
-          } catch {
-            // 忽略解析错误
-          }
-        }
+      // 转换为前端期望的 BacktestResult 格式
+      const backtestResult = {
+        id: result.id,
+        config: config,
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        metrics: {
+          totalReturn: result.stats?.totalReturn ?? 0,
+          annualizedReturn: result.stats?.annualizedReturn ?? 0,
+          maxDrawdown: result.stats?.maxDrawdown ?? 0,
+          sharpeRatio: result.stats?.sharpeRatio ?? 0,
+          winRate: result.stats?.winRate ?? 0,
+          profitFactor: result.stats?.profitFactor ?? 1,
+          totalTrades: result.stats?.totalTrades ?? 0,
+          avgWin: result.stats?.averageProfit ?? 0,
+          avgLoss: result.stats?.averageLoss ?? 0,
+        },
+        equity: result.equityCurve?.map((p: { timestamp: number; equity: number }) => ({
+          date: new Date(p.timestamp).toISOString().split('T')[0],
+          equity: p.equity,
+        })) || [],
+        trades: (result.trades || []).map((t: { id: string; symbol: string; type: string; price: number; amount: number; timestamp: number; pnl?: number; fee?: number }) => ({
+          id: t.id,
+          symbol: config.symbol,
+          side: t.type === 'buy' ? 'buy' : 'sell',
+          entryPrice: t.price,
+          exitPrice: t.price * (1 + (t.pnl || 0) / 100),
+          quantity: t.amount,
+          pnl: (t.pnl || 0) * t.amount * t.price / 100,
+          pnlPercent: t.pnl || 0,
+          entryTime: new Date(t.timestamp).toISOString(),
+          exitTime: new Date(t.timestamp + 3600000).toISOString(),
+          fee: t.fee || 0,
+        })),
       }
+
+      setResult(backtestResult)
+      setActiveTab('results')
     } catch (error) {
       setError(error instanceof Error ? error.message : '回测执行失败')
     }
-  }, [setCurrentBacktest, updateStatus, setResult, setError])
+  }, [setCurrentBacktest, setResult, setError, setActiveTab])
 
   // 处理历史记录选择
   const handleSelectHistory = React.useCallback((id: string) => {

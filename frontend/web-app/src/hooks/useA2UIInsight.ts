@@ -224,6 +224,15 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
     (response: InsightApiResponse): InsightData | null => {
       const insight = response.insight as InsightData | undefined
 
+      // Debug: 打印 API 返回的 insight.params
+      if (insight?.params) {
+        console.log('[useA2UIInsight] API response insight.params:', insight.params.map(p => ({
+          key: p.key,
+          value: p.value,
+          type: typeof p.value,
+        })))
+      }
+
       // 检查是否是澄清类型
       const isClarification = insight?.type === 'clarification'
       const clarification = isClarification ? (insight as ClarificationInsight) : null

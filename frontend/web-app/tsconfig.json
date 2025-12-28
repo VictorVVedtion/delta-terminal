@@ -1,16 +1,22 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
     "lib": ["dom", "dom.iterable", "ES2022"],
     "jsx": "preserve",
     "noEmit": true,
     "incremental": true,
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
     "plugins": [
       {
         "name": "next"
@@ -21,10 +27,7 @@
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],
       "@/lib/*": ["./src/lib/*"],
-      "@/styles/*": ["./src/styles/*"],
-      "@delta/common-types": ["../../shared/common-types/src"],
-      "@delta/utils": ["../../shared/utils/src"],
-      "@delta/config": ["../../shared/config/src"]
+      "@/styles/*": ["./src/styles/*"]
     }
   },
   "include": [
