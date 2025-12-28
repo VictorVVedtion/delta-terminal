@@ -23,8 +23,8 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
 4. query_strategy - 用户想要查询策略信息
    关键词：查看、显示、列出、有哪些策略等
 
-5. analyze_market - 用户想要分析市场
-   关键词：分析市场、趋势分析、行情分析、价格分析等
+5. analyze_market - 用户想要分析市场或查询价格
+   关键词：分析市场、趋势分析、行情分析、价格分析、多少钱、什么价格、现在价格、当前价格、行情、涨跌、走势等
 
 6. backtest - 用户想要进行回测
    关键词：回测、测试、历史数据、效果如何等

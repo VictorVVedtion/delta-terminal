@@ -370,7 +370,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     preset: 'economy',
     name: '经济型',
     description: '成本最低，适合高频调用',
-    defaultModel: 'anthropic/claude-sonnet-4',
+    defaultModel: 'anthropic/claude-sonnet-4.5',
     estimatedCostPerCall: 0.003,
     icon: 'Coins'
   },
@@ -378,7 +378,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     preset: 'balanced',
     name: '平衡型',
     description: '性能与成本平衡，大多数场景推荐',
-    defaultModel: 'anthropic/claude-sonnet-4',
+    defaultModel: 'anthropic/claude-sonnet-4.5',
     estimatedCostPerCall: 0.003,
     icon: 'Scale'
   },
@@ -454,7 +454,7 @@ export const DEFAULT_AI_CONFIG: AIConfig = {
     streaming: true,
     showThinking: true,
     autoRoute: false,
-    maxTokens: 2048,
+    maxTokens: 4096,
     temperature: 0.7
   }
 }
