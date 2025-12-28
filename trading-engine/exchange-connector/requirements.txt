@@ -1,0 +1,37 @@
+# Exchange Connector Dependencies
+# Python 3.10+
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+
+# CCXT for exchange connections
+ccxt>=4.1.0
+
+# WebSocket
+websockets>=12.0
+
+# Retry and backoff
+backoff>=2.2.1
+
+# Redis for caching
+redis>=5.0.0
+
+# Encryption
+cryptography>=41.0.0
+
+# HTTP client
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.12.0
+
+# Type checking
+mypy>=1.7.0

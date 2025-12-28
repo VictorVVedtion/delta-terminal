@@ -3,6 +3,8 @@ import logging
 from typing import Any, Callable, Dict, Optional
 from .base import BaseWebSocket
 from .binance_ws import BinanceWebSocket
+from .okx_ws import OKXWebSocket
+from .bybit_ws import BybitWebSocket
 
 logger = logging.getLogger(__name__)
 
@@ -84,11 +86,12 @@ class WebSocketManager:
 
         if exchange_id == 'binance':
             return BinanceWebSocket(testnet=testnet, **kwargs)
-        # 可以添加其他交易所的 WebSocket 实现
-        # elif exchange_id == 'okx':
-        #     return OKXWebSocket(testnet=testnet, **kwargs)
-        # elif exchange_id == 'bybit':
-        #     return BybitWebSocket(testnet=testnet, **kwargs)
+        elif exchange_id == 'okx':
+            return OKXWebSocket(testnet=testnet, **kwargs)
+        elif exchange_id == 'bybit':
+            # Bybit 支持 category 参数: spot, linear, inverse, option
+            category = kwargs.pop('category', 'spot')
+            return BybitWebSocket(testnet=testnet, category=category, **kwargs)
         else:
             raise ValueError(f"不支持的交易所 WebSocket: {exchange_id}")
 
