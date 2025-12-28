@@ -6,10 +6,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
-import {
-  fetchRemoteAccountsFromSupabase,
-  persistAccountsToSupabase,
-} from '@/lib/paperTradingSync'
+import { fetchRemoteAccountsFromSupabase, persistAccountsToSupabase } from '@/lib/paperTradingSync'
 import type {
   ClosePositionParams,
   ClosePositionResult,
@@ -104,12 +101,7 @@ function generateId(prefix: string): string {
 /**
  * 计算交易总成本/收益
  */
-function calculateTradeTotal(
-  side: TradeSide,
-  size: number,
-  price: number,
-  fee: number
-): number {
+function calculateTradeTotal(side: TradeSide, size: number, price: number, fee: number): number {
   const base = size * price
   if (side === 'buy') {
     return -(base + fee) // 买入是负数 (花费)
@@ -140,11 +132,7 @@ function calculateUnrealizedPnl(
 /**
  * 计算已实现盈亏
  */
-function calculateRealizedPnl(
-  position: PaperPosition,
-  exitPrice: number,
-  fee: number
-): number {
+function calculateRealizedPnl(position: PaperPosition, exitPrice: number, fee: number): number {
   const { side, entryPrice, size } = position
   let pnl = 0
   if (side === 'long') {
@@ -202,8 +190,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
         deleteAccount: (accountId) => {
           set((state) => ({
             accounts: state.accounts.filter((acc) => acc.id !== accountId),
-            activeAccountId:
-              state.activeAccountId === accountId ? null : state.activeAccountId,
+            activeAccountId: state.activeAccountId === accountId ? null : state.activeAccountId,
           }))
         },
 
@@ -284,9 +271,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
                   const existingPos = newPositions[existingPosIndex]
                   const totalSize = existingPos.size + size
                   const newEntryPrice =
-                    (existingPos.entryPrice * existingPos.size +
-                      currentPrice * size) /
-                    totalSize
+                    (existingPos.entryPrice * existingPos.size + currentPrice * size) / totalSize
 
                   newPositions[existingPosIndex] = {
                     id: existingPos.id,
@@ -338,11 +323,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
                     openedAt: existingPos.openedAt,
                     updatedAt: existingPos.updatedAt,
                   }
-                  const realizedPnl = calculateRealizedPnl(
-                    posForCalc,
-                    currentPrice,
-                    fee
-                  )
+                  const realizedPnl = calculateRealizedPnl(posForCalc, currentPrice, fee)
                   trade.realizedPnl = realizedPnl
 
                   if (existingPos.size === size) {
@@ -518,10 +499,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
           const totalPnlPercent = (totalPnl / account.initialCapital) * 100
 
           // 计算未实现盈亏
-          const unrealizedPnl = account.positions.reduce(
-            (sum, pos) => sum + pos.unrealizedPnl,
-            0
-          )
+          const unrealizedPnl = account.positions.reduce((sum, pos) => sum + pos.unrealizedPnl, 0)
 
           // 计算已实现盈亏
           const realizedPnl = account.trades.reduce(
@@ -530,9 +508,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
           )
 
           // 计算交易统计
-          const closedTrades = account.trades.filter(
-            (t) => t.realizedPnl !== undefined
-          )
+          const closedTrades = account.trades.filter((t) => t.realizedPnl !== undefined)
           const totalTrades = closedTrades.length
           const winTrades = closedTrades.filter((t) => (t.realizedPnl || 0) > 0).length
           const lossTrades = closedTrades.filter((t) => (t.realizedPnl || 0) < 0).length
@@ -547,8 +523,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
             .map((t) => t.realizedPnl || 0)
 
           const avgWin = wins.length > 0 ? wins.reduce((a, b) => a + b, 0) / wins.length : 0
-          const avgLoss =
-            losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / losses.length : 0
+          const avgLoss = losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / losses.length : 0
 
           // 计算总手续费
           const totalFees = account.trades.reduce((sum, trade) => sum + trade.fee, 0)
@@ -619,13 +594,11 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
 
 // 订阅 accounts 变化，自动同步到 Supabase
 if (typeof window !== 'undefined') {
-  usePaperTradingStore.subscribe(
-    (state, prevState) => {
-      if (state.accounts !== prevState.accounts) {
-        void persistAccountsToSupabase(state.accounts)
-      }
+  usePaperTradingStore.subscribe((state, prevState) => {
+    if (state.accounts !== prevState.accounts) {
+      void persistAccountsToSupabase(state.accounts)
     }
-  )
+  })
 }
 
 // =============================================================================
@@ -650,6 +623,13 @@ export const selectActiveAccount = (state: PaperTradingStore) => {
  */
 export const selectAccountByAgentId = (agentId: string) => (state: PaperTradingStore) => {
   return state.accounts.find((acc) => acc.agentId === agentId)
+}
+
+/**
+ * 选择指定 ID 的账户
+ */
+export const selectAccountById = (accountId: string) => (state: PaperTradingStore) => {
+  return state.accounts.find((acc) => acc.id === accountId)
 }
 
 export default usePaperTradingStore

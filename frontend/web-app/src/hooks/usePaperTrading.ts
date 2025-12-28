@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 import {
   selectAccountByAgentId as _selectAccountByAgentId,
   selectActiveAccount,
+  selectAllAccounts,
   usePaperTradingStore,
 } from '@/store/paperTrading'
 import type {
@@ -115,19 +116,22 @@ export function usePaperTrading(
     getAccountStats,
   } = usePaperTradingStore()
 
+  // 订阅账户数组以确保状态更新触发重渲染
+  const accounts = usePaperTradingStore(selectAllAccounts)
+
   // 获取活跃账户
   const activeAccount = usePaperTradingStore(selectActiveAccount)
 
-  // 确定当前使用的账户
+  // 确定当前使用的账户（使用 accounts 作为依赖确保实时更新）
   const account = useMemo(() => {
     if (providedAccountId) {
-      return getAccount(providedAccountId) || null
+      return accounts.find((acc) => acc.id === providedAccountId) || null
     }
     if (agentId) {
-      return storeGetAccountByAgentId(agentId) || null
+      return accounts.find((acc) => acc.agentId === agentId) || null
     }
     return activeAccount
-  }, [providedAccountId, agentId, activeAccount, getAccount, storeGetAccountByAgentId])
+  }, [providedAccountId, agentId, activeAccount, accounts])
 
   const accountId = account?.id || null
 

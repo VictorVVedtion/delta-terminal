@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
 import path from 'path'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
@@ -11,11 +11,11 @@ export default defineConfig({
       '**/e2e/**',
       '**/*.e2e.ts',
       '**/*.e2e.spec.ts',
-      // Temporarily exclude tests that need refactoring from Jest to Vitest
+      // Temporarily exclude tests that need Next.js navigation mocks
       // or are missing dependencies / have complex retry logic
-      '**/ChatInterface.test.tsx',
+      '**/ChatInterface.test.tsx', // Needs Next.js useSearchParams mock
       '**/DeployCanvas.test.tsx',
-      '**/paperTrading.test.ts',
+      '**/paperTrading.test.ts', // Needs proper position management mock
       '**/hyperliquid.test.ts',
     ],
     coverage: {
