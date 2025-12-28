@@ -54,7 +54,7 @@ function runTests() {
     return
   }
 
-  // 测试 2: 买入 BTC
+  // 测试 2: 买入 BTC - 使用 2025年12月 价格范围
   log('\n--- 测试 2: 买入 BTC ---', 'yellow')
   const buyResult = store.placeMarketOrder(
     {
@@ -64,7 +64,7 @@ function runTests() {
       type: 'market',
       size: 0.1,
     },
-    50000
+    95000
   )
 
   if (buyResult.success) {
@@ -82,9 +82,9 @@ function runTests() {
     return
   }
 
-  // 测试 3: 更新价格
+  // 测试 3: 更新价格 (模拟价格上涨)
   log('\n--- 测试 3: 更新价格 ---', 'yellow')
-  store.updatePositionPrice(accountId, 'BTC/USDT', 51000)
+  store.updatePositionPrice(accountId, 'BTC/USDT', 96000)
   const accountAfterUpdate = store.getAccount(accountId)
   const position = accountAfterUpdate?.positions[0]
 

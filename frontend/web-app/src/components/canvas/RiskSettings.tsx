@@ -76,7 +76,7 @@ const RISK_LEVEL_CONFIG: Record<
 export function RiskSettings({
   value,
   onChange,
-  currentPrice = 40000,
+  currentPrice = 95000,
   totalCapital = 10000,
   disabled = false,
   className,

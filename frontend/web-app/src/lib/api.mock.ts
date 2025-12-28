@@ -316,13 +316,14 @@ export const mockEquityCurve: EquityPoint[] = Array.from({ length: 180 }, (_, i)
  * Mock 交易记录
  */
 export const mockBacktestTrades: BacktestTrade[] = Array.from({ length: 48 }, (_, i) => {
-  const entryDate = new Date('2024-01-01')
+  // 模拟 2025 年回测数据
+  const entryDate = new Date('2025-01-01')
   entryDate.setDate(entryDate.getDate() + i * 3 + Math.floor(Math.random() * 3))
   const exitDate = new Date(entryDate)
   exitDate.setDate(exitDate.getDate() + 1 + Math.floor(Math.random() * 3))
 
   const side = Math.random() > 0.5 ? 'buy' : 'sell' as const
-  const entryPrice = 40000 + Math.random() * 20000
+  const entryPrice = 90000 + Math.random() * 15000
   const pnlPercent = (Math.random() - 0.4) * 10
   const exitPrice = entryPrice * (1 + pnlPercent / 100)
   const quantity = 0.01 + Math.random() * 0.1
