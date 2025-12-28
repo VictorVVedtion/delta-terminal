@@ -1210,6 +1210,9 @@ class InsightGeneratorService:
 
     def _parse_params(self, params_data: List[Dict[str, Any]]) -> List[InsightParam]:
         """Parse parameter list from response"""
+        # Debug: 打印 LLM 返回的原始参数数据
+        logger.info(f"[InsightService] Parsing params from LLM response: {[{k: p.get(k) for k in ['key', 'value', 'type']} for p in params_data]}")
+
         params = []
         for p in params_data:
             try:
