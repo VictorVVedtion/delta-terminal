@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import httpProxy from 'http-proxy';
+import type { ServerResponse } from 'http';
 import { config } from '../config/index.js';
 import { authenticateJWT } from '../middleware/auth.js';
 
@@ -17,9 +18,11 @@ const proxy = httpProxy.createProxyServer({
 proxy.on('error', (err, req, res) => {
   console.error('代理错误:', err);
 
-  if (!res.headersSent) {
-    res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
+  // 类型守卫：确保 res 是 ServerResponse
+  const response = res as ServerResponse;
+  if ('headersSent' in response && !response.headersSent) {
+    response.writeHead(502, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({
       statusCode: 502,
       error: 'Bad Gateway',
       message: '上游服务不可用',

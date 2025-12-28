@@ -75,7 +75,7 @@ export async function buildApp() {
   }
 
   // 健康检查
-  fastify.get('/health', async (request, reply) => {
+  fastify.get('/health', async (_request, _reply) => {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -91,7 +91,7 @@ export async function buildApp() {
   await fastify.register(apiKeyRoutes, { prefix: '/api/v1' });
 
   // 全局错误处理
-  fastify.setErrorHandler((error, request, reply) => {
+  fastify.setErrorHandler((error, _request, reply) => {
     fastify.log.error(error);
 
     const statusCode = error.statusCode || 500;
@@ -105,7 +105,7 @@ export async function buildApp() {
   });
 
   // 404 处理
-  fastify.setNotFoundHandler((request, reply) => {
+  fastify.setNotFoundHandler((_request, reply) => {
     reply.status(404).send({
       success: false,
       error: 'Route not found',

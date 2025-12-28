@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
@@ -12,6 +12,13 @@ import { ExecutionService } from './services/execution.service.js';
 import { strategyRoutes } from './routes/strategies.js';
 import { templateRoutes } from './routes/templates.js';
 import { executionRoutes } from './routes/executions.js';
+
+// 扩展 Fastify 类型以支持 authenticate 方法
+declare module 'fastify' {
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+}
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -33,10 +40,10 @@ export async function buildApp() {
   const prisma = new PrismaClient();
 
   // 注册插件
-  await fastify.register(helmet);
-  await fastify.register(cors, config.cors);
-  await fastify.register(jwt, { secret: config.jwt.secret });
-  await fastify.register(rateLimit, config.rateLimit);
+  await fastify.register(helmet as any);
+  await fastify.register(cors as any, config.cors);
+  await fastify.register(jwt as any, { secret: config.jwt.secret });
+  await fastify.register(rateLimit as any, config.rateLimit);
 
   // JWT 认证装饰器
   fastify.decorate('authenticate', async function (request: any, reply: any) {
@@ -70,7 +77,7 @@ export async function buildApp() {
   );
 
   // 错误处理
-  fastify.setErrorHandler((error, request, reply) => {
+  fastify.setErrorHandler((error: Error & { statusCode?: number }, _request, reply) => {
     fastify.log.error(error);
     reply.status(error.statusCode || 500).send({
       success: false,

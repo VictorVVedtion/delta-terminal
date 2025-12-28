@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 /**
  * 请求日志中间件
@@ -6,9 +6,10 @@ import { FastifyRequest, FastifyReply } from 'fastify';
  */
 export async function loggerMiddleware(
   request: FastifyRequest,
-  reply: FastifyReply
+  _reply: FastifyReply
 ): Promise<void> {
-  const startTime = Date.now();
+  // 记录请求开始时间
+  (request as FastifyRequest & { startTime: number }).startTime = Date.now();
 
   // 记录请求开始
   request.log.info({
@@ -17,11 +18,16 @@ export async function loggerMiddleware(
     ip: request.ip,
     userAgent: request.headers['user-agent'],
   }, '收到请求');
+}
 
-  // 在响应发送后记录
-  reply.addHook('onSend', async () => {
-    const duration = Date.now() - startTime;
-    
+/**
+ * 注册应用级日志钩子
+ */
+export function registerLoggerHooks(app: FastifyInstance): void {
+  app.addHook('onResponse', async (request, reply) => {
+    const startTime = (request as FastifyRequest & { startTime?: number }).startTime;
+    const duration = startTime ? Date.now() - startTime : 0;
+
     request.log.info({
       method: request.method,
       url: request.url,
