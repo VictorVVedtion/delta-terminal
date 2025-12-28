@@ -272,6 +272,7 @@ class InsightEvidence(BaseModel):
 class ImpactMetricKey(str, Enum):
     """Standard impact metric keys"""
 
+    # 策略相关指标
     EXPECTED_RETURN = "expectedReturn"
     ANNUALIZED_RETURN = "annualizedReturn"
     WIN_RATE = "winRate"
@@ -283,6 +284,68 @@ class ImpactMetricKey(str, Enum):
     AVG_PROFIT = "avgProfit"
     AVG_LOSS = "avgLoss"
 
+    # 市场分析指标
+    TREND_STRENGTH = "trendStrength"
+    TREND = "trend"  # LLM 常用的简写形式
+    VOLATILITY = "volatility"
+    SUPPORT_LEVEL = "supportLevel"
+    RESISTANCE_LEVEL = "resistanceLevel"
+    RSI = "rsi"
+    MACD = "macd"
+    VOLUME = "volume"
+    PRICE_CHANGE = "priceChange"
+    MARKET_CAP = "marketCap"
+    MOMENTUM = "momentum"
+
+    # 信号与情绪指标
+    SIGNAL = "signal"
+    SENTIMENT = "sentiment"
+    STRENGTH = "strength"
+    DIRECTION = "direction"
+
+    # 网格交易指标
+    GRID_SPACING = "gridSpacing"
+    GRID_PROFIT_PERCENT = "gridProfitPercent"
+    GRID_COUNT = "gridCount"
+    AMOUNT_PER_GRID = "amountPerGrid"
+    ESTIMATED_DAILY_TRADES = "estimatedDailyTrades"
+    TRADING_FREQUENCY = "tradingFrequency"
+    PRICE_RANGE = "priceRange"
+    UPPER_PRICE = "upperPrice"
+    LOWER_PRICE = "lowerPrice"
+    GRID_PROFIT = "gridProfit"
+    TOTAL_INVESTMENT = "totalInvestment"
+
+    # 附加市场指标
+    RSI_LEVEL = "rsi_level"
+    MACD_SIGNAL = "macd_signal"
+    BOLLINGER_POSITION = "bollingerPosition"
+    ATR = "atr"
+    VOLUME_RATIO = "volumeRatio"
+
+    # 风险指标
+    RISK_LEVEL = "riskLevel"
+    POSITION_SIZE = "positionSize"
+    LEVERAGE = "leverage"
+    LIQUIDATION_PRICE = "liquidationPrice"
+    MARGIN_RATIO = "marginRatio"
+
+    # 成本与收益指标
+    AVERAGE_COST = "averageCost"
+    TOTAL_COST = "totalCost"
+    BREAK_EVEN_PRICE = "breakEvenPrice"
+    REALIZED_PNL = "realizedPnl"
+    UNREALIZED_PNL = "unrealizedPnl"
+    ROI = "roi"
+    COST_BASIS = "costBasis"
+
+    # 定投/抄底策略指标
+    ESTIMATED_PURCHASES = "estimatedPurchases"
+    AVG_COST_REDUCTION = "avgCostReduction"
+    DIP_OPPORTUNITIES = "dipOpportunities"
+    CAPITAL_UTILIZATION = "capitalUtilization"
+    AVERAGE_ENTRY_PRICE = "averageEntryPrice"
+
 
 class ImpactMetric(BaseModel):
     """Single impact metric"""
@@ -291,11 +354,11 @@ class ImpactMetric(BaseModel):
         description="Metric key (e.g., 'expectedReturn', 'winRate')"
     )
     label: str = Field(description="Display label")
-    value: float = Field(description="Current/new value")
-    old_value: Optional[float] = Field(
+    value: Union[float, str] = Field(description="Current/new value (numeric or descriptive)")
+    old_value: Optional[Union[float, str]] = Field(
         default=None, description="Previous value (for comparison)"
     )
-    unit: str = Field(description="Unit (e.g., '%', 'x')")
+    unit: Optional[str] = Field(default="", description="Unit (e.g., '%', 'x')")
     trend: Literal["up", "down", "neutral"] = Field(description="Trend direction")
 
 

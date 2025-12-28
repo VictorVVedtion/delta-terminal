@@ -120,9 +120,13 @@ async def _get_repo() -> InsightRepository:
 
 
 async def store_insight(insight: InsightData) -> None:
-    """存储洞察"""
-    repo = await _get_repo()
-    await repo.save(insight)
+    """存储洞察，失败时静默处理"""
+    try:
+        repo = await _get_repo()
+        await repo.save(insight)
+    except Exception as e:
+        # 存储失败不应影响主流程，记录警告即可
+        logger.warning(f"Failed to store InsightData: {e}")
 
 
 async def get_insight(insight_id: str) -> Optional[InsightData]:

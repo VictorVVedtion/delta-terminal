@@ -300,18 +300,42 @@ class PostgresInsightRepository(InsightRepository):
     """
 
     def __init__(self, database_url: str):
-        self._database_url = database_url
+        # 转换 SQLAlchemy 格式的 DSN 为 asyncpg 格式
+        # postgresql+asyncpg:// -> postgresql://
+        self._database_url = self._normalize_dsn(database_url)
         self._pool = None
 
+    @staticmethod
+    def _normalize_dsn(dsn: str) -> str:
+        """将 SQLAlchemy 格式的 DSN 转换为 asyncpg 兼容格式"""
+        if dsn.startswith("postgresql+asyncpg://"):
+            return dsn.replace("postgresql+asyncpg://", "postgresql://", 1)
+        if dsn.startswith("postgres+asyncpg://"):
+            return dsn.replace("postgres+asyncpg://", "postgres://", 1)
+        return dsn
+
     async def connect(self):
-        """建立数据库连接"""
+        """建立数据库连接并验证表存在"""
         try:
             import asyncpg
             self._pool = await asyncpg.create_pool(
                 self._database_url,
-                min_size=5,
-                max_size=20
+                min_size=2,
+                max_size=10
             )
+            # 验证 insights 表存在
+            async with self._pool.acquire() as conn:
+                table_exists = await conn.fetchval("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables
+                        WHERE table_name = 'insights'
+                    )
+                """)
+                if not table_exists:
+                    logger.warning("Table 'insights' does not exist, will use in-memory fallback")
+                    await self._pool.close()
+                    self._pool = None
+                    raise RuntimeError("insights table not found")
             logger.info("Connected to PostgreSQL for insight storage")
         except ImportError:
             logger.error("asyncpg not installed, falling back to in-memory storage")
