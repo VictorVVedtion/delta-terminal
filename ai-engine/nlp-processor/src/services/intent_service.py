@@ -58,17 +58,23 @@ class IntentService:
             logger.info("IntentService: Using legacy LLMService (single model)")
 
     async def recognize_intent(
-        self, request: IntentRecognitionRequest
+        self,
+        request: IntentRecognitionRequest,
+        user_id: Optional[str] = None,
     ) -> IntentRecognitionResponse:
         """
         识别用户意图
 
         Args:
             request: 意图识别请求
+            user_id: 用户 ID (可选，用于加载用户模型配置)
 
         Returns:
             意图识别响应
         """
+        # 使用传入的 user_id，或回退到实例级别的 user_id
+        effective_user_id = user_id or self.user_id
+
         try:
             logger.info(f"Recognizing intent for text: {request.text[:100]}...")
 
@@ -99,7 +105,7 @@ class IntentService:
                     messages=messages,
                     task=LLMTaskType.INTENT_RECOGNITION,
                     system=system_msg,
-                    user_id=self.user_id,
+                    user_id=effective_user_id,
                     temperature=0.3,
                 )
             else:

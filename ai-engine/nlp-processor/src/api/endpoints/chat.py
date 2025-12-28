@@ -82,11 +82,13 @@ async def send_message(
         # 添加用户消息到历史
         conversation.add_message(MessageRole.USER, request.message)
 
-        # 识别意图
+        # 识别意图 (传递 user_id 以应用用户模型配置)
         intent_request = IntentRecognitionRequest(
             text=request.message, context=request.context
         )
-        intent_response = await intent_service.recognize_intent(intent_request)
+        intent_response = await intent_service.recognize_intent(
+            intent_request, user_id=request.user_id
+        )
 
         logger.info(
             f"Intent recognized: {intent_response.intent} "
