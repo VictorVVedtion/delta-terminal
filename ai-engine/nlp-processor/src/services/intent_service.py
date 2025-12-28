@@ -93,10 +93,19 @@ class IntentService:
                 None,
             )
 
-            # 调用 LLM
-            response = await self.llm_service.generate_json_response(
-                messages=messages, system=system_msg, temperature=0.3
-            )
+            # 调用 LLM (优先使用 LLMRouter 进行任务路由)
+            if self.llm_router:
+                response = await self.llm_router.generate_json(
+                    messages=messages,
+                    task=LLMTaskType.INTENT_RECOGNITION,
+                    system=system_msg,
+                    user_id=self.user_id,
+                    temperature=0.3,
+                )
+            else:
+                response = await self.llm_service.generate_json_response(
+                    messages=messages, system=system_msg, temperature=0.3
+                )
 
             # 解析响应
             intent = IntentType(response.get("intent", "UNKNOWN"))
@@ -319,7 +328,20 @@ class IntentService:
         return True, concept
 
 
-async def get_intent_service() -> IntentService:
-    """获取意图服务实例"""
+async def get_intent_service(user_id: Optional[str] = None) -> IntentService:
+    """
+    获取意图服务实例
+
+    Args:
+        user_id: 用户 ID (可选，用于加载用户模型配置)
+
+    Returns:
+        IntentService 实例
+    """
     llm_service = get_llm_service()
-    return IntentService(llm_service)
+    llm_router = get_llm_router()
+    return IntentService(
+        llm_service=llm_service,
+        llm_router=llm_router,
+        user_id=user_id,
+    )
