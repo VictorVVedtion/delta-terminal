@@ -4,7 +4,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
-  Check,
+  CheckCheck,
   ChevronRight,
   Clock,
   GitCompare,
@@ -25,6 +25,7 @@ import React from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getSmartDefaultValue } from '@/lib/param-defaults'
 import { cn } from '@/lib/utils'
 import type {
@@ -53,54 +54,50 @@ export function InsightCard({
   const typeInfo = getInsightTypeInfo(insight.type)
 
   // Get key params to display (level 1 only, max 3)
-  const keyParams = insight.params
-    .filter(p => p.level === 1)
-    .slice(0, 3)
+  const keyParams = insight.params.filter((p) => p.level === 1).slice(0, 3)
 
   // Get symbol for smart defaults
-  const symbolParam = insight.params.find(p => p.key === 'symbol')
+  const symbolParam = insight.params.find((p) => p.key === 'symbol')
   const symbol = typeof symbolParam?.value === 'string' ? symbolParam.value : undefined
 
   // Get key metrics from impact
   const keyMetrics = insight.impact?.metrics.slice(0, 2) || []
 
   // Truncate explanation
-  const shortExplanation = insight.explanation.length > 100
-    ? insight.explanation.slice(0, 100) + '...'
-    : insight.explanation
+  const shortExplanation =
+    insight.explanation.length > 100
+      ? insight.explanation.slice(0, 100) + '...'
+      : insight.explanation
 
   return (
     <Card
       className={cn(
-        'relative overflow-hidden transition-all duration-200 cursor-pointer',
+        'relative cursor-pointer overflow-hidden transition-all duration-200',
         'border-l-4 border-border/50',
         'bg-card/80 backdrop-blur-sm', // RiverBit glass effect
         typeInfo.borderColor,
-        isHovered && 'shadow-lg shadow-primary/5 scale-[1.01]',
-        status === 'approved' && 'opacity-80 border-l-success',
-        status === 'rejected' && 'opacity-50 border-l-destructive',
+        isHovered && 'scale-[1.01] shadow-lg shadow-primary/5',
+        status === 'approved' && 'border-l-success opacity-80',
+        status === 'rejected' && 'border-l-destructive opacity-50'
       )}
-      onMouseEnter={() => { setIsHovered(true); }}
-      onMouseLeave={() => { setIsHovered(false); }}
+      onMouseEnter={() => {
+        setIsHovered(true)
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false)
+      }}
       onClick={onExpand}
     >
       {/* Status Badge */}
-      {status !== 'pending' && (
-        <StatusBadge status={status} />
-      )}
+      {status !== 'pending' && <StatusBadge status={status} />}
 
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           {/* Type Icon and Title */}
           <div className="flex items-center gap-3">
-            <div className={cn(
-              'p-2 rounded-lg',
-              typeInfo.bgColor,
-            )}>
-              {typeInfo.icon}
-            </div>
+            <div className={cn('rounded-lg p-2', typeInfo.bgColor)}>{typeInfo.icon}</div>
             <div>
-              <h3 className="font-semibold text-sm">{typeInfo.title}</h3>
+              <h3 className="text-sm font-semibold">{typeInfo.title}</h3>
               {insight.target && (
                 <p className="text-xs text-muted-foreground">
                   {insight.target.symbol} - {insight.target.name}
@@ -110,9 +107,7 @@ export function InsightCard({
           </div>
 
           {/* Confidence Badge */}
-          {insight.impact && (
-            <ConfidenceBadge confidence={insight.impact.confidence} />
-          )}
+          {insight.impact && <ConfidenceBadge confidence={insight.impact.confidence} />}
         </div>
       </CardHeader>
 
@@ -120,7 +115,7 @@ export function InsightCard({
         {/* Key Parameters Preview */}
         {keyParams.length > 0 && !compact && (
           <div className="flex flex-wrap gap-2">
-            {keyParams.map(param => (
+            {keyParams.map((param) => (
               <ParamPreview key={param.key} param={param} symbol={symbol} />
             ))}
           </div>
@@ -129,7 +124,7 @@ export function InsightCard({
         {/* Key Metrics Preview */}
         {keyMetrics.length > 0 && !compact && (
           <div className="flex gap-4">
-            {keyMetrics.map(metric => (
+            {keyMetrics.map((metric) => (
               <MetricPreview key={metric.key} metric={metric} />
             ))}
           </div>
@@ -144,18 +139,30 @@ export function InsightCard({
         {status === 'pending' && !compact && (
           <div className="flex items-center justify-between pt-2">
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onApprove?.(insight.params)
-                }}
-                className="gap-1"
-              >
-                <Check className="h-3 w-3" />
-                批准
-              </Button>
+              {/* Quick Approve Button - UX Enhancement (P0) */}
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Quick approve with current/default params
+                        onApprove?.(insight.params)
+                      }}
+                      className="gap-1 border-0 bg-gradient-to-r from-emerald-500 to-green-500 shadow-sm hover:from-emerald-600 hover:to-green-600"
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      快速批准
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs p-0">
+                    <QuickApprovePreview params={insight.params} symbol={symbol} />
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               <Button
                 size="sm"
                 variant="outline"
@@ -179,7 +186,7 @@ export function InsightCard({
               }}
               className="gap-1 text-muted-foreground"
             >
-              查看详情
+              调参后批准
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -195,9 +202,7 @@ export function InsightCard({
       </CardContent>
 
       {/* Hover indicator - RiverBit cyan glow */}
-      {isHovered && (
-        <div className="absolute inset-0 bg-primary/[0.03] pointer-events-none" />
-      )}
+      {isHovered && <div className="pointer-events-none absolute inset-0 bg-primary/[0.03]" />}
     </Card>
   )
 }
@@ -217,10 +222,7 @@ function StatusBadge({ status }: { status: InsightCardStatus }) {
   const config = statusConfig[status]
 
   return (
-    <Badge
-      variant={config.variant}
-      className="absolute top-2 right-2 text-xs"
-    >
+    <Badge variant={config.variant} className="absolute right-2 top-2 text-xs">
       {config.label}
     </Badge>
   )
@@ -228,11 +230,8 @@ function StatusBadge({ status }: { status: InsightCardStatus }) {
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const percent = Math.round(confidence * 100)
-  const color = confidence >= 0.8
-    ? 'text-green-500'
-    : confidence >= 0.6
-      ? 'text-yellow-500'
-      : 'text-red-500'
+  const color =
+    confidence >= 0.8 ? 'text-green-500' : confidence >= 0.6 ? 'text-yellow-500' : 'text-red-500'
 
   return (
     <div className={cn('flex items-center gap-1 text-xs', color)}>
@@ -246,12 +245,12 @@ function ParamPreview({ param, symbol }: { param: InsightParam; symbol?: string 
   const displayValue = formatParamValue(param, symbol)
 
   return (
-    <div className="flex items-center gap-1 px-2 py-1 bg-muted rounded-md text-xs">
+    <div className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
       <Settings className="h-3 w-3 text-muted-foreground" />
       <span className="text-muted-foreground">{param.label}:</span>
       <span className="font-medium">{displayValue}</span>
       {param.old_value != null && (
-        <span className="text-muted-foreground line-through ml-1">
+        <span className="ml-1 text-muted-foreground line-through">
           {formatParamValue({ ...param, value: param.old_value }, symbol)}
         </span>
       )}
@@ -260,17 +259,15 @@ function ParamPreview({ param, symbol }: { param: InsightParam; symbol?: string 
 }
 
 function MetricPreview({ metric }: { metric: ImpactMetric }) {
-  const TrendIcon = metric.trend === 'up'
-    ? TrendingUp
-    : metric.trend === 'down'
-      ? TrendingDown
-      : null
+  const TrendIcon =
+    metric.trend === 'up' ? TrendingUp : metric.trend === 'down' ? TrendingDown : null
 
-  const trendColor = metric.trend === 'up'
-    ? 'text-green-500'
-    : metric.trend === 'down'
-      ? 'text-red-500'
-      : 'text-muted-foreground'
+  const trendColor =
+    metric.trend === 'up'
+      ? 'text-green-500'
+      : metric.trend === 'down'
+        ? 'text-red-500'
+        : 'text-muted-foreground'
 
   return (
     <div className="flex items-center gap-2">
@@ -286,8 +283,46 @@ function MetricPreview({ metric }: { metric: ImpactMetric }) {
       </div>
       <div className={cn('flex items-center gap-1 text-sm font-medium', trendColor)}>
         {TrendIcon && <TrendIcon className="h-3 w-3" />}
-        <span>{metric.value}{metric.unit}</span>
+        <span>
+          {metric.value}
+          {metric.unit}
+        </span>
       </div>
+    </div>
+  )
+}
+
+/**
+ * QuickApprovePreview - Shows parameter preview in tooltip before quick approve
+ * UX Enhancement: Users can see what values will be used before one-click approval
+ */
+function QuickApprovePreview({ params, symbol }: { params: InsightParam[]; symbol?: string }) {
+  // Show only level 1 (core) params, max 5
+  const coreParams = params.filter((p) => p.level === 1).slice(0, 5)
+
+  if (coreParams.length === 0) {
+    return <div className="p-3 text-xs text-muted-foreground">使用 AI 推荐的默认参数</div>
+  }
+
+  return (
+    <div className="space-y-2 p-3">
+      <div className="mb-2 flex items-center gap-1.5 border-b border-border pb-2 text-xs font-medium text-foreground">
+        <CheckCheck className="h-3 w-3 text-emerald-500" />
+        将使用以下参数：
+      </div>
+      <div className="space-y-1.5">
+        {coreParams.map((param) => (
+          <div key={param.key} className="flex items-center justify-between gap-4 text-xs">
+            <span className="text-muted-foreground">{param.label}</span>
+            <span className="font-medium text-foreground">{formatParamValue(param, symbol)}</span>
+          </div>
+        ))}
+      </div>
+      {params.filter((p) => p.level === 1).length > 5 && (
+        <div className="border-t border-border pt-1 text-xs text-muted-foreground">
+          +{params.filter((p) => p.level === 1).length - 5} 更多参数...
+        </div>
+      )}
     </div>
   )
 }
@@ -381,15 +416,16 @@ function formatParamValue(param: InsightParam, symbol?: string): string {
   }
 
   if (typeof value === 'number') {
-    const formatted = param.config.precision !== undefined
-      ? value.toFixed(param.config.precision)
-      : value.toString()
+    const formatted =
+      param.config.precision !== undefined
+        ? value.toFixed(param.config.precision)
+        : value.toString()
     return param.config.unit ? `${formatted}${param.config.unit}` : formatted
   }
 
   if (typeof value === 'string') {
     // Try to find label from options
-    const option = param.config.options?.find(o => o.value === value)
+    const option = param.config.options?.find((o) => o.value === value)
     return option?.label || value
   }
 

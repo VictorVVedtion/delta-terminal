@@ -139,6 +139,9 @@ class DataService:
             else:
                 await collector.start(symbols)
 
+            # 确保 exchange 字典存在
+            if exchange not in self.collectors:
+                self.collectors[exchange] = {}
             self.collectors[exchange][collector_key] = collector
             logger.info(f"启动采集器成功: {collector_key}")
 

@@ -27,11 +27,22 @@ export interface StrategyTemplate {
   /** 默认配置 */
   defaultConfig: {
     symbol: string
+    /** 多交易对支持 (S51) - 可选 */
+    symbols?: string[]
     timeframe: string
     riskSettings: {
       stopLoss: { enabled: boolean; type: string; value: number }
       takeProfit: { enabled: boolean; type: string; value: number }
       positionLimit: { maxPositionPercent: number; maxTradeAmount: number }
+    }
+    /** 多交易对配置 (S51) */
+    multiPairConfig?: {
+      /** 相关性过滤阈值 */
+      correlationThreshold: number
+      /** 仓位分配模式 */
+      allocationMode: 'equal' | 'risk_parity' | 'momentum_weighted'
+      /** 最大同时持仓数 */
+      maxConcurrentPositions: number
     }
   }
 
@@ -47,6 +58,9 @@ export interface StrategyTemplate {
 
   /** 使用提示 */
   tips: string[]
+
+  /** 是否支持多交易对 (S51) */
+  supportsMultiPair?: boolean
 }
 
 // =============================================================================
@@ -133,11 +147,7 @@ export const RSI_OVERSOLD_TEMPLATE: StrategyTemplate = {
     maxDrawdown: -8,
   },
   marketConditions: ['横盘震荡', 'RSI 指标有效'],
-  tips: [
-    '适合震荡市场，趋势市场效果较差',
-    '建议结合成交量确认信号',
-    '止损设置在关键支撑位下方',
-  ],
+  tips: ['适合震荡市场，趋势市场效果较差', '建议结合成交量确认信号', '止损设置在关键支撑位下方'],
 }
 
 /**
@@ -223,11 +233,7 @@ export const MA_CROSS_TEMPLATE: StrategyTemplate = {
     maxDrawdown: -15,
   },
   marketConditions: ['上升趋势', '趋势明确'],
-  tips: [
-    '适合趋势市场，震荡市会频繁止损',
-    'EMA 对价格变化更敏感',
-    '建议在4小时或日线级别使用',
-  ],
+  tips: ['适合趋势市场，震荡市会频繁止损', 'EMA 对价格变化更敏感', '建议在4小时或日线级别使用'],
 }
 
 /**
@@ -305,11 +311,7 @@ export const MACD_CROSS_TEMPLATE: StrategyTemplate = {
     maxDrawdown: -12,
   },
   marketConditions: ['趋势确认', '动能转换'],
-  tips: [
-    'MACD 是趋势确认指标，信号相对滞后',
-    '结合零轴可过滤假信号',
-    '适合中长周期交易',
-  ],
+  tips: ['MACD 是趋势确认指标，信号相对滞后', '结合零轴可过滤假信号', '适合中长周期交易'],
 }
 
 /**
@@ -386,11 +388,7 @@ export const GRID_TRADING_TEMPLATE: StrategyTemplate = {
     maxDrawdown: -10,
   },
   marketConditions: ['横盘震荡', '区间波动'],
-  tips: [
-    '适合长期横盘的币种',
-    '网格越密交易越频繁，收益越稳定',
-    '趋势行情可能造成套牢',
-  ],
+  tips: ['适合长期横盘的币种', '网格越密交易越频繁，收益越稳定', '趋势行情可能造成套牢'],
 }
 
 /**
@@ -460,11 +458,7 @@ export const BOLLINGER_BOUNCE_TEMPLATE: StrategyTemplate = {
     maxDrawdown: -7,
   },
   marketConditions: ['震荡市', '波动稳定'],
-  tips: [
-    '标准差越大，信号越少但更可靠',
-    '强趋势时不要逆势交易',
-    '建议等待确认K线',
-  ],
+  tips: ['标准差越大，信号越少但更可靠', '强趋势时不要逆势交易', '建议等待确认K线'],
 }
 
 /**
@@ -545,10 +539,263 @@ export const BREAKOUT_TEMPLATE: StrategyTemplate = {
     maxDrawdown: -18,
   },
   marketConditions: ['盘整突破', '趋势启动'],
+  tips: ['突破策略胜率较低，需靠盈亏比取胜', '成交量放大确认更可靠', '建议使用追踪止损'],
+}
+
+/**
+ * 多交易对轮动策略 (S51 - Multi-Pair Trading)
+ * PO 评审 P0 优先级
+ */
+export const MULTI_PAIR_ROTATION_TEMPLATE: StrategyTemplate = {
+  id: 'multi_pair_rotation',
+  name: '多交易对轮动策略',
+  category: 'trend',
+  description: '在多个交易对之间智能轮动，追踪强势币种，规避弱势资产，分散风险提升收益',
+  riskLevel: 'medium',
+  supportsMultiPair: true,
+  params: [
+    {
+      key: 'symbols',
+      label: '交易对列表',
+      type: 'select',
+      value: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+      level: 1,
+      config: {
+        options: [
+          { value: 'BTC/USDT', label: 'BTC/USDT' },
+          { value: 'ETH/USDT', label: 'ETH/USDT' },
+          { value: 'SOL/USDT', label: 'SOL/USDT' },
+          { value: 'BNB/USDT', label: 'BNB/USDT' },
+          { value: 'XRP/USDT', label: 'XRP/USDT' },
+          { value: 'ADA/USDT', label: 'ADA/USDT' },
+          { value: 'DOGE/USDT', label: 'DOGE/USDT' },
+          { value: 'AVAX/USDT', label: 'AVAX/USDT' },
+        ],
+      },
+      description: '选择多个交易对进行轮动交易',
+    },
+    {
+      key: 'momentum_period',
+      label: '动量周期',
+      type: 'slider',
+      value: 14,
+      level: 1,
+      config: { min: 7, max: 30, step: 1 },
+      description: '评估动量的时间周期',
+    },
+    {
+      key: 'max_positions',
+      label: '最大持仓数',
+      type: 'slider',
+      value: 3,
+      level: 1,
+      config: { min: 1, max: 5, step: 1 },
+      description: '同时持有的最大交易对数量',
+    },
+    {
+      key: 'allocation_mode',
+      label: '仓位分配',
+      type: 'select',
+      value: 'momentum_weighted',
+      level: 1,
+      config: {
+        options: [
+          { value: 'equal', label: '等权分配' },
+          { value: 'risk_parity', label: '风险平价' },
+          { value: 'momentum_weighted', label: '动量加权' },
+        ],
+      },
+      description: '资金在多个交易对间的分配方式',
+    },
+    {
+      key: 'rebalance_interval',
+      label: '再平衡周期',
+      type: 'select',
+      value: '1d',
+      level: 1,
+      config: {
+        options: [
+          { value: '4h', label: '4小时' },
+          { value: '1d', label: '每日' },
+          { value: '1w', label: '每周' },
+        ],
+      },
+      description: '重新评估并调整持仓的频率',
+    },
+    {
+      key: 'correlation_threshold',
+      label: '相关性阈值',
+      type: 'slider',
+      value: 0.7,
+      level: 2,
+      config: { min: 0.3, max: 0.9, step: 0.1 },
+      description: '高相关性币种不同时持有',
+    },
+    {
+      key: 'min_momentum_score',
+      label: '最低动量分',
+      type: 'slider',
+      value: 60,
+      level: 2,
+      config: { min: 40, max: 80, step: 5 },
+      description: '低于此分数不开仓',
+    },
+    {
+      key: 'stop_loss',
+      label: '止损',
+      type: 'slider',
+      value: 8,
+      level: 2,
+      config: { min: 3, max: 15, step: 1, unit: '%' },
+    },
+    {
+      key: 'take_profit',
+      label: '止盈',
+      type: 'slider',
+      value: 25,
+      level: 2,
+      config: { min: 10, max: 50, step: 5, unit: '%' },
+    },
+  ],
+  defaultConfig: {
+    symbol: 'BTC/USDT',
+    symbols: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+    timeframe: '4h',
+    riskSettings: {
+      stopLoss: { enabled: true, type: 'percentage', value: 8 },
+      takeProfit: { enabled: true, type: 'percentage', value: 25 },
+      positionLimit: { maxPositionPercent: 30, maxTradeAmount: 15000 },
+    },
+    multiPairConfig: {
+      correlationThreshold: 0.7,
+      allocationMode: 'momentum_weighted',
+      maxConcurrentPositions: 3,
+    },
+  },
+  backtestMetrics: {
+    winRate: 58,
+    totalReturn: 65,
+    maxDrawdown: -12,
+  },
+  marketConditions: ['市场分化', '板块轮动'],
   tips: [
-    '突破策略胜率较低，需靠盈亏比取胜',
-    '成交量放大确认更可靠',
-    '建议使用追踪止损',
+    '选择低相关性的交易对以分散风险',
+    '动量加权适合趋势明确的市场',
+    '风险平价模式更稳健',
+    '至少选择5个交易对以获得更好的轮动效果',
+  ],
+}
+
+/**
+ * 多交易对配对交易策略 (S51)
+ */
+export const PAIR_TRADING_TEMPLATE: StrategyTemplate = {
+  id: 'pair_trading',
+  name: '配对交易策略',
+  category: 'mean_reversion',
+  description: '利用高相关性交易对的价差回归特性，同时做多一个做空另一个，赚取价差收益',
+  riskLevel: 'low',
+  supportsMultiPair: true,
+  params: [
+    {
+      key: 'pair_a',
+      label: '交易对 A',
+      type: 'select',
+      value: 'BTC/USDT',
+      level: 1,
+      config: {
+        options: [
+          { value: 'BTC/USDT', label: 'BTC/USDT' },
+          { value: 'ETH/USDT', label: 'ETH/USDT' },
+          { value: 'SOL/USDT', label: 'SOL/USDT' },
+        ],
+      },
+    },
+    {
+      key: 'pair_b',
+      label: '交易对 B',
+      type: 'select',
+      value: 'ETH/USDT',
+      level: 1,
+      config: {
+        options: [
+          { value: 'BTC/USDT', label: 'BTC/USDT' },
+          { value: 'ETH/USDT', label: 'ETH/USDT' },
+          { value: 'SOL/USDT', label: 'SOL/USDT' },
+        ],
+      },
+    },
+    {
+      key: 'spread_lookback',
+      label: '价差周期',
+      type: 'slider',
+      value: 60,
+      level: 1,
+      config: { min: 20, max: 120, step: 5 },
+      description: '计算价差均值和标准差的周期',
+    },
+    {
+      key: 'entry_zscore',
+      label: '入场Z分数',
+      type: 'slider',
+      value: 2,
+      level: 1,
+      config: { min: 1, max: 3, step: 0.1 },
+      description: '价差偏离均值多少标准差时入场',
+    },
+    {
+      key: 'exit_zscore',
+      label: '出场Z分数',
+      type: 'slider',
+      value: 0.5,
+      level: 1,
+      config: { min: 0, max: 1, step: 0.1 },
+      description: '价差回归到多少标准差时出场',
+    },
+    {
+      key: 'position_size',
+      label: '仓位比例',
+      type: 'slider',
+      value: 20,
+      level: 1,
+      config: { min: 10, max: 40, step: 5, unit: '%' },
+    },
+    {
+      key: 'stop_loss_zscore',
+      label: '止损Z分数',
+      type: 'slider',
+      value: 4,
+      level: 2,
+      config: { min: 3, max: 5, step: 0.5 },
+      description: '价差偏离超过此值止损',
+    },
+  ],
+  defaultConfig: {
+    symbol: 'BTC/USDT',
+    symbols: ['BTC/USDT', 'ETH/USDT'],
+    timeframe: '1h',
+    riskSettings: {
+      stopLoss: { enabled: true, type: 'zscore', value: 4 },
+      takeProfit: { enabled: true, type: 'zscore', value: 0.5 },
+      positionLimit: { maxPositionPercent: 20, maxTradeAmount: 10000 },
+    },
+    multiPairConfig: {
+      correlationThreshold: 0.8,
+      allocationMode: 'equal',
+      maxConcurrentPositions: 2,
+    },
+  },
+  backtestMetrics: {
+    winRate: 72,
+    totalReturn: 28,
+    maxDrawdown: -5,
+  },
+  marketConditions: ['高相关性', '价差稳定'],
+  tips: [
+    '选择历史相关性>0.8的交易对',
+    '适合市场中性策略，不依赖方向判断',
+    '需要同时支持做多和做空',
+    '价差回归需要时间，耐心持有',
   ],
 }
 
@@ -563,6 +810,9 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
   GRID_TRADING_TEMPLATE,
   BOLLINGER_BOUNCE_TEMPLATE,
   BREAKOUT_TEMPLATE,
+  // S51 多交易对策略
+  MULTI_PAIR_ROTATION_TEMPLATE,
+  PAIR_TRADING_TEMPLATE,
 ]
 
 /**
@@ -592,11 +842,12 @@ export const TEMPLATE_CATEGORIES: Record<TemplateCategory, { label: string; icon
 /**
  * Risk level display config
  */
-export const RISK_LEVEL_CONFIG: Record<RiskLevel, { label: string; color: string; icon: string }> = {
-  low: { label: '低风险', color: 'text-green-500', icon: 'ShieldCheck' },
-  medium: { label: '中等风险', color: 'text-yellow-500', icon: 'AlertTriangle' },
-  high: { label: '高风险', color: 'text-red-500', icon: 'Flame' },
-}
+export const RISK_LEVEL_CONFIG: Record<RiskLevel, { label: string; color: string; icon: string }> =
+  {
+    low: { label: '低风险', color: 'text-green-500', icon: 'ShieldCheck' },
+    medium: { label: '中等风险', color: 'text-yellow-500', icon: 'AlertTriangle' },
+    high: { label: '高风险', color: 'text-red-500', icon: 'Flame' },
+  }
 
 // =============================================================================
 // Template to InsightData Conversion
