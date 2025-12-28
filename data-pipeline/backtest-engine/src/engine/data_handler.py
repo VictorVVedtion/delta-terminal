@@ -1,9 +1,16 @@
 """数据处理器 - 管理历史数据加载与迭代"""
+import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Iterator
 import pandas as pd
 import numpy as np
 import logging
+
+try:
+    import ccxt
+    CCXT_AVAILABLE = True
+except ImportError:
+    CCXT_AVAILABLE = False
 
 from src.engine.event_engine import EventEngine, MarketEvent
 
@@ -44,16 +51,18 @@ class DataHandler:
 
         self._is_loaded = False
 
-    def load_data(self, data_source: str = "mock") -> None:
+    def load_data(self, data_source: str = "okx") -> None:
         """
         加载历史数据
 
         Args:
-            data_source: 数据源 ("mock", "timescaledb", "csv")
+            data_source: 数据源 ("okx", "mock", "timescaledb", "csv")
         """
         logger.info(f"开始加载数据 | 品种: {self.symbols} | 数据源: {data_source}")
 
-        if data_source == "mock":
+        if data_source == "okx":
+            self._load_from_okx()
+        elif data_source == "mock":
             self._load_mock_data()
         elif data_source == "timescaledb":
             self._load_from_timescaledb()
@@ -64,6 +73,114 @@ class DataHandler:
 
         self._is_loaded = True
         logger.info(f"数据加载完成 | 总记录数: {sum(len(df) for df in self.data.values())}")
+
+    def _load_from_okx(self) -> None:
+        """从 OKX 加载真实历史 K 线数据"""
+        if not CCXT_AVAILABLE:
+            logger.warning("CCXT 未安装，回退到模拟数据")
+            self._load_mock_data()
+            return
+
+        try:
+            exchange = ccxt.okx({
+                "enableRateLimit": True,
+            })
+
+            for symbol in self.symbols:
+                logger.info(f"从 OKX 加载 {symbol} 历史数据...")
+
+                # 标准化交易对格式 (BTCUSDT -> BTC/USDT)
+                ccxt_symbol = self._normalize_symbol(symbol)
+
+                # 计算需要的 K 线数量
+                hours = int((self.end_date - self.start_date).total_seconds() / 3600)
+                limit = min(hours, 1000)  # OKX 单次最多返回 1000 条
+
+                all_ohlcv = []
+                since = int(self.start_date.timestamp() * 1000)
+                end_ts = int(self.end_date.timestamp() * 1000)
+
+                # 分批获取数据
+                while since < end_ts:
+                    try:
+                        ohlcv = exchange.fetch_ohlcv(
+                            ccxt_symbol,
+                            timeframe="1h",
+                            since=since,
+                            limit=limit,
+                        )
+                        if not ohlcv:
+                            break
+
+                        all_ohlcv.extend(ohlcv)
+                        since = ohlcv[-1][0] + 3600000  # 下一小时
+
+                        # 避免请求过快
+                        if len(all_ohlcv) % 500 == 0:
+                            logger.debug(f"已加载 {len(all_ohlcv)} 条 {symbol} 数据")
+
+                    except Exception as e:
+                        logger.warning(f"获取 {symbol} 数据失败: {e}")
+                        break
+
+                if all_ohlcv:
+                    df = pd.DataFrame(
+                        all_ohlcv,
+                        columns=["timestamp", "open", "high", "low", "close", "volume"],
+                    )
+                    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+                    df["symbol"] = symbol
+                    df = df.sort_values("timestamp").reset_index(drop=True)
+
+                    # 过滤时间范围
+                    df = df[
+                        (df["timestamp"] >= self.start_date)
+                        & (df["timestamp"] <= self.end_date)
+                    ]
+
+                    self.data[symbol] = df
+                    logger.info(f"OKX 数据加载完成: {symbol} | 记录数: {len(df)}")
+                else:
+                    logger.warning(f"无法获取 {symbol} 数据，使用模拟数据")
+                    self._load_mock_symbol(symbol)
+
+        except Exception as e:
+            logger.error(f"OKX 数据加载失败: {e}，回退到模拟数据")
+            self._load_mock_data()
+
+    def _normalize_symbol(self, symbol: str) -> str:
+        """标准化交易对格式 (BTCUSDT -> BTC/USDT)"""
+        symbol = symbol.upper()
+        if "/" in symbol:
+            return symbol
+        # 常见稳定币后缀
+        for quote in ["USDT", "USDC", "BUSD", "USD"]:
+            if symbol.endswith(quote):
+                return f"{symbol[:-len(quote)]}/{quote}"
+        return f"{symbol}/USDT"
+
+    def _load_mock_symbol(self, symbol: str) -> None:
+        """为单个品种生成模拟数据"""
+        dates = pd.date_range(start=self.start_date, end=self.end_date, freq="1h")
+        n = len(dates)
+
+        np.random.seed(hash(symbol) % 2**32)
+        base_price = 100.0
+        returns = np.random.normal(0.0001, 0.02, n)
+        prices = base_price * np.exp(np.cumsum(returns))
+
+        df = pd.DataFrame({
+            "timestamp": dates,
+            "symbol": symbol,
+            "open": prices * (1 + np.random.uniform(-0.005, 0.005, n)),
+            "high": prices * (1 + np.random.uniform(0.001, 0.01, n)),
+            "low": prices * (1 + np.random.uniform(-0.01, -0.001, n)),
+            "close": prices,
+            "volume": np.random.uniform(1000, 10000, n),
+        })
+
+        df = df.sort_values("timestamp").reset_index(drop=True)
+        self.data[symbol] = df
 
     def _load_mock_data(self) -> None:
         """生成模拟数据 (用于测试)"""
