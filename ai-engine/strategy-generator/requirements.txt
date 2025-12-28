@@ -1,0 +1,28 @@
+# Strategy Generator Dependencies
+# Python 3.10+
+
+# LangChain
+langchain>=0.1.0
+langchain-anthropic>=0.1.0
+
+# Anthropic Claude
+anthropic>=0.18.0
+
+# FastAPI
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+
+# Data processing
+pandas>=2.1.0
+numpy>=1.26.0
+
+# Technical Analysis
+ta-lib>=0.4.28
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
