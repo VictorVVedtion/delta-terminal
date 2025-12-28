@@ -66,6 +66,7 @@ from ..prompts.insight_prompts import (
 from .llm_router import LLMRouter, get_llm_router
 from .llm_service import LLMService, get_llm_service
 from .reasoning_service import ReasoningChainService, get_reasoning_service
+from .market_data_service import MarketDataService, get_market_data_service
 from ..models.llm_routing import LLMTaskType
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,7 @@ class InsightGeneratorService:
         reasoning_service: Optional[ReasoningChainService] = None,
         llm_router: Optional[LLMRouter] = None,
         user_id: Optional[str] = None,
+        market_data_service: Optional[MarketDataService] = None,
     ):
         """
         Initialize the service
@@ -115,11 +117,13 @@ class InsightGeneratorService:
             reasoning_service: Reasoning chain service instance (optional)
             llm_router: LLM router for task-based model selection (recommended)
             user_id: User ID for loading user-specific model preferences
+            market_data_service: Real-time market data service
         """
         self.llm_service = llm_service
         self.reasoning_service = reasoning_service
         self.llm_router = llm_router
         self.user_id = user_id
+        self.market_data_service = market_data_service
 
         # Log which routing mode is active
         if self.llm_router:
@@ -207,6 +211,7 @@ class InsightGeneratorService:
         user_input: str,
         intent: IntentType,
         entities: Dict[str, Any],
+        collected_params: Optional[Dict[str, Any]] = None,
     ) -> tuple[bool, List[str], bool]:
         """
         Assess whether user input has sufficient information for intent execution
@@ -215,6 +220,7 @@ class InsightGeneratorService:
             user_input: User's raw input text
             intent: Detected intent type
             entities: Extracted entities from intent recognition
+            collected_params: Parameters collected from multi-step clarification
 
         Returns:
             Tuple of (is_complete, missing_params, has_abstract_concepts)
@@ -224,17 +230,36 @@ class InsightGeneratorService:
             return (True, [], False)
 
         user_input_lower = user_input.lower()
+        collected_params = collected_params or {}
 
         # Check for abstract/vague keywords
         has_abstract = any(
             keyword in user_input for keyword in self.ABSTRACT_KEYWORDS
         )
 
+        # Map collected_params keys to required param keys
+        param_key_mapping = {
+            "trading_pair": "symbol",
+            "symbol": "symbol",
+            "timeframe": "timeframe",
+            "strategy_type": "strategy_type",
+            "strategy_perspective": "strategy_type",
+        }
+
         # Check for required parameters
         missing_params = []
         for param_key, keywords in self.REQUIRED_STRATEGY_PARAMS.items():
             # Check if parameter is in entities
             if param_key in entities and entities[param_key]:
+                continue
+
+            # Check if parameter is in collected_params (from multi-step flow)
+            collected_key = next(
+                (k for k, v in param_key_mapping.items() if v == param_key and k in collected_params),
+                None
+            )
+            if collected_key or param_key in collected_params:
+                logger.debug(f"Parameter '{param_key}' found in collected_params")
                 continue
 
             # Check if any keyword appears in input
@@ -248,7 +273,8 @@ class InsightGeneratorService:
 
         logger.debug(
             f"Intent completeness check: complete={is_complete}, "
-            f"missing={missing_params}, abstract={has_abstract}"
+            f"missing={missing_params}, abstract={has_abstract}, "
+            f"collected={list(collected_params.keys())}"
         )
 
         return (is_complete, missing_params, has_abstract)
@@ -351,8 +377,10 @@ class InsightGeneratorService:
             # A2UI 分层澄清机制 - Level 2: 技术参数补全
             # =================================================================
             # A2UI Core: Check intent completeness before proceeding
+            # 传入 collected_params 以便在多步骤引导中正确评估已收集的参数
+            collected_params = (context or {}).get("collected_params", {})
             is_complete, missing_params, has_abstract = self._assess_intent_completeness(
-                user_input, intent, entities
+                user_input, intent, entities, collected_params
             )
 
             # If request is incomplete, generate clarification instead
@@ -511,9 +539,31 @@ class InsightGeneratorService:
         context: Dict[str, Any],
     ) -> InsightData:
         """Generate InsightData for market analysis"""
-        # Use strategy prompt but with analysis context
+        # 从用户输入中提取交易对
+        symbol = self._extract_symbol_from_input(user_input) or "BTC/USDT"
+
+        # 获取真实市场数据
+        market_data = await self._get_real_market_data(symbol, context)
+        market_context = self._format_market_context(market_data)
+
+        # 将真实市场数据注入上下文
         context["analysis_mode"] = True
+        context["real_market_data"] = market_data
+        context["market_context"] = market_context
+        context["symbol"] = symbol
+
+        logger.info(f"Market analysis with real data for {symbol}: available={market_data.get('data_available', False)}")
+
         return await self._generate_strategy_insight(user_input, chat_history, context)
+
+    def _extract_symbol_from_input(self, text: str) -> Optional[str]:
+        """从用户输入中提取交易对"""
+        text_upper = text.upper()
+        symbols = ["BTC", "ETH", "SOL", "DOGE", "BNB", "XRP", "ADA", "AVAX", "LINK", "DOT"]
+        for symbol in symbols:
+            if symbol in text_upper:
+                return f"{symbol}/USDT"
+        return None
 
     async def _generate_optimize_insight(
         self,
@@ -527,18 +577,16 @@ class InsightGeneratorService:
 
         # 准备策略配置和表现数据
         strategy_config = json.dumps(target_strategy or {}, ensure_ascii=False)
+
+        # 表现数据：优先使用 context 中的真实数据
         performance_data = json.dumps(context.get("performance", {
-            "totalReturn": 12.3,
-            "sharpeRatio": 1.42,
-            "maxDrawdown": -12.5,
-            "winRate": 58.2,
-            "totalTrades": 156
+            "note": "无历史表现数据",
         }), ensure_ascii=False)
-        market_context = json.dumps(context.get("market", {
-            "trend": "bullish",
-            "volatility": "medium",
-            "btcPrice": 87000
-        }), ensure_ascii=False)
+
+        # 获取真实市场数据
+        symbol = (target_strategy or {}).get("symbol", "BTC/USDT")
+        market_data = await self._get_real_market_data(symbol, context)
+        market_context = self._format_market_context(market_data)
 
         prompt_value = OPTIMIZE_INSIGHT_PROMPT.format_messages(
             chat_history=formatted_history,
@@ -638,27 +686,20 @@ class InsightGeneratorService:
         """Generate InsightData for portfolio risk analysis"""
         formatted_history = self._format_chat_history(chat_history)
 
-        # 准备投资组合和策略数据
+        # 准备投资组合数据：优先使用 context 中的真实数据
         portfolio = json.dumps(context.get("portfolio", {
-            "totalValue": 50000,
-            "positions": [
-                {"symbol": "BTC/USDT", "value": 25000, "percentage": 50},
-                {"symbol": "ETH/USDT", "value": 15000, "percentage": 30},
-                {"symbol": "SOL/USDT", "value": 10000, "percentage": 20}
-            ]
+            "note": "无投资组合数据，请先连接交易所账户",
         }), ensure_ascii=False)
 
-        active_strategies = json.dumps(context.get("strategies", [
-            {"id": "strategy_1", "name": "RSI 反弹", "symbol": "BTC/USDT", "status": "running"},
-            {"id": "strategy_2", "name": "网格交易", "symbol": "ETH/USDT", "status": "running"}
-        ]), ensure_ascii=False)
+        # 活跃策略：优先使用 context 中的真实数据
+        active_strategies = json.dumps(
+            context.get("strategies", []),
+            ensure_ascii=False
+        )
 
-        market_data = json.dumps(context.get("market", {
-            "btcPrice": 87000,
-            "volatilityIndex": 45,
-            "fearGreedIndex": 65,
-            "trend": "bullish"
-        }), ensure_ascii=False)
+        # 获取真实市场数据
+        real_market = await self._get_real_market_data("BTC/USDT", context)
+        market_data = self._format_market_context(real_market)
 
         prompt_value = RISK_ANALYSIS_PROMPT.format_messages(
             chat_history=formatted_history,
@@ -1055,6 +1096,58 @@ class InsightGeneratorService:
 
         return self._parse_risk_alert_response(response)
 
+    async def _get_real_market_data(
+        self,
+        symbol: str = "BTC/USDT",
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        获取真实市场数据 (用于注入 LLM prompt)
+
+        如果 market_data_service 可用，返回真实数据；
+        否则从 context 获取或返回空数据。
+        """
+        # 如果 context 中已有市场数据，优先使用
+        if context and "market" in context and context["market"].get("data_available"):
+            return context["market"]
+
+        # 使用 MarketDataService 获取真实数据
+        if self.market_data_service:
+            try:
+                market_summary = await self.market_data_service.get_market_summary(symbol)
+                if market_summary.get("data_available"):
+                    logger.info(f"Using real market data for {symbol}")
+                    return market_summary
+            except Exception as e:
+                logger.warning(f"Failed to get real market data: {e}")
+
+        # 返回空数据占位符（表示数据不可用）
+        logger.warning(f"No real market data available for {symbol}")
+        return {
+            "symbol": symbol,
+            "price": {"current": 0},
+            "data_available": False,
+        }
+
+    def _format_market_context(self, market_data: Dict[str, Any]) -> str:
+        """格式化市场数据为 LLM 可读的 JSON"""
+        if not market_data.get("data_available"):
+            return json.dumps({
+                "note": "实时市场数据暂不可用，请基于用户输入进行分析",
+                "data_available": False,
+            }, ensure_ascii=False)
+
+        return json.dumps({
+            "symbol": market_data.get("symbol", ""),
+            "price": market_data.get("price", {}),
+            "indicators": market_data.get("indicators", {}),
+            "trend": market_data.get("trend", {}),
+            "volatility": market_data.get("volatility", {}),
+            "levels": market_data.get("levels", {}),
+            "volume": market_data.get("volume", {}),
+            "data_available": True,
+        }, ensure_ascii=False)
+
     def _format_chat_history(self, messages: List[Message]) -> List[tuple]:
         """Format chat history for LangChain prompts"""
         formatted = []
@@ -1422,6 +1515,7 @@ async def get_insight_service(
     include_reasoning: bool = True,
     use_router: bool = True,
     user_id: Optional[str] = None,
+    include_market_data: bool = True,
 ) -> InsightGeneratorService:
     """
     Get insight generator service instance
@@ -1430,6 +1524,7 @@ async def get_insight_service(
         include_reasoning: Whether to include reasoning chain service (A2UI 2.0)
         use_router: Whether to use LLMRouter for task-based model selection
         user_id: User ID for loading user-specific model preferences
+        include_market_data: Whether to include real market data service
 
     Returns:
         InsightGeneratorService instance
@@ -1454,9 +1549,19 @@ async def get_insight_service(
         except Exception as e:
             logger.warning(f"Failed to initialize reasoning service: {e}")
 
+    # 初始化市场数据服务 (CCXT + Hyperliquid/OKX)
+    market_data_service = None
+    if include_market_data:
+        try:
+            market_data_service = await get_market_data_service()
+            logger.info("Market data service initialized (CCXT + Hyperliquid/OKX)")
+        except Exception as e:
+            logger.warning(f"Failed to initialize market data service: {e}")
+
     return InsightGeneratorService(
         llm_service=llm_service,
         reasoning_service=reasoning_service,
         llm_router=llm_router,
         user_id=user_id,
+        market_data_service=market_data_service,
     )

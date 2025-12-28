@@ -11,6 +11,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from ..config import get_settings
+from .market_data_service import MarketDataService, get_market_data_service
 from ..models.reasoning_chain import (
     EvidenceType,
     NodeAction,
@@ -125,9 +126,10 @@ STRATEGY_PERSPECTIVES = {
 class ReasoningChainService:
     """推理链生成服务"""
 
-    def __init__(self):
+    def __init__(self, market_data_service: Optional[MarketDataService] = None):
         self.settings = get_settings()
         self._llm: Optional[ChatAnthropic] = None
+        self.market_data_service = market_data_service
 
     @property
     def llm(self) -> ChatAnthropic:
@@ -218,8 +220,8 @@ class ReasoningChainService:
                 ],
             )
 
-            # Step 2: 分析市场状态（模拟数据）
-            market_analysis = self._generate_market_analysis(symbol or "BTC/USDT", concept)
+            # Step 2: 分析市场状态 (使用真实数据)
+            market_analysis = await self._generate_market_analysis(symbol or "BTC/USDT", concept)
             builder.add_analysis(
                 title="当前市场分析",
                 content=market_analysis["content"],
@@ -292,38 +294,46 @@ class ReasoningChainService:
 
         return builder.build()
 
-    def _generate_market_analysis(
+    async def _generate_market_analysis(
         self,
         symbol: str,
         concept: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """生成市场分析（模拟数据）"""
-        # 实际应用中，这里应该调用市场数据服务获取实时数据
-        base_symbol = symbol.split("/")[0]
+        """生成市场分析 (使用真实数据)"""
+        # 获取真实市场数据
+        data = {"rsi": 50, "price": 0, "change_24h": 0, "volume_ratio": 1.0}
 
-        # 模拟的市场数据
-        mock_data = {
-            "BTC": {"rsi": 28, "price": 87520, "change_24h": -3.2, "volume_ratio": 1.8},
-            "ETH": {"rsi": 35, "price": 2927, "change_24h": -2.8, "volume_ratio": 1.5},
-            "SOL": {"rsi": 42, "price": 123, "change_24h": -1.5, "volume_ratio": 1.2},
-        }
-
-        data = mock_data.get(base_symbol, mock_data["BTC"])
+        if self.market_data_service:
+            try:
+                indicators = await self.market_data_service.get_technical_indicators(symbol)
+                if not indicators.get("error"):
+                    rsi_data = indicators.get("rsi", {})
+                    price_data = indicators.get("price", {})
+                    volume_data = indicators.get("volume", {})
+                    data = {
+                        "rsi": rsi_data.get("value", 50),
+                        "price": price_data.get("current", 0),
+                        "change_24h": price_data.get("change_percent", 0),
+                        "volume_ratio": volume_data.get("ratio", 1.0),
+                    }
+                    logger.info(f"Using real market data for {symbol}")
+            except Exception as e:
+                logger.warning(f"Failed to get real market data for {symbol}: {e}")
 
         content = f"""当前 **{symbol}** 技术面状态：
 
-• **RSI(14)**: {data['rsi']} {'✅ 超卖区' if data['rsi'] < 30 else '⚠️ 接近超卖' if data['rsi'] < 40 else '正常区间'}
+• **RSI(14)**: {data['rsi']:.1f} {'✅ 超卖区' if data['rsi'] < 30 else '⚠️ 接近超卖' if data['rsi'] < 40 else '🔴 超买区' if data['rsi'] > 70 else '正常区间'}
 • **24h 涨跌**: {data['change_24h']:+.1f}%
-• **成交量**: 较昨日放大 {data['volume_ratio']:.1f}x
+• **成交量**: {'放大' if data['volume_ratio'] > 1 else '缩小'} {data['volume_ratio']:.1f}x
 • **当前价格**: ${data['price']:,.2f}
 
-基于以上数据，当前市场{'处于超卖区域，可能存在反弹机会' if data['rsi'] < 30 else '接近超卖区域，需要观察确认信号' if data['rsi'] < 40 else '处于正常区间'}。"""
+基于以上数据，当前市场{'处于超卖区域，可能存在反弹机会' if data['rsi'] < 30 else '接近超卖区域，需要观察确认信号' if data['rsi'] < 40 else '处于超买区域，注意回调风险' if data['rsi'] > 70 else '处于正常区间'}。"""
 
         evidence = [
             ReasoningEvidence(
                 type=EvidenceType.INDICATOR,
                 label="RSI(14)",
-                value=data["rsi"],
+                value=round(data["rsi"], 1),
                 significance="high" if data["rsi"] < 30 or data["rsi"] > 70 else "medium",
             ),
             ReasoningEvidence(
@@ -399,5 +409,7 @@ async def get_reasoning_service() -> ReasoningChainService:
     """获取推理链服务单例"""
     global _reasoning_service
     if _reasoning_service is None:
-        _reasoning_service = ReasoningChainService()
+        # 初始化市场数据服务
+        market_data_service = await get_market_data_service()
+        _reasoning_service = ReasoningChainService(market_data_service=market_data_service)
     return _reasoning_service
