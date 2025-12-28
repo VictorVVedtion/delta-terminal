@@ -5,11 +5,13 @@ import {
   CandlestickSeries,
   ColorType,
   createChart,
+  createSeriesMarkers,
   CrosshairMode,
   type HistogramData,
   HistogramSeries,
   type IChartApi,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
   type SeriesMarker,
   type Time,
 } from 'lightweight-charts'
@@ -56,25 +58,31 @@ const CHART_COLORS = {
 // Helper Functions
 // =============================================================================
 
-function formatSignalMarkers(signals: ChartSignal[]): SeriesMarker<Time>[] {
-  return signals.map((signal) => {
-    const isBuy = signal.type === 'buy'
-    const isClose = signal.type === 'close'
+function formatSignalMarkers(signals: ChartSignal[], candleTimes: Set<number>): SeriesMarker<Time>[] {
+  return signals
+    .filter((signal) => {
+      // 确保信号时间戳与 K 线时间戳匹配
+      const timeInSeconds = Math.floor(signal.timestamp / 1000)
+      return candleTimes.has(timeInSeconds)
+    })
+    .map((signal) => {
+      const isBuy = signal.type === 'buy'
+      const isClose = signal.type === 'close'
 
-    return {
-      time: (signal.timestamp / 1000) as Time, // Convert to seconds
-      position: isBuy ? 'belowBar' : 'aboveBar',
-      color: isBuy ? CHART_COLORS.buyColor : isClose ? CHART_COLORS.closeColor : CHART_COLORS.sellColor,
-      shape: isBuy ? 'arrowUp' : isClose ? 'circle' : 'arrowDown',
-      text: signal.label || (isBuy ? 'Buy' : isClose ? 'Close' : 'Sell'),
-      size: 1,
-    } as SeriesMarker<Time>
-  })
+      return {
+        time: Math.floor(signal.timestamp / 1000) as Time, // Convert to seconds (integer)
+        position: isBuy ? 'belowBar' : 'aboveBar',
+        color: isBuy ? CHART_COLORS.buyColor : isClose ? CHART_COLORS.closeColor : CHART_COLORS.sellColor,
+        shape: isBuy ? 'arrowUp' : isClose ? 'circle' : 'arrowDown',
+        text: signal.label || (isBuy ? 'B' : isClose ? 'C' : 'S'),
+        size: 3, // 最大尺寸确保可见
+      } as SeriesMarker<Time>
+    })
 }
 
 function formatCandlestickData(candles: ChartData['candles']): CandlestickData[] {
   return candles.map((candle) => ({
-    time: (candle.timestamp / 1000) as Time, // Convert to seconds
+    time: Math.floor(candle.timestamp / 1000) as Time, // Convert to seconds (integer)
     open: candle.open,
     high: candle.high,
     low: candle.low,
@@ -84,7 +92,7 @@ function formatCandlestickData(candles: ChartData['candles']): CandlestickData[]
 
 function formatVolumeData(candles: ChartData['candles']): HistogramData[] {
   return candles.map((candle) => ({
-    time: (candle.timestamp / 1000) as Time,
+    time: Math.floor(candle.timestamp / 1000) as Time, // Convert to seconds (integer)
     value: candle.volume,
     color: candle.close >= candle.open ? CHART_COLORS.volumeUp : CHART_COLORS.volumeDown,
   }))
@@ -105,6 +113,7 @@ export function BacktestKlineChart({
   const chartRef = useRef<IChartApi | null>(null)
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
 
   // Initialize chart
   const initChart = useCallback(() => {
@@ -197,26 +206,47 @@ export function BacktestKlineChart({
     const candlestickData = formatCandlestickData(data.candles)
     candlestickSeriesRef.current.setData(candlestickData)
 
+    // 创建 K 线时间集合用于信号匹配
+    const candleTimes = new Set(data.candles.map(c => Math.floor(c.timestamp / 1000)))
+
     // Set volume data
     if (volumeSeriesRef.current && showVolume) {
       const volumeData = formatVolumeData(data.candles)
       volumeSeriesRef.current.setData(volumeData)
     }
 
-    // Set signal markers
-    // Note: In lightweight-charts v5, markers API changed
-    // Using attachPrimitive or custom overlay for signals
-    // TODO: Implement custom marker primitives for v5
+    // Set signal markers using lightweight-charts v5 API
     if (data.signals && data.signals.length > 0 && candlestickSeriesRef.current) {
-      try {
-        // Try v5 API first (may need createSeriesMarkers plugin)
-        const markers = formatSignalMarkers(data.signals)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(candlestickSeriesRef.current as any).setMarkers?.(markers)
-      } catch {
-        // Markers not supported in this version, skip
-        console.debug('Markers not supported, using overlay instead')
+      const markers = formatSignalMarkers(data.signals, candleTimes)
+
+      // Debug: 输出信号数据
+      console.log('[BacktestKlineChart] Raw signals count:', data.signals.length)
+      console.log('[BacktestKlineChart] Matched markers count:', markers.length)
+      console.log('[BacktestKlineChart] First 3 markers:', markers.slice(0, 3))
+      console.log('[BacktestKlineChart] Candle times sample:', Array.from(candleTimes).slice(0, 3))
+
+      // Clean up existing markers plugin
+      if (markersRef.current) {
+        markersRef.current.setMarkers([])
       }
+
+      // Create new markers plugin with v5 API
+      if (markers.length > 0) {
+        try {
+          markersRef.current = createSeriesMarkers(candlestickSeriesRef.current, markers)
+          console.log('[BacktestKlineChart] Markers created successfully:', markers.length)
+        } catch (err) {
+          console.error('[BacktestKlineChart] Failed to create markers:', err)
+        }
+      } else {
+        console.warn('[BacktestKlineChart] No valid markers after filtering')
+      }
+    } else {
+      console.log('[BacktestKlineChart] No signals to display:', {
+        signalsExist: !!data.signals,
+        signalsLength: data.signals?.length,
+        seriesExists: !!candlestickSeriesRef.current,
+      })
     }
 
     // Fit visible range
@@ -225,8 +255,8 @@ export function BacktestKlineChart({
       const toCandle = data.candles[data.candles.length - 1]
       if (fromCandle && toCandle) {
         chartRef.current.timeScale().setVisibleRange({
-          from: (fromCandle.timestamp / 1000) as Time,
-          to: (toCandle.timestamp / 1000) as Time,
+          from: Math.floor(fromCandle.timestamp / 1000) as Time,
+          to: Math.floor(toCandle.timestamp / 1000) as Time,
         })
       }
     } else if (chartRef.current) {
@@ -257,6 +287,10 @@ export function BacktestKlineChart({
     }
 
     return () => {
+      if (markersRef.current) {
+        markersRef.current.setMarkers([])
+        markersRef.current = null
+      }
       if (chartRef.current) {
         chartRef.current.remove()
         chartRef.current = null
@@ -266,6 +300,16 @@ export function BacktestKlineChart({
     }
   }, [initChart, updateChartData])
 
+  // 统计信号数量用于显示
+  const signalCounts = React.useMemo(() => {
+    if (!data.signals) return { buy: 0, sell: 0, close: 0 }
+    return {
+      buy: data.signals.filter(s => s.type === 'buy').length,
+      sell: data.signals.filter(s => s.type === 'sell').length,
+      close: data.signals.filter(s => s.type === 'close').length,
+    }
+  }, [data.signals])
+
   return (
     <div className={cn('relative rounded-lg overflow-hidden bg-background', className)}>
       {/* Chart Header */}
@@ -274,20 +318,22 @@ export function BacktestKlineChart({
         <span className="text-xs text-muted-foreground">{data.timeframe}</span>
       </div>
 
-      {/* Signal Legend */}
+      {/* Signal Legend with counts */}
       <div className="absolute top-2 right-3 z-10 flex items-center gap-3 text-[10px]">
         <div className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-muted-foreground">Buy</span>
+          <span className="text-muted-foreground">Buy ({signalCounts.buy})</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-red-500" />
-          <span className="text-muted-foreground">Sell</span>
+          <span className="text-muted-foreground">Sell ({signalCounts.sell})</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-yellow-500" />
-          <span className="text-muted-foreground">Close</span>
-        </div>
+        {signalCounts.close > 0 && (
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-yellow-500" />
+            <span className="text-muted-foreground">Close ({signalCounts.close})</span>
+          </div>
+        )}
       </div>
 
       {/* Chart Container */}

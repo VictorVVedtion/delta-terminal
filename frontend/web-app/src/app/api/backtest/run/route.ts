@@ -26,17 +26,65 @@ const SIMULATE_DELAY = 2000
 // Mock Data Generators
 // ============================================================================
 
-function generateCandles(startTime: number, endTime: number, timeframe: string): Candle[] {
+/**
+ * 根据交易对获取合理的价格范围
+ */
+function getPriceRangeForSymbol(symbol: string): { base: number; volatility: number } {
+  const symbolLower = symbol.toLowerCase()
+
+  // 常见交易对的价格范围
+  if (symbolLower.includes('btc')) {
+    return { base: 95000, volatility: 0.015 } // BTC 当前约 95000 USDT
+  }
+  if (symbolLower.includes('eth')) {
+    return { base: 3400, volatility: 0.02 } // ETH 当前约 3400 USDT
+  }
+  if (symbolLower.includes('sol')) {
+    return { base: 190, volatility: 0.03 } // SOL 当前约 190 USDT
+  }
+  if (symbolLower.includes('bnb')) {
+    return { base: 700, volatility: 0.02 } // BNB 当前约 700 USDT
+  }
+  if (symbolLower.includes('xrp')) {
+    return { base: 2.2, volatility: 0.03 } // XRP 当前约 2.2 USDT
+  }
+  if (symbolLower.includes('doge')) {
+    return { base: 0.32, volatility: 0.04 } // DOGE 当前约 0.32 USDT
+  }
+  if (symbolLower.includes('ada')) {
+    return { base: 0.9, volatility: 0.03 } // ADA 当前约 0.9 USDT
+  }
+  if (symbolLower.includes('avax')) {
+    return { base: 40, volatility: 0.03 } // AVAX 当前约 40 USDT
+  }
+  if (symbolLower.includes('link')) {
+    return { base: 23, volatility: 0.025 } // LINK 当前约 23 USDT
+  }
+
+  // 默认使用中等价格
+  return { base: 100, volatility: 0.02 }
+}
+
+function generateCandles(
+  startTime: number,
+  endTime: number,
+  timeframe: string,
+  symbol: string
+): Candle[] {
   const candles: Candle[] = []
   const intervalMs = getIntervalMs(timeframe)
-  let price = 40000 + Math.random() * 5000
+  const { base, volatility } = getPriceRangeForSymbol(symbol)
+
+  // 起始价格在基准价格附近波动
+  let price = base * (0.95 + Math.random() * 0.1)
   let time = startTime
 
   while (time <= endTime) {
     const open = price
-    const change = (Math.random() - 0.48) * price * 0.02
-    const high = Math.max(open, open + change) + Math.random() * price * 0.005
-    const low = Math.min(open, open + change) - Math.random() * price * 0.005
+    // 使用符号特定的波动率
+    const change = (Math.random() - 0.48) * price * volatility
+    const high = Math.max(open, open + change) + Math.random() * price * volatility * 0.3
+    const low = Math.min(open, open + change) - Math.random() * price * volatility * 0.3
     const close = open + change
     price = close
 
@@ -55,20 +103,58 @@ function generateCandles(startTime: number, endTime: number, timeframe: string):
   return candles
 }
 
-function generateSignals(candles: Candle[]): ChartSignal[] {
+function generateSignals(candles: Candle[], strategyName: string): ChartSignal[] {
   const signals: ChartSignal[] = []
+  const isGrid = strategyName.toLowerCase().includes('网格') || strategyName.toLowerCase().includes('grid')
+
+  // 确保生成足够多的信号用于可视化
+  const signalProbability = isGrid ? 0.08 : 0.05 // 网格策略信号更频繁
+  let lastSignalType: 'buy' | 'sell' | 'close' = 'sell' // 交替生成买卖信号
 
   candles.forEach((candle, i) => {
-    if (i < 10) return
-    if (Math.random() > 0.92) {
+    if (i < 5) return // 跳过前几根K线
+
+    if (Math.random() < signalProbability) {
+      // 交替买卖，网格策略特点
+      const type = lastSignalType === 'buy' ? 'sell' : 'buy'
+      lastSignalType = type
+
+      let label: string
+      if (isGrid) {
+        label = type === 'buy' ? '网格买入' : '网格卖出'
+      } else {
+        label = type === 'buy' ? '入场' : '出场'
+      }
+
       signals.push({
         timestamp: candle.timestamp,
-        type: Math.random() > 0.5 ? 'buy' : 'sell',
-        price: candle.close,
-        label: Math.random() > 0.5 ? '网格买入' : '网格卖出',
+        type,
+        price: type === 'buy' ? candle.low : candle.high, // 买在低点，卖在高点
+        label,
       })
     }
   })
+
+  // 确保至少有一些信号
+  if (signals.length < 5 && candles.length > 20) {
+    // 强制添加几个信号点
+    const indices = [10, 25, 40, 55, 70].filter(i => i < candles.length)
+    indices.forEach((idx, i) => {
+      const candle = candles[idx]
+      if (candle) {
+        const type = i % 2 === 0 ? 'buy' : 'sell'
+        signals.push({
+          timestamp: candle.timestamp,
+          type,
+          price: type === 'buy' ? candle.low : candle.high,
+          label: isGrid ? (type === 'buy' ? '网格买入' : '网格卖出') : (type === 'buy' ? '入场' : '出场'),
+        })
+      }
+    })
+  }
+
+  // 按时间排序
+  signals.sort((a, b) => a.timestamp - b.timestamp)
 
   return signals
 }
@@ -251,8 +337,8 @@ export async function POST(request: NextRequest) {
     await new Promise((resolve) => setTimeout(resolve, SIMULATE_DELAY))
 
     // 生成模拟数据
-    const candles = generateCandles(config.startDate, config.endDate, config.timeframe)
-    const signals = generateSignals(candles)
+    const candles = generateCandles(config.startDate, config.endDate, config.timeframe, config.symbol)
+    const signals = generateSignals(candles, config.strategyName)
     const equityCurve = generateEquityCurve(
       config.startDate,
       config.endDate,
