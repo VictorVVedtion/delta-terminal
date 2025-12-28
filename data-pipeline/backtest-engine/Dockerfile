@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libhdf5-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装Poetry
@@ -38,7 +39,7 @@ EXPOSE 8003
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8003/health')"
+    CMD curl -f http://localhost:8003/health || exit 1
 
 # 启动命令
 CMD ["python", "-m", "src.main"]
