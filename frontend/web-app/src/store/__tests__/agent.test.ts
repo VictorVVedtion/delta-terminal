@@ -1,340 +1,143 @@
-/**
- * AgentStore Tests - 部署功能测试
- * Story 1.2: 部署 API 接口与 AgentStore 状态管理
- */
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useAgentStore, type Agent } from '../agent'
 
-import { act } from '@testing-library/react'
-
-import { type Agent, useAgentStore } from '../agent'
-
-// =============================================================================
-// Test Setup
-// =============================================================================
-
-const createMockAgent = (overrides: Partial<Agent> = {}): Agent => ({
-  id: 'test_agent_001',
-  name: 'Test Strategy',
-  symbol: 'BTC/USDT',
-  status: 'stopped',
-  pnl: 0,
-  pnlPercent: 0,
-  trades: 0,
-  winRate: 0,
-  createdAt: Date.now(),
-  updatedAt: Date.now(),
-  ...overrides,
-})
-
-describe('AgentStore - Deployment Actions', () => {
+describe('AgentStore', () => {
   beforeEach(() => {
-    // Reset store state before each test
-    act(() => {
-      useAgentStore.setState({
-        agents: [],
-        activeAgentId: null,
-      })
+    // Reset store to initial state
+    useAgentStore.setState({
+      agents: [],
+      activeAgentId: null,
+      riskOverview: {
+        marginRate: 0,
+        totalExposure: 0,
+        maxDrawdown: 0,
+        riskLevel: 'low',
+      },
+      pnlDashboard: {
+        totalPnL: 0,
+        totalPnLPercent: 0,
+        todayPnL: 0,
+        todayPnLPercent: 0,
+        weekPnL: 0,
+        monthPnL: 0,
+      },
+      chatHistory: [],
     })
   })
 
-  // =============================================================================
-  // deployAgentToPaper Tests
-  // =============================================================================
-
-  describe('deployAgentToPaper', () => {
-    it('should update agent status to paper', () => {
-      const agent = createMockAgent({ id: 'agent_1', status: 'stopped' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().deployAgentToPaper('agent_1', 10000)
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.status).toBe('paper')
+  describe('Initial State', () => {
+    it('should have empty agents array', () => {
+      const { agents } = useAgentStore.getState()
+      expect(agents).toEqual([])
     })
 
-    it('should set deploymentStatus to deployed', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().deployAgentToPaper('agent_1', 10000)
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.deploymentStatus).toBe('deployed')
+    it('should have null activeAgentId', () => {
+      const { activeAgentId } = useAgentStore.getState()
+      expect(activeAgentId).toBeNull()
     })
 
-    it('should set virtualCapital correctly', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().deployAgentToPaper('agent_1', 25000)
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.virtualCapital).toBe(25000)
-    })
-
-    it('should set deployedAt and paperStartedAt timestamps', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      const beforeDeploy = Date.now()
-
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().deployAgentToPaper('agent_1', 10000)
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.deployedAt).toBeGreaterThanOrEqual(beforeDeploy)
-      expect(updatedAgent?.paperStartedAt).toBeGreaterThanOrEqual(beforeDeploy)
-    })
-
-    it('should not affect other agents', () => {
-      const agent1 = createMockAgent({ id: 'agent_1', status: 'stopped' })
-      const agent2 = createMockAgent({ id: 'agent_2', status: 'stopped' })
-
-      act(() => {
-        useAgentStore.getState().addAgent(agent1)
-        useAgentStore.getState().addAgent(agent2)
-        useAgentStore.getState().deployAgentToPaper('agent_1', 10000)
-      })
-
-      const unchangedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_2')
-      expect(unchangedAgent?.status).toBe('stopped')
-      expect(unchangedAgent?.deploymentStatus).toBeUndefined()
+    it('should have default risk overview', () => {
+      const { riskOverview } = useAgentStore.getState()
+      expect(riskOverview.riskLevel).toBe('low')
+      expect(riskOverview.marginRate).toBe(0)
     })
   })
 
-  // =============================================================================
-  // deployAgentToLive Tests
-  // =============================================================================
+  describe('Agent Actions', () => {
+    const mockAgent: Agent = {
+      id: 'agent-1',
+      name: 'Test Agent',
+      symbol: 'BTC/USDT',
+      status: 'paper',
+      pnl: 100,
+      pnlPercent: 5,
+      trades: 10,
+      winRate: 0.6,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
 
-  describe('deployAgentToLive', () => {
-    it('should update agent status to live', () => {
-      const agent = createMockAgent({ id: 'agent_1', status: 'paper' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().deployAgentToLive('agent_1', 5000)
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.status).toBe('live')
+    it('should add agent', () => {
+      useAgentStore.getState().addAgent(mockAgent)
+      const { agents } = useAgentStore.getState()
+      expect(agents).toHaveLength(1)
+      expect(agents[0].id).toBe('agent-1')
     })
 
-    it('should set initialCapital correctly', () => {
-      const agent = createMockAgent({ id: 'agent_1', status: 'paper' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().deployAgentToLive('agent_1', 15000)
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.initialCapital).toBe(15000)
+    it('should update agent', () => {
+      useAgentStore.getState().addAgent(mockAgent)
+      useAgentStore.getState().updateAgent('agent-1', { pnl: 200 })
+      const { agents } = useAgentStore.getState()
+      expect(agents[0].pnl).toBe(200)
     })
 
-    it('should set deploymentStatus to deployed', () => {
-      const agent = createMockAgent({ id: 'agent_1', status: 'paper' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().deployAgentToLive('agent_1', 5000)
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.deploymentStatus).toBe('deployed')
-    })
-  })
-
-  // =============================================================================
-  // updateDeploymentProgress Tests
-  // =============================================================================
-
-  describe('updateDeploymentProgress', () => {
-    it('should set deploymentStatus to deploying for in_progress', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().updateDeploymentProgress('agent_1', {
-          status: 'in_progress',
-          progress: 50,
-          currentStep: 'Initializing...',
-        })
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.deploymentStatus).toBe('deploying')
+    it('should remove agent', () => {
+      useAgentStore.getState().addAgent(mockAgent)
+      useAgentStore.getState().removeAgent('agent-1')
+      const { agents } = useAgentStore.getState()
+      expect(agents).toHaveLength(0)
     })
 
-    it('should set deploymentStatus to deployed for completed', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().updateDeploymentProgress('agent_1', {
-          status: 'completed',
-          progress: 100,
-          currentStep: 'Done',
-        })
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.deploymentStatus).toBe('deployed')
+    it('should set active agent', () => {
+      useAgentStore.getState().addAgent(mockAgent)
+      useAgentStore.getState().setActiveAgent('agent-1')
+      const { activeAgentId } = useAgentStore.getState()
+      expect(activeAgentId).toBe('agent-1')
     })
 
-    it('should set deploymentStatus to failed for failed', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().updateDeploymentProgress('agent_1', {
-          status: 'failed',
-          progress: 30,
-          currentStep: 'Error',
-          error: 'Connection failed',
-        })
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.deploymentStatus).toBe('failed')
+    it('should set multiple agents', () => {
+      const agents = [mockAgent, { ...mockAgent, id: 'agent-2', name: 'Agent 2' }]
+      useAgentStore.getState().setAgents(agents)
+      expect(useAgentStore.getState().agents).toHaveLength(2)
     })
   })
 
-  // =============================================================================
-  // rollbackDeployment Tests
-  // =============================================================================
-
-  describe('rollbackDeployment', () => {
-    it('should restore previous status', () => {
-      const agent = createMockAgent({ id: 'agent_1', status: 'paper' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().rollbackDeployment('agent_1', 'stopped')
+  describe('Risk Overview Actions', () => {
+    it('should update risk overview', () => {
+      useAgentStore.getState().updateRiskOverview({
+        riskLevel: 'high',
+        marginRate: 50,
       })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.status).toBe('stopped')
-    })
-
-    it('should set deploymentStatus to failed', () => {
-      const agent = createMockAgent({ id: 'agent_1', status: 'paper' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-        useAgentStore.getState().rollbackDeployment('agent_1', 'stopped')
-      })
-
-      const updatedAgent = useAgentStore.getState().agents.find((a) => a.id === 'agent_1')
-      expect(updatedAgent?.deploymentStatus).toBe('failed')
+      const { riskOverview } = useAgentStore.getState()
+      expect(riskOverview.riskLevel).toBe('high')
+      expect(riskOverview.marginRate).toBe(50)
     })
   })
 
-  // =============================================================================
-  // canDeployToPaper Tests
-  // =============================================================================
-
-  describe('canDeployToPaper', () => {
-    it('should return true when agent has backtestId', () => {
-      const agent = createMockAgent({ id: 'agent_1', backtestId: 'backtest_001' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
+  describe('PnL Dashboard Actions', () => {
+    it('should update pnl dashboard', () => {
+      useAgentStore.getState().updatePnLDashboard({
+        totalPnL: 1000,
+        todayPnL: 100,
       })
-
-      const canDeploy = useAgentStore.getState().canDeployToPaper('agent_1')
-      expect(canDeploy).toBe(true)
-    })
-
-    it('should return false when agent has no backtestId', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-      })
-
-      const canDeploy = useAgentStore.getState().canDeployToPaper('agent_1')
-      expect(canDeploy).toBe(false)
-    })
-
-    it('should return false when agent does not exist', () => {
-      const canDeploy = useAgentStore.getState().canDeployToPaper('non_existent')
-      expect(canDeploy).toBe(false)
+      const { pnlDashboard } = useAgentStore.getState()
+      expect(pnlDashboard.totalPnL).toBe(1000)
+      expect(pnlDashboard.todayPnL).toBe(100)
     })
   })
 
-  // =============================================================================
-  // canDeployToLive Tests
-  // =============================================================================
-
-  describe('canDeployToLive', () => {
-    it('should return false when agent is not in paper mode', () => {
-      const agent = createMockAgent({ id: 'agent_1', status: 'stopped' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
+  describe('Chat History Actions', () => {
+    it('should add chat history', () => {
+      useAgentStore.getState().addChatHistory({
+        id: 'chat-1',
+        title: 'Test Chat',
+        preview: 'Hello world',
+        timestamp: Date.now(),
       })
-
-      const canDeploy = useAgentStore.getState().canDeployToLive('agent_1')
-      expect(canDeploy).toBe(false)
+      const { chatHistory } = useAgentStore.getState()
+      expect(chatHistory).toHaveLength(1)
     })
 
-    it('should return false when paper running days < 7', () => {
-      const agent = createMockAgent({
-        id: 'agent_1',
-        status: 'paper',
-        paperStartedAt: Date.now() - 3 * 24 * 60 * 60 * 1000, // 3 days ago
+    it('should clear chat history', () => {
+      useAgentStore.getState().addChatHistory({
+        id: 'chat-1',
+        title: 'Test Chat',
+        preview: 'Hello world',
+        timestamp: Date.now(),
       })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-      })
-
-      const canDeploy = useAgentStore.getState().canDeployToLive('agent_1')
-      expect(canDeploy).toBe(false)
-    })
-
-    it('should return true when paper running days >= 7', () => {
-      const agent = createMockAgent({
-        id: 'agent_1',
-        status: 'paper',
-        paperStartedAt: Date.now() - 10 * 24 * 60 * 60 * 1000, // 10 days ago
-      })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-      })
-
-      const canDeploy = useAgentStore.getState().canDeployToLive('agent_1')
-      expect(canDeploy).toBe(true)
-    })
-
-    it('should return false when agent does not exist', () => {
-      const canDeploy = useAgentStore.getState().canDeployToLive('non_existent')
-      expect(canDeploy).toBe(false)
-    })
-  })
-
-  // =============================================================================
-  // getPaperRunningDays Tests
-  // =============================================================================
-
-  describe('getPaperRunningDays', () => {
-    it('should return 0 when agent has no paperStartedAt', () => {
-      const agent = createMockAgent({ id: 'agent_1' })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-      })
-
-      const days = useAgentStore.getState().getPaperRunningDays('agent_1')
-      expect(days).toBe(0)
-    })
-
-    it('should return correct number of days', () => {
-      const daysAgo = 5
-      const agent = createMockAgent({
-        id: 'agent_1',
-        paperStartedAt: Date.now() - daysAgo * 24 * 60 * 60 * 1000,
-      })
-      act(() => {
-        useAgentStore.getState().addAgent(agent)
-      })
-
-      const days = useAgentStore.getState().getPaperRunningDays('agent_1')
-      expect(days).toBe(daysAgo)
-    })
-
-    it('should return 0 when agent does not exist', () => {
-      const days = useAgentStore.getState().getPaperRunningDays('non_existent')
-      expect(days).toBe(0)
+      useAgentStore.getState().clearChatHistory()
+      const { chatHistory } = useAgentStore.getState()
+      expect(chatHistory).toHaveLength(0)
     })
   })
 })

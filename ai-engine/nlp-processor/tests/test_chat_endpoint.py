@@ -14,12 +14,16 @@ from src.models.insight_schemas import (
     ParamConfig,
     create_insight_id,
 )
+from src.services.insight_service import get_insight_service
+from src.services.intent_service import get_intent_service
+from src.chains.strategy_chain import get_strategy_chain
 
 
 @pytest.fixture
 def client():
     """创建测试客户端"""
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture
@@ -85,28 +89,32 @@ class TestChatEndpoint:
         mock_strategy_chain
     ):
         """测试基本消息发送"""
-        with patch('src.api.endpoints.chat.get_insight_service', return_value=mock_insight_service), \
-             patch('src.api.endpoints.chat.get_intent_service', return_value=mock_intent_service), \
-             patch('src.api.endpoints.chat.get_strategy_chain', return_value=mock_strategy_chain), \
-             patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+        # 使用 FastAPI dependency_overrides
+        app.dependency_overrides[get_insight_service] = lambda: mock_insight_service
+        app.dependency_overrides[get_intent_service] = lambda: mock_intent_service
+        app.dependency_overrides[get_strategy_chain] = lambda: mock_strategy_chain
 
-            response = client.post(
-                "/api/v1/chat/message",
-                json={
-                    "message": "帮我创建一个 BTC 策略",
-                    "user_id": "test_user"
-                }
-            )
+        try:
+            with patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+                response = client.post(
+                    "/api/v1/chat/message",
+                    json={
+                        "message": "帮我创建一个 BTC 策略",
+                        "user_id": "test_user"
+                    }
+                )
 
-            assert response.status_code == 200
-            data = response.json()
+                assert response.status_code == 200
+                data = response.json()
 
-            assert "message" in data
-            assert "conversation_id" in data
-            assert "intent" in data
-            assert data["intent"] == "CREATE_STRATEGY"
-            assert "insight" in data
-            assert data["insight"] is not None
+                assert "message" in data
+                assert "conversation_id" in data
+                assert "intent" in data
+                assert data["intent"] == "create_strategy"  # 小写，与 IntentType.value 一致
+                assert "insight" in data
+                assert data["insight"] is not None
+        finally:
+            app.dependency_overrides.clear()
 
     def test_send_message_with_conversation_id(
         self,
@@ -116,35 +124,38 @@ class TestChatEndpoint:
         mock_strategy_chain
     ):
         """测试带对话 ID 的消息发送"""
-        with patch('src.api.endpoints.chat.get_insight_service', return_value=mock_insight_service), \
-             patch('src.api.endpoints.chat.get_intent_service', return_value=mock_intent_service), \
-             patch('src.api.endpoints.chat.get_strategy_chain', return_value=mock_strategy_chain), \
-             patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+        app.dependency_overrides[get_insight_service] = lambda: mock_insight_service
+        app.dependency_overrides[get_intent_service] = lambda: mock_intent_service
+        app.dependency_overrides[get_strategy_chain] = lambda: mock_strategy_chain
 
-            # 第一条消息
-            response1 = client.post(
-                "/api/v1/chat/message",
-                json={
-                    "message": "你好",
-                    "user_id": "test_user"
-                }
-            )
+        try:
+            with patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+                # 第一条消息
+                response1 = client.post(
+                    "/api/v1/chat/message",
+                    json={
+                        "message": "你好",
+                        "user_id": "test_user"
+                    }
+                )
 
-            assert response1.status_code == 200
-            conv_id = response1.json()["conversation_id"]
+                assert response1.status_code == 200
+                conv_id = response1.json()["conversation_id"]
 
-            # 第二条消息使用相同的对话 ID
-            response2 = client.post(
-                "/api/v1/chat/message",
-                json={
-                    "message": "创建策略",
-                    "user_id": "test_user",
-                    "conversation_id": conv_id
-                }
-            )
+                # 第二条消息使用相同的对话 ID
+                response2 = client.post(
+                    "/api/v1/chat/message",
+                    json={
+                        "message": "创建策略",
+                        "user_id": "test_user",
+                        "conversation_id": conv_id
+                    }
+                )
 
-            assert response2.status_code == 200
-            assert response2.json()["conversation_id"] == conv_id
+                assert response2.status_code == 200
+                assert response2.json()["conversation_id"] == conv_id
+        finally:
+            app.dependency_overrides.clear()
 
     def test_send_message_follow_up(
         self,
@@ -154,31 +165,34 @@ class TestChatEndpoint:
         mock_strategy_chain
     ):
         """测试跟进消息（澄清回答）"""
-        with patch('src.api.endpoints.chat.get_insight_service', return_value=mock_insight_service), \
-             patch('src.api.endpoints.chat.get_intent_service', return_value=mock_intent_service), \
-             patch('src.api.endpoints.chat.get_strategy_chain', return_value=mock_strategy_chain), \
-             patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+        app.dependency_overrides[get_insight_service] = lambda: mock_insight_service
+        app.dependency_overrides[get_intent_service] = lambda: mock_intent_service
+        app.dependency_overrides[get_strategy_chain] = lambda: mock_strategy_chain
 
-            response = client.post(
-                "/api/v1/chat/message",
-                json={
-                    "message": "BTC/USDT",
-                    "user_id": "test_user",
-                    "context": {
-                        "isFollowUp": True,
-                        "collectedParams": {"timeframe": "1h"},
-                        "category": "trading_pair",
-                        "previousQuestion": "选择交易对"
+        try:
+            with patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+                response = client.post(
+                    "/api/v1/chat/message",
+                    json={
+                        "message": "BTC/USDT",
+                        "user_id": "test_user",
+                        "context": {
+                            "isFollowUp": True,
+                            "collectedParams": {"timeframe": "1h"},
+                            "category": "trading_pair",
+                            "previousQuestion": "选择交易对"
+                        }
                     }
-                }
-            )
+                )
 
-            assert response.status_code == 200
-            data = response.json()
+                assert response.status_code == 200
+                data = response.json()
 
-            assert "insight" in data
-            # 验证 InsightGeneratorService 被调用
-            mock_insight_service.generate_insight.assert_called()
+                assert "insight" in data
+                # 验证 InsightGeneratorService 被调用
+                mock_insight_service.generate_insight.assert_called()
+        finally:
+            app.dependency_overrides.clear()
 
     def test_send_message_general_chat(
         self,
@@ -200,25 +214,28 @@ class TestChatEndpoint:
             )
         )
 
-        with patch('src.api.endpoints.chat.get_insight_service', return_value=mock_insight_service), \
-             patch('src.api.endpoints.chat.get_intent_service', return_value=mock_intent_service), \
-             patch('src.api.endpoints.chat.get_strategy_chain', return_value=mock_strategy_chain), \
-             patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+        app.dependency_overrides[get_insight_service] = lambda: mock_insight_service
+        app.dependency_overrides[get_intent_service] = lambda: mock_intent_service
+        app.dependency_overrides[get_strategy_chain] = lambda: mock_strategy_chain
 
-            response = client.post(
-                "/api/v1/chat/message",
-                json={
-                    "message": "今天天气怎么样?",
-                    "user_id": "test_user"
-                }
-            )
+        try:
+            with patch('src.api.endpoints.chat.store_insight', new_callable=AsyncMock):
+                response = client.post(
+                    "/api/v1/chat/message",
+                    json={
+                        "message": "今天天气怎么样?",
+                        "user_id": "test_user"
+                    }
+                )
 
-            assert response.status_code == 200
-            data = response.json()
+                assert response.status_code == 200
+                data = response.json()
 
-            assert data["intent"] == "GENERAL_CHAT"
-            # 普通对话使用 strategy_chain
-            mock_strategy_chain.process_conversation.assert_called()
+                assert data["intent"] == "general_chat"  # 小写
+                # 普通对话使用 strategy_chain
+                mock_strategy_chain.process_conversation.assert_called()
+        finally:
+            app.dependency_overrides.clear()
 
     def test_send_message_invalid_request(self, client):
         """测试无效请求"""
@@ -246,10 +263,11 @@ class TestChatEndpoint:
             side_effect=Exception("Service error")
         )
 
-        with patch('src.api.endpoints.chat.get_insight_service', return_value=mock_insight_service), \
-             patch('src.api.endpoints.chat.get_intent_service', return_value=mock_intent_service), \
-             patch('src.api.endpoints.chat.get_strategy_chain', return_value=mock_strategy_chain):
+        app.dependency_overrides[get_insight_service] = lambda: mock_insight_service
+        app.dependency_overrides[get_intent_service] = lambda: mock_intent_service
+        app.dependency_overrides[get_strategy_chain] = lambda: mock_strategy_chain
 
+        try:
             response = client.post(
                 "/api/v1/chat/message",
                 json={
@@ -260,6 +278,8 @@ class TestChatEndpoint:
 
             assert response.status_code == 500
             assert "detail" in response.json()
+        finally:
+            app.dependency_overrides.clear()
 
     def test_get_conversation(self, client):
         """测试获取对话历史"""

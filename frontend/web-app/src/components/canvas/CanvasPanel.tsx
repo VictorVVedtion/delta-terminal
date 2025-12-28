@@ -116,7 +116,7 @@ export function CanvasPanel({
   React.useEffect(() => {
     if (insight) {
       // Debug: 打印接收到的 insight.params
-      console.log('[CanvasPanel] Received insight.params:', insight.params?.map(p => ({
+      console.log('[CanvasPanel] Received insight.params:', insight.params.map(p => ({
         key: p.key,
         value: p.value,
         type: typeof p.value,

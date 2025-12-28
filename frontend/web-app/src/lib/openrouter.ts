@@ -119,7 +119,7 @@ export class OpenRouterClient {
   async *chatStream(request: AIRequest): AsyncGenerator<AIStreamChunk> {
     const model = request.model || 'anthropic/claude-sonnet-4.5'
     const modelInfo = AI_MODELS[model]
-    const supportsThinking = modelInfo?.supportsThinking ?? false
+    const supportsThinking = modelInfo.supportsThinking ?? false
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -319,15 +319,15 @@ export class OpenRouterClient {
     latency: number
   ): AIResponse {
     const modelInfo = AI_MODELS[model]
-    const inputPrice = modelInfo?.inputPrice || 0
-    const outputPrice = modelInfo?.outputPrice || 0
+    const inputPrice = modelInfo.inputPrice || 0
+    const outputPrice = modelInfo.outputPrice || 0
 
     const inputTokens = data.usage.prompt_tokens || 0
     const outputTokens = data.usage.completion_tokens || 0
     const totalCost = (inputTokens * inputPrice + outputTokens * outputPrice) / 1000000
 
     const content = data.choices[0]?.message?.content || ''
-    const { cleanContent, thinking } = this.extractThinking(content, modelInfo?.supportsThinking)
+    const { cleanContent, thinking } = this.extractThinking(content, modelInfo.supportsThinking)
 
     return {
       id: data.id,

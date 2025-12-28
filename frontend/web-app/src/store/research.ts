@@ -251,7 +251,7 @@ export const useResearchStore = create<ResearchState>()(
 
         // 计算包含当前步骤进度的总进度
         const currentStep = session.steps[session.currentStepIndex]
-        const currentProgress = currentStep?.progress || 0
+        const currentProgress = currentStep.progress || 0
 
         return Math.round(
           ((completedSteps + currentProgress / 100) / totalSteps) * 100

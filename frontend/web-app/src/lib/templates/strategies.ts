@@ -5,7 +5,7 @@
  * 提供常用策略模板，用户可一键应用并调整参数
  */
 
-import type { InsightData,InsightParam } from '@/types/insight'
+import type { InsightData, InsightParam } from '@/types/insight'
 
 // =============================================================================
 // Types
@@ -583,19 +583,19 @@ export function getTemplateById(id: string): StrategyTemplate | undefined {
  * Category display config
  */
 export const TEMPLATE_CATEGORIES: Record<TemplateCategory, { label: string; icon: string }> = {
-  trend: { label: '趋势跟踪', icon: '📈' },
-  mean_reversion: { label: '均值回归', icon: '🔄' },
-  market_making: { label: '做市策略', icon: '💹' },
-  breakout: { label: '突破策略', icon: '🚀' },
+  trend: { label: '趋势跟踪', icon: 'TrendingUp' },
+  mean_reversion: { label: '均值回归', icon: 'RefreshCcw' },
+  market_making: { label: '做市策略', icon: 'LineChart' },
+  breakout: { label: '突破策略', icon: 'Zap' },
 }
 
 /**
  * Risk level display config
  */
 export const RISK_LEVEL_CONFIG: Record<RiskLevel, { label: string; color: string; icon: string }> = {
-  low: { label: '低风险', color: 'text-green-500', icon: '🟢' },
-  medium: { label: '中等风险', color: 'text-yellow-500', icon: '🟡' },
-  high: { label: '高风险', color: 'text-red-500', icon: '🔴' },
+  low: { label: '低风险', color: 'text-green-500', icon: 'ShieldCheck' },
+  medium: { label: '中等风险', color: 'text-yellow-500', icon: 'AlertTriangle' },
+  high: { label: '高风险', color: 'text-red-500', icon: 'Flame' },
 }
 
 // =============================================================================

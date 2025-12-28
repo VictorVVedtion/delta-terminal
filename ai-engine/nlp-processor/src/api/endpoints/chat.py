@@ -21,14 +21,12 @@ from ...models.schemas import (
 )
 from ...services.insight_service import InsightGeneratorService, get_insight_service
 from ...services.intent_service import IntentService, get_intent_service
+from ...services.conversation_store import ConversationStore, get_conversation_store
 from .insight import store_insight
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
-
-# 临时存储对话（实际应使用 Redis 或数据库）
-conversations: Dict[str, Conversation] = {}
 
 # A2UI: 需要生成 InsightData 的意图类型
 INSIGHT_INTENTS = {
@@ -48,6 +46,7 @@ async def send_message(
     intent_service: IntentService = Depends(get_intent_service),
     strategy_chain: StrategyChain = Depends(get_strategy_chain),
     insight_service: InsightGeneratorService = Depends(get_insight_service),
+    conversation_store: ConversationStore = Depends(get_conversation_store),
 ) -> ChatResponse:
     """
     发送聊天消息
@@ -60,6 +59,7 @@ async def send_message(
         intent_service: 意图服务
         strategy_chain: 策略链
         insight_service: InsightData 生成服务
+        conversation_store: 对话存储服务
 
     Returns:
         聊天响应（包含 InsightData）
@@ -70,15 +70,14 @@ async def send_message(
         # 获取或创建对话
         conversation_id = request.conversation_id or str(uuid.uuid4())
 
-        if conversation_id not in conversations:
-            conversations[conversation_id] = Conversation(
+        conversation = await conversation_store.get_conversation(conversation_id)
+        if not conversation:
+            conversation = Conversation(
                 conversation_id=conversation_id,
                 user_id=request.user_id,
                 messages=[],
                 context=request.context or {},
             )
-
-        conversation = conversations[conversation_id]
 
         # 添加用户消息到历史
         conversation.add_message(MessageRole.USER, request.message)
@@ -136,6 +135,10 @@ async def send_message(
 
             insight_data = insight.model_dump()
             ai_response = insight.explanation
+
+            # 添加 AI 响应到历史并保存
+            conversation.add_message(MessageRole.ASSISTANT, ai_response)
+            await conversation_store.save_conversation(conversation)
 
             # 生成建议操作
             suggested_actions = await _generate_suggested_actions(
@@ -209,6 +212,9 @@ async def send_message(
         # 添加 AI 响应到历史
         conversation.add_message(MessageRole.ASSISTANT, ai_response)
 
+        # 保存对话到存储
+        await conversation_store.save_conversation(conversation)
+
         # 生成建议的后续操作
         suggested_actions = await _generate_suggested_actions(
             intent_response.intent, intent_response.entities
@@ -234,38 +240,47 @@ async def send_message(
 
 
 @router.get("/conversation/{conversation_id}")
-async def get_conversation(conversation_id: str) -> Conversation:
+async def get_conversation(
+    conversation_id: str,
+    conversation_store: ConversationStore = Depends(get_conversation_store),
+) -> Conversation:
     """
     获取对话历史
 
     Args:
         conversation_id: 对话 ID
+        conversation_store: 对话存储服务
 
     Returns:
         对话对象
     """
-    if conversation_id not in conversations:
+    conversation = await conversation_store.get_conversation(conversation_id)
+    if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="对话不存在",
         )
 
-    return conversations[conversation_id]
+    return conversation
 
 
 @router.delete("/conversation/{conversation_id}")
-async def delete_conversation(conversation_id: str) -> Dict[str, str]:
+async def delete_conversation(
+    conversation_id: str,
+    conversation_store: ConversationStore = Depends(get_conversation_store),
+) -> Dict[str, str]:
     """
     删除对话
 
     Args:
         conversation_id: 对话 ID
+        conversation_store: 对话存储服务
 
     Returns:
         删除确认消息
     """
-    if conversation_id in conversations:
-        del conversations[conversation_id]
+    deleted = await conversation_store.delete_conversation(conversation_id)
+    if deleted:
         return {"message": "对话已删除"}
 
     raise HTTPException(
@@ -275,24 +290,26 @@ async def delete_conversation(conversation_id: str) -> Dict[str, str]:
 
 
 @router.post("/conversation/{conversation_id}/clear")
-async def clear_conversation(conversation_id: str) -> Dict[str, str]:
+async def clear_conversation(
+    conversation_id: str,
+    conversation_store: ConversationStore = Depends(get_conversation_store),
+) -> Dict[str, str]:
     """
     清空对话历史（保留对话）
 
     Args:
         conversation_id: 对话 ID
+        conversation_store: 对话存储服务
 
     Returns:
         清空确认消息
     """
-    if conversation_id not in conversations:
+    cleared = await conversation_store.clear_conversation_messages(conversation_id)
+    if not cleared:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="对话不存在",
         )
-
-    conversations[conversation_id].messages = []
-    conversations[conversation_id].updated_at = datetime.now()
 
     return {"message": "对话历史已清空"}
 
@@ -366,22 +383,23 @@ async def _generate_suggested_actions(intent, entities: Dict) -> list[str]:
     """
     suggestions = []
 
-    # 支持 IntentType 和字符串两种类型
+    # 支持 IntentType 和字符串两种类型，统一转换为小写比较
     intent_str = intent.value if hasattr(intent, "value") else str(intent)
+    intent_lower = intent_str.lower()
 
-    if intent_str == "CREATE_STRATEGY":
+    if intent_lower == "create_strategy":
         suggestions.extend([
             "查看完整的策略配置",
             "进行历史数据回测",
             "启动策略运行",
         ])
-    elif intent_str == "ANALYZE_MARKET":
+    elif intent_lower == "analyze_market":
         suggestions.extend([
             "查看更多技术指标",
             "分析历史价格走势",
             "创建基于分析的策略",
         ])
-    elif intent_str == "QUERY_STRATEGY":
+    elif intent_lower == "query_strategy":
         suggestions.extend([
             "查看策略详情",
             "修改策略参数",

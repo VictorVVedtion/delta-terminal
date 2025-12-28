@@ -86,7 +86,7 @@ export function PnLChart({ data, title = '盈亏曲线' }: PnLChartProps) {
           <StatItem label="最低" value={`$${minValue.toFixed(2)}`} />
           <StatItem
             label="涨幅"
-            value={data.length > 0 ? `${((data[data.length - 1]!.value - data[0]!.value) / data[0]!.value * 100).toFixed(2)}%` : '0%'}
+            value={data.length > 0 ? `${((data[data.length - 1].value - data[0].value) / data[0].value * 100).toFixed(2)}%` : '0%'}
             isPercentage
           />
         </div>

@@ -17,7 +17,7 @@ class TestIntentService:
         mock = AsyncMock()
         mock.generate_json_response = AsyncMock(
             return_value={
-                "intent": "CREATE_STRATEGY",
+                "intent": "create_strategy",
                 "confidence": 0.95,
                 "entities": {"symbol": "BTC/USDT", "strategy_type": "grid"},
                 "reasoning": "用户明确表达了创建网格策略的意图"
@@ -31,7 +31,7 @@ class TestIntentService:
         mock = AsyncMock()
         mock.generate_json = AsyncMock(
             return_value={
-                "intent": "CREATE_STRATEGY",
+                "intent": "create_strategy",
                 "confidence": 0.95,
                 "entities": {"symbol": "BTC/USDT", "strategy_type": "grid"},
                 "reasoning": "用户明确表达了创建网格策略的意图"

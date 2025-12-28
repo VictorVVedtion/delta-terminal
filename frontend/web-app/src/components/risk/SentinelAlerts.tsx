@@ -116,10 +116,10 @@ function generateMockAlert(): SentinelAlert {
     'margin',
     'consecutive_loss',
   ]
-  const type = types[Math.floor(Math.random() * types.length)]!
+  const type = types[Math.floor(Math.random() * types.length)]
 
   const severities: AlertSeverity[] = ['info', 'warning', 'critical']
-  const severity = severities[Math.floor(Math.random() * severities.length)]!
+  const severity = severities[Math.floor(Math.random() * severities.length)]
 
   const alertTemplates: Record<AlertType, Partial<SentinelAlert>> = {
     volatility: {

@@ -26,7 +26,6 @@ export default function BacktestPage() {
     history,
     setCurrentBacktest,
     setResult,
-    updateStatus,
     setError,
     removeFromHistory,
   } = useBacktestStore()

@@ -4,6 +4,7 @@ import {
   Activity,
   BarChart3,
   DollarSign,
+  type LucideIcon,
   Power,
   Shield,
   Target,
@@ -29,7 +30,7 @@ interface RiskMetric {
   value: number | string
   change?: number
   status: 'safe' | 'warning' | 'danger'
-  icon: React.ElementType
+  icon: LucideIcon
 }
 
 interface PositionRisk {

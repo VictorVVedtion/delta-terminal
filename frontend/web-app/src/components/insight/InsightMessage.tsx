@@ -1,5 +1,6 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { Bot } from 'lucide-react'
 import React from 'react'
 
@@ -9,7 +10,8 @@ import type {
   ClarificationInsight,
   InsightCardStatus,
   InsightData,
-  InsightParam} from '@/types/insight';
+  InsightParam
+} from '@/types/insight';
 import {
   isClarificationInsight,
 } from '@/types/insight'
@@ -122,8 +124,8 @@ export function InsightMessage({
   // Determine clarification status from insight status
   const clarificationStatus: 'pending' | 'answered' | 'skipped' =
     status === 'approved' ? 'answered' :
-    status === 'rejected' ? 'skipped' :
-    'pending'
+      status === 'rejected' ? 'skipped' :
+        'pending'
 
   // Check if reasoning chain should be shown
   const hasReasoningChain = insight.reasoning_chain && insight.show_reasoning
@@ -182,9 +184,22 @@ export function InsightMessage({
 
   // With avatar - full message layout
   return (
-    <div className={cn('flex gap-3', className)}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, filter: 'blur(10px)', y: -20 }}
+      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
+      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+      className={cn('flex gap-3 relative', className)}
+    >
+      {/* Beam Connector (Projecting from top) */}
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: 40, opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="absolute left-[15px] -top-8 w-[2px] bg-gradient-to-b from-transparent via-cyan-500/50 to-cyan-500/20 z-0 pointer-events-none"
+      />
+
       {/* AI Avatar */}
-      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center relative z-10">
         <Bot className="h-4 w-4 text-foreground" />
       </div>
 
@@ -196,7 +211,9 @@ export function InsightMessage({
         </div>
 
         {/* Card */}
-        <div className="max-w-lg">
+        <div className="max-w-lg relative">
+          {/* Connection Line to Avatar */}
+          <div className="absolute -left-6 top-4 w-4 h-[2px] bg-gradient-to-r from-muted to-transparent opacity-50" />
           {renderCard()}
         </div>
 
@@ -210,7 +227,7 @@ export function InsightMessage({
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 

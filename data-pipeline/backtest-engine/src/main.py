@@ -10,13 +10,12 @@ from src.config import settings
 from src.api.router import api_router
 from src.models.schemas import HealthResponse
 
-# 配置日志
+# 配置日志 - Railway 环境只用 stdout
 logging.basicConfig(
     level=getattr(logging, settings.log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(settings.log_file)
     ]
 )
 
@@ -29,13 +28,16 @@ async def lifespan(app: FastAPI):
     # 启动
     logger.info("========================================")
     logger.info(f"{settings.app_name} v{settings.app_version}")
+    logger.info(f"监听端口: {settings.port}")
     logger.info("回测引擎启动中...")
     logger.info("========================================")
 
-    # 创建必要的目录
+    # 创建必要的目录（忽略错误，云环境可能没有写权限）
     import os
-    os.makedirs(settings.report_output_dir, exist_ok=True)
-    os.makedirs(os.path.dirname(settings.log_file), exist_ok=True)
+    try:
+        os.makedirs(settings.report_output_dir, exist_ok=True)
+    except Exception:
+        pass
 
     yield
 

@@ -10,6 +10,7 @@ import {
   GitMerge,
   Grid3X3,
   Loader2,
+  type LucideIcon,
   Play,
   RefreshCw,
   TrendingUp,
@@ -33,7 +34,7 @@ interface BacktestFormProps {
   isRunning: boolean
 }
 
-const STRATEGY_ICONS: Record<string, React.ElementType> = {
+const STRATEGY_ICONS: Record<string, LucideIcon> = {
   grid: Grid3X3,
   calendar: Calendar,
   activity: Activity,

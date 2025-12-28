@@ -17,17 +17,24 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # API 配置
+    # 应用基础配置
+    app_name: str = "Delta Terminal - NLP Processor"
+    app_version: str = "0.1.0"
+    debug: bool = False
+    host: str = "0.0.0.0"
+    port: int = 8001  # Railway 会通过 PORT 环境变量覆盖
+
+    # API 配置 (保留兼容性)
     api_host: str = Field(default="0.0.0.0", description="API 主机地址")
     api_port: int = Field(default=8001, description="API 端口")
-    api_reload: bool = Field(default=True, description="热重载")
+    api_reload: bool = Field(default=False, description="热重载")
     api_workers: int = Field(default=1, description="工作进程数")
 
     # 环境配置
-    environment: str = Field(default="development", description="运行环境")
+    environment: str = Field(default="production", description="运行环境")
 
     # OpenRouter API 配置 (替代直接 Anthropic 调用)
-    openrouter_api_key: str = Field(description="OpenRouter API 密钥")
+    openrouter_api_key: str = Field(default="", description="OpenRouter API 密钥")
     openrouter_api_url: str = Field(
         default="https://openrouter.ai/api/v1",
         description="OpenRouter API URL",
@@ -57,7 +64,7 @@ class Settings(BaseSettings):
     database_max_overflow: int = Field(default=10, description="最大溢出连接")
 
     # JWT 配置
-    secret_key: str = Field(description="JWT 密钥")
+    secret_key: str = Field(default="dev-secret-key-change-in-production", description="JWT 密钥")
     algorithm: str = Field(default="HS256", description="加密算法")
     access_token_expire_minutes: int = Field(default=30, description="Token 过期时间(分钟)")
 

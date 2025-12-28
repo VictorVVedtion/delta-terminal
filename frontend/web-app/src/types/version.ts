@@ -78,8 +78,8 @@ export function parseVersion(version: string): { major: number; minor: number } 
     return { major: 1, minor: 0 }
   }
   return {
-    major: parseInt(match[1]!, 10),
-    minor: parseInt(match[2]!, 10),
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
   }
 }
 

@@ -9,3 +9,4 @@ export {
   ErrorFallback,
   PageErrorBoundary,
 } from './ErrorBoundary'
+export { ErrorBoundaryDemo } from './ErrorBoundaryDemo'

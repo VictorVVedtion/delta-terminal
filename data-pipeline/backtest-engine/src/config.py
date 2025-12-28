@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
     host: str = "0.0.0.0"
-    port: int = 8003
+    port: int = 8003  # Railway 会通过 PORT 环境变量覆盖
 
     # API配置
     api_prefix: str = "/api/v1"

@@ -216,7 +216,7 @@ function SimpleMode({ currentPreset, onPresetChange }: SimpleModeProps) {
               </p>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
-                  {model?.name || preset.defaultModel}
+                  {model.name || preset.defaultModel}
                 </span>
                 <span className="font-mono text-primary">
                   ~${preset.estimatedCostPerCall.toFixed(3)}/次
@@ -276,7 +276,7 @@ function AdvancedMode({
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <div className="text-sm">{modelInfo?.name || currentModel}</div>
+                  <div className="text-sm">{modelInfo.name || currentModel}</div>
                   <div className="text-xs text-muted-foreground">
                     优先: {getPriorityLabel(task.priority)}
                   </div>
@@ -294,7 +294,7 @@ function AdvancedMode({
             {isExpanded && (
               <div className="border-t bg-secondary/30 p-4 space-y-2">
                 <div className="text-xs text-muted-foreground mb-3">
-                  推荐: {AI_MODELS[task.recommendedModel]?.name || task.recommendedModel}
+                  推荐: {AI_MODELS[task.recommendedModel].name || task.recommendedModel}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {getModelsForTask(task.type).map((model) => (

@@ -121,7 +121,7 @@ export function HeatmapSlider({
         </label>
         <div className="flex items-center gap-2">
           <span className={cn('text-sm font-semibold', colors.text)}>
-            {currentZone?.label}
+            {currentZone.label}
           </span>
           <span className="text-sm text-muted-foreground">
             ({value}{unit})

@@ -222,7 +222,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
    */
   const handleResponse = useCallback(
     (response: InsightApiResponse): InsightData | null => {
-      const insight = response.insight as InsightData | undefined
+      const insight = response.insight
 
       // Debug: 打印 API 返回的 insight.params
       if (insight?.params) {

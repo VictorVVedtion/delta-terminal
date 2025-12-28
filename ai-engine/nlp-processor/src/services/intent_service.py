@@ -14,6 +14,12 @@ from ..models.llm_routing import LLMTaskType
 from ..prompts.strategy_prompts import INTENT_RECOGNITION_PROMPT
 from .llm_service import LLMService, get_llm_service
 from .llm_router import LLMRouter, get_llm_router
+from ..utils.input_sanitizer import (
+    sanitize_user_input,
+    sanitize_for_llm,
+    check_input_abuse,
+    InputValidationError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +82,44 @@ class IntentService:
         effective_user_id = user_id or self.user_id
 
         try:
-            logger.info(f"Recognizing intent for text: {request.text[:100]}...")
+            # ====================================================================
+            # 安全检查: 输入清理和验证
+            # ====================================================================
+            try:
+                # 清理用户输入
+                cleaned_text, warnings = sanitize_user_input(
+                    request.text,
+                    max_length=2000,
+                    allow_special_chars=True,
+                    strict_mode=False,  # 非严格模式，记录但不阻止
+                )
+
+                # 记录警告
+                if warnings:
+                    logger.warning(f"输入清理警告 (user: {effective_user_id}): {warnings}")
+
+                # 滥用检测
+                if effective_user_id and check_input_abuse(effective_user_id, cleaned_text):
+                    logger.warning(f"检测到重复输入滥用: {effective_user_id}")
+
+            except InputValidationError as e:
+                logger.error(f"输入验证失败: {e}")
+                return IntentRecognitionResponse(
+                    intent=IntentType.UNKNOWN,
+                    confidence=0.0,
+                    entities={},
+                    reasoning=f"输入验证失败: {str(e)}",
+                )
+
+            # 为 LLM 准备安全输入
+            safe_input = sanitize_for_llm(cleaned_text, context="intent_recognition")
+
+            logger.info(f"Recognizing intent for text: {safe_input[:100]}...")
 
             # 构建提示
             context = json.dumps(request.context or {}, ensure_ascii=False)
             prompt_value = INTENT_RECOGNITION_PROMPT.format_messages(
-                user_input=request.text, context=context
+                user_input=safe_input, context=context
             )
 
             # 转换为 API 消息格式
@@ -174,6 +212,8 @@ class IntentService:
 
         # 简单的关键词匹配（实际应使用更复杂的 NER）
         text_upper = text.upper()
+        # 归一化文本：移除数字与中文之间的空格
+        normalized_text = text.replace(" 小时", "小时").replace(" 分钟", "分钟").replace(" 天", "天")
 
         # 提取交易对
         symbols = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"]
@@ -195,7 +235,7 @@ class IntentService:
             "周线": "1w",
         }
         for keyword, timeframe in timeframes.items():
-            if keyword in text:
+            if keyword in normalized_text:
                 entities["timeframe"] = timeframe
                 break
 
@@ -238,13 +278,14 @@ class IntentService:
         """提取查询相关实体"""
         entities: Dict[str, Any] = {}
 
-        # 提取查询类型
-        if "所有" in text or "全部" in text:
-            entities["query_type"] = "all"
-        elif "运行" in text or "活跃" in text:
+        # 提取查询类型（优先级：active > all > history）
+        # 先检查更具体的状态词
+        if "运行" in text or "活跃" in text:
             entities["query_type"] = "active"
         elif "历史" in text:
             entities["query_type"] = "history"
+        elif "所有" in text or "全部" in text:
+            entities["query_type"] = "all"
 
         return entities
 

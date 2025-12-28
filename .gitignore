@@ -107,3 +107,6 @@ credentials/
 # 监控与日志
 prometheus/
 grafana/
+
+# Vercel
+.vercel

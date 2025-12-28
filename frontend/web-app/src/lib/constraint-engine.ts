@@ -261,7 +261,7 @@ function evaluateAssetConstraint(
     case 'required_liquidity': {
       if (pendingOrder && rule.minVolume) {
         const symbolData = market[pendingOrder.symbol]
-        const volume = symbolData?.volume24h || 0
+        const volume = symbolData.volume24h || 0
         details = { symbol: pendingOrder.symbol, volume24h: volume, minVolume: rule.minVolume }
 
         if (volume < rule.minVolume) {
@@ -449,7 +449,7 @@ function evaluateExecutionConstraint(
 
     case 'max_spread': {
       const symbolData = market[pendingOrder.symbol]
-      const spreadPercent = symbolData?.spreadPercent || 0
+      const spreadPercent = symbolData.spreadPercent || 0
       details = { spreadPercent, limit: rule.maxSpreadPercent }
 
       if (rule.maxSpreadPercent && spreadPercent > rule.maxSpreadPercent) {

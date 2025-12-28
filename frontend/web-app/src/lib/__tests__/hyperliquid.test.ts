@@ -70,12 +70,18 @@ describe('Hyperliquid API Client', () => {
     });
 
     it('应该处理 API 错误', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      // Mock all retry attempts (MAX_RETRIES = 3, so 4 total attempts)
+      const errorResponse = {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
         json: async () => ({ error: 'Server error' }),
-      });
+      };
+      (global.fetch as any)
+        .mockResolvedValueOnce(errorResponse)
+        .mockResolvedValueOnce(errorResponse)
+        .mockResolvedValueOnce(errorResponse)
+        .mockResolvedValueOnce(errorResponse);
 
       await expect(getAllMidPrices()).rejects.toThrow();
     });
@@ -217,7 +223,13 @@ describe('Hyperliquid API Client', () => {
     });
 
     it('应该在连接失败时返回 false', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      // Mock all retry attempts (MAX_RETRIES = 3, so 4 total attempts)
+      const networkError = new Error('Network error');
+      (global.fetch as any)
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError);
 
       const isValid = await validateConnection();
       expect(isValid).toBe(false);

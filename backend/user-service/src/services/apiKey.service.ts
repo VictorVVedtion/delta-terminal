@@ -1,8 +1,16 @@
 import { PrismaClient, ApiKey } from '@prisma/client';
-import { encrypt, decrypt } from '../utils/encryption';
+import { encrypt, decrypt, maskSensitiveString, logAuditEvent } from '../utils/encryption';
 import type { CreateApiKeyInput, UpdateApiKeyInput } from '../types';
 
 const prisma = new PrismaClient();
+
+/**
+ * API 密钥返回类型 (安全版本，不包含敏感信息)
+ */
+export type SafeApiKey = Omit<ApiKey, 'apiSecret' | 'passphrase'> & {
+  apiSecret: string; // 掩码版本
+  passphrase: string | null; // 掩码版本
+};
 
 export class ApiKeyService {
   /**
@@ -29,36 +37,90 @@ export class ApiKeyService {
   }
 
   /**
-   * 获取用户的所有 API 密钥
+   * 获取用户的所有 API 密钥 (安全版本 - 掩码敏感信息)
    */
-  async getApiKeys(userId: string): Promise<ApiKey[]> {
-    return prisma.apiKey.findMany({
+  async getApiKeys(userId: string): Promise<SafeApiKey[]> {
+    const apiKeys = await prisma.apiKey.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
+
+    // 掩码敏感信息
+    return apiKeys.map(key => this._maskApiKey(key));
   }
 
   /**
-   * 根据 ID 获取 API 密钥
+   * 掩码 API 密钥敏感信息
    */
-  async getApiKeyById(id: string, userId: string): Promise<ApiKey | null> {
-    return prisma.apiKey.findFirst({
+  private _maskApiKey(apiKey: ApiKey): SafeApiKey {
+    return {
+      ...apiKey,
+      apiKey: maskSensitiveString(decrypt(apiKey.apiKey)), // 解密后掩码
+      apiSecret: '***masked***', // 完全掩码
+      passphrase: apiKey.passphrase ? '***masked***' : null, // 完全掩码
+    };
+  }
+
+  /**
+   * 根据 ID 获取 API 密钥 (安全版本 - 掩码敏感信息)
+   */
+  async getApiKeyById(id: string, userId: string): Promise<SafeApiKey | null> {
+    const apiKey = await prisma.apiKey.findFirst({
       where: {
         id,
         userId,
       },
     });
+
+    if (!apiKey) {
+      return null;
+    }
+
+    return this._maskApiKey(apiKey);
   }
 
   /**
-   * 获取解密后的 API 密钥
+   * 获取解密后的 API 密钥 (仅用于内部交易引擎调用)
+   *
+   * ⚠️ 安全警告:
+   * - 此方法返回明文密钥，仅应在服务端内部使用
+   * - 调用会被记录到审计日志
+   * - 禁止将返回值直接暴露给前端或 API 响应
+   *
+   * @param id - API 密钥 ID
+   * @param userId - 用户 ID
+   * @param requestContext - 请求上下文 (用于审计)
    */
-  async getDecryptedApiKey(id: string, userId: string) {
-    const apiKey = await this.getApiKeyById(id, userId);
+  async getDecryptedApiKey(
+    id: string,
+    userId: string,
+    requestContext?: { ipAddress?: string; userAgent?: string; purpose?: string }
+  ) {
+    // 先获取原始数据（需要从数据库重新查询，不能用掩码版本）
+    const apiKey = await prisma.apiKey.findFirst({
+      where: { id, userId },
+    });
+
     if (!apiKey) {
       throw new Error('API 密钥不存在');
     }
 
+    // 记录审计日志
+    logAuditEvent({
+      timestamp: new Date(),
+      userId,
+      action: 'API_KEY_DECRYPT',
+      resource: 'ApiKey',
+      resourceId: id,
+      ipAddress: requestContext?.ipAddress,
+      userAgent: requestContext?.userAgent,
+      metadata: {
+        exchange: apiKey.exchange,
+        purpose: requestContext?.purpose || 'trading_execution',
+      },
+    });
+
+    // 解密并返回
     return {
       ...apiKey,
       apiKey: decrypt(apiKey.apiKey),
@@ -114,10 +176,10 @@ export class ApiKeyService {
   }
 
   /**
-   * 根据交易所获取用户的 API 密钥
+   * 根据交易所获取用户的 API 密钥 (安全版本 - 掩码敏感信息)
    */
-  async getApiKeysByExchange(userId: string, exchange: string): Promise<ApiKey[]> {
-    return prisma.apiKey.findMany({
+  async getApiKeysByExchange(userId: string, exchange: string): Promise<SafeApiKey[]> {
+    const apiKeys = await prisma.apiKey.findMany({
       where: {
         userId,
         exchange,
@@ -125,6 +187,8 @@ export class ApiKeyService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return apiKeys.map(key => this._maskApiKey(key));
   }
 }
 

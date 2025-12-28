@@ -30,7 +30,7 @@ export const MODE_CONFIGS: Record<WorkMode, ModeConfig> = {
   chat: {
     id: 'chat',
     name: '对话模式',
-    icon: '💬',
+    icon: 'MessageSquare',
     description: '日常聊天、策略讨论、教学问答',
     model: 'Claude Sonnet',
     features: ['InsightCard', 'Canvas', '策略创建'],
@@ -38,7 +38,7 @@ export const MODE_CONFIGS: Record<WorkMode, ModeConfig> = {
   research: {
     id: 'research',
     name: '深度研究',
-    icon: '🔬',
+    icon: 'Microscope',
     description: '综合分析技术面、链上数据、宏观事件',
     model: 'Claude Opus',
     features: ['深度报告', '多维分析', '长上下文'],
@@ -46,7 +46,7 @@ export const MODE_CONFIGS: Record<WorkMode, ModeConfig> = {
   code: {
     id: 'code',
     name: '代码模式',
-    icon: '💻',
+    icon: 'Terminal',
     description: '策略代码编写、调试、优化',
     model: 'Claude Sonnet',
     features: ['代码生成', '语法高亮', '调试辅助'],
@@ -54,7 +54,7 @@ export const MODE_CONFIGS: Record<WorkMode, ModeConfig> = {
   onchain: {
     id: 'onchain',
     name: '链上分析',
-    icon: '⛓️',
+    icon: 'Link',
     description: '链上数据分析、巨鲸追踪、资金流向',
     model: 'Claude Sonnet',
     features: ['链上数据', '巨鲸监控', '资金流向'],
@@ -62,7 +62,7 @@ export const MODE_CONFIGS: Record<WorkMode, ModeConfig> = {
   monitor: {
     id: 'monitor',
     name: '监控模式',
-    icon: '📊',
+    icon: 'Activity',
     description: '实时监控所有运行中的策略',
     model: 'Claude Haiku',
     features: ['实时数据', '风险预警', '快速响应'],
@@ -70,7 +70,7 @@ export const MODE_CONFIGS: Record<WorkMode, ModeConfig> = {
   sleep: {
     id: 'sleep',
     name: '安睡模式',
-    icon: '😴',
+    icon: 'Moon',
     description: '自动化运行，仅紧急事件通知',
     model: 'Claude Haiku',
     features: ['自动化', '低干扰', '紧急通知'],

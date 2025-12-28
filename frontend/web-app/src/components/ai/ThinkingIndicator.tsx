@@ -6,6 +6,7 @@
 
 'use client'
 
+import { Brain, CheckCircle2, Circle, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { cn } from '@/lib/utils'
@@ -58,7 +59,7 @@ export function ThinkingIndicator({
           {isLoading ? (
             <LoadingSpinner className="w-4 h-4" />
           ) : (
-            <span className="text-primary">🧠</span>
+            <Brain className="w-4 h-4 text-primary" />
           )}
           <span className="text-sm font-medium">
             {isLoading ? 'Spirit 正在思考...' : `思考过程 (${steps.length} 步)`}
@@ -118,14 +119,13 @@ function ThinkingStepItem({ step, index: _index, isNew }: ThinkingStepItemProps)
       )}
     >
       <div className="flex items-start gap-3">
-        {/* 状态图标 */}
         <div className="flex-shrink-0 mt-0.5">
           {step.status === 'completed' ? (
-            <span className="text-green-500">✓</span>
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
           ) : step.status === 'processing' ? (
-            <LoadingSpinner className="w-4 h-4 text-primary" />
+            <Loader2 className="w-4 h-4 text-primary animate-spin" />
           ) : (
-            <span className="text-muted-foreground">○</span>
+            <Circle className="w-4 h-4 text-muted-foreground" />
           )}
         </div>
 

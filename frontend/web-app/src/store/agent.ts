@@ -25,6 +25,12 @@ export interface Agent {
   createdAt: number
   updatedAt: number
 
+  // ===== Summoning Ritual Fields (Restored) =====
+  /** Spirit Archetype */
+  archetype?: 'trading_spirit' | 'research_analyst'
+  /** Personality Traits (0.0 - 1.0) */
+  traits?: Record<string, number>
+
   // ===== 部署相关字段 (Story 1.2) =====
   /** 部署状态 */
   deploymentStatus?: AgentDeploymentStatus | undefined
@@ -140,18 +146,18 @@ export const useAgentStore = create<AgentState>()(
     chatHistory: initialChatHistory,
 
     // Agent Actions
-    setAgents: (agents) =>
-      { set({ agents }, false, 'agent/setAgents'); },
+    setAgents: (agents) => { set({ agents }, false, 'agent/setAgents'); },
 
-    addAgent: (agent) =>
-      { set(
+    addAgent: (agent) => {
+      set(
         (state) => ({ agents: [...state.agents, agent] }),
         false,
         'agent/addAgent'
-      ); },
+      );
+    },
 
-    updateAgent: (id, updates) =>
-      { set(
+    updateAgent: (id, updates) => {
+      set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === id ? { ...a, ...updates, updatedAt: Date.now() } : a
@@ -159,137 +165,145 @@ export const useAgentStore = create<AgentState>()(
         }),
         false,
         'agent/updateAgent'
-      ); },
+      );
+    },
 
-    removeAgent: (id) =>
-      { set(
+    removeAgent: (id) => {
+      set(
         (state) => ({
           agents: state.agents.filter((a) => a.id !== id),
           activeAgentId: state.activeAgentId === id ? null : state.activeAgentId,
         }),
         false,
         'agent/removeAgent'
-      ); },
+      );
+    },
 
-    setActiveAgent: (id) =>
-      { set({ activeAgentId: id }, false, 'agent/setActiveAgent'); },
+    setActiveAgent: (id) => { set({ activeAgentId: id }, false, 'agent/setActiveAgent'); },
 
     // Risk Actions
-    updateRiskOverview: (risk) =>
-      { set(
+    updateRiskOverview: (risk) => {
+      set(
         (state) => ({ riskOverview: { ...state.riskOverview, ...risk } }),
         false,
         'agent/updateRiskOverview'
-      ); },
+      );
+    },
 
     // PnL Actions
-    updatePnLDashboard: (pnl) =>
-      { set(
+    updatePnLDashboard: (pnl) => {
+      set(
         (state) => ({ pnlDashboard: { ...state.pnlDashboard, ...pnl } }),
         false,
         'agent/updatePnLDashboard'
-      ); },
+      );
+    },
 
     // Chat History Actions
-    addChatHistory: (chat) =>
-      { set(
+    addChatHistory: (chat) => {
+      set(
         (state) => ({ chatHistory: [chat, ...state.chatHistory] }),
         false,
         'agent/addChatHistory'
-      ); },
+      );
+    },
 
-    removeChatHistory: (id) =>
-      { set(
+    removeChatHistory: (id) => {
+      set(
         (state) => ({ chatHistory: state.chatHistory.filter((c) => c.id !== id) }),
         false,
         'agent/removeChatHistory'
-      ); },
+      );
+    },
 
-    clearChatHistory: () =>
-      { set({ chatHistory: [] }, false, 'agent/clearChatHistory'); },
+    clearChatHistory: () => { set({ chatHistory: [] }, false, 'agent/clearChatHistory'); },
 
     // ===== 部署相关 Actions (Story 1.2) =====
 
-    deployAgentToPaper: (agentId, virtualCapital) =>
-      { set(
+    deployAgentToPaper: (agentId, virtualCapital) => {
+      set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
               ? {
-                  ...a,
-                  status: 'paper' as AgentStatus,
-                  deploymentStatus: 'deployed' as const,
-                  deployedAt: Date.now(),
-                  paperStartedAt: Date.now(),
-                  virtualCapital,
-                  updatedAt: Date.now(),
-                }
+                ...a,
+                status: 'paper' as AgentStatus,
+                deploymentStatus: 'deployed' as const,
+                deployedAt: Date.now(),
+                paperStartedAt: Date.now(),
+                virtualCapital,
+                updatedAt: Date.now(),
+              }
               : a
           ),
         }),
         false,
         'agent/deployToPaper'
-      ); },
+      );
+    },
 
-    deployAgentToLive: (agentId, initialCapital) =>
-      { set(
+    deployAgentToLive: (agentId, initialCapital) => {
+      set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
               ? {
-                  ...a,
-                  status: 'live' as AgentStatus,
-                  deploymentStatus: 'deployed' as const,
-                  deployedAt: Date.now(),
-                  initialCapital,
-                  updatedAt: Date.now(),
-                }
+                ...a,
+                status: 'live' as AgentStatus,
+                deploymentStatus: 'deployed' as const,
+                deployedAt: Date.now(),
+                initialCapital,
+                updatedAt: Date.now(),
+              }
               : a
           ),
         }),
         false,
         'agent/deployToLive'
-      ); },
+      );
+    },
 
-    updateDeploymentProgress: (agentId, status) =>
-      { set(
+    updateDeploymentProgress: (agentId, status) => {
+      set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
               ? {
-                  ...a,
-                  deploymentStatus:
-                    status.status === 'completed'
-                      ? ('deployed' as const)
-                      : status.status === 'failed'
+                ...a,
+                deploymentStatus:
+                  status.status === 'completed'
+                    ? ('deployed' as const)
+                    : status.status === 'failed'
                       ? ('failed' as const)
                       : ('deploying' as const),
-                  updatedAt: Date.now(),
-                }
+                updatedAt: Date.now(),
+              }
               : a
           ),
         }),
         false,
         'agent/updateDeploymentProgress'
-      ); },
+      );
+    },
 
-    rollbackDeployment: (agentId, previousStatus) =>
-      { set(
+    rollbackDeployment: (agentId, previousStatus) => {
+      set(
         (state) => ({
           agents: state.agents.map((a) =>
             a.id === agentId
               ? {
-                  ...a,
-                  status: previousStatus,
-                  deploymentStatus: 'failed' as const,
-                  updatedAt: Date.now(),
-                }
+                ...a,
+                status: previousStatus,
+                deploymentStatus: 'failed' as const,
+                updatedAt: Date.now(),
+              }
               : a
           ),
         }),
         false,
         'agent/rollbackDeployment'
-      ); },
+      );
+    },
 
     canDeployToPaper: (agentId: string): boolean => {
       const { agents } = useAgentStore.getState()

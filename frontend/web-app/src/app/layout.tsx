@@ -5,6 +5,7 @@ import { GeistSans } from 'geist/font/sans';
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 
+import { PageErrorBoundary } from '@/components/error/ErrorBoundary';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { WebSocketProvider } from '@/components/providers/WebSocketProvider';
@@ -56,24 +57,26 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <AuthProvider>
-          <ThemeProvider>
-            <WebSocketProvider>
-              {children}
-              {/* Story 5.1: Toast 通知容器 */}
-              <Toaster
-                position="top-right"
-                richColors
-                closeButton
-                toastOptions={{
-                  className: 'font-sans',
-                }}
-              />
-              {/* Story 10.1: 新手引导 */}
-              <OnboardingTour />
-            </WebSocketProvider>
-          </ThemeProvider>
-        </AuthProvider>
+        <PageErrorBoundary>
+          <AuthProvider>
+            <ThemeProvider>
+              <WebSocketProvider>
+                {children}
+                {/* Story 5.1: Toast 通知容器 */}
+                <Toaster
+                  position="top-right"
+                  richColors
+                  closeButton
+                  toastOptions={{
+                    className: 'font-sans',
+                  }}
+                />
+                {/* Story 10.1: 新手引导 */}
+                <OnboardingTour />
+              </WebSocketProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </PageErrorBoundary>
       </body>
     </html>
   );

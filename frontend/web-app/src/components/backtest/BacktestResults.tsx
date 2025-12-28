@@ -7,6 +7,7 @@ import {
   BarChart3,
   Download,
   ListOrdered,
+  type LucideIcon,
   Share2,
   Target,
   TrendingDown,
@@ -214,7 +215,7 @@ export function BacktestResults({ result }: BacktestResultsProps) {
 interface MetricCardProps {
   title: string
   value: string
-  icon: React.ElementType
+  icon: LucideIcon
   variant?: 'default' | 'success' | 'destructive' | 'warning'
 }
 

@@ -6,6 +6,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   DollarSign,
+  type LucideIcon,
   Pause,
   Play,
   StopCircle,
@@ -421,7 +422,7 @@ interface MetricCardProps {
   value: number
   unit: string
   trend: 'up' | 'down' | 'neutral'
-  icon: React.ElementType
+  icon: LucideIcon
 }
 
 function MetricCard({ label, value, unit, trend, icon: Icon }: MetricCardProps) {

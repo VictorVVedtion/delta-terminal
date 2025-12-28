@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import {
   AlertTriangle,
   BarChart3,
@@ -15,13 +16,15 @@ import { useRouter } from 'next/navigation'
 import React from 'react'
 import { toast } from 'sonner'
 
-import { RISK_PRESETS,useRiskWarning } from '@/components/common/RiskWarningDialog'
+import { RISK_PRESETS, useRiskWarning } from '@/components/common/RiskWarningDialog'
+import { SpiritCreationWizard } from '@/components/spirit/SpiritCreationWizard'
 import { ThinkingIndicator } from '@/components/thinking/ThinkingIndicator'
+import { Sparkline } from '@/components/ui/sparkline'
 import { cn } from '@/lib/utils'
-import type { Agent, AgentStatus} from '@/store/agent';
-import {useAgentStore } from '@/store/agent'
+import type { Agent, AgentStatus } from '@/store/agent';
+import { useAgentStore } from '@/store/agent'
 import { useAnalysisStore } from '@/store/analysis'
-import type { AttributionInsightData, ComparisonInsightData,SensitivityInsightData } from '@/types/insight'
+import type { AttributionInsightData, ComparisonInsightData, SensitivityInsightData } from '@/types/insight'
 import type { ThinkingProcess } from '@/types/thinking'
 
 /**
@@ -240,86 +243,117 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
 
   return (
     <div className="relative group">
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onClick()
-        }
-      }}
-      className={cn(
-        'w-full text-left rounded-md p-2.5 mb-1.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
-        'bg-muted/50 hover:bg-muted transition-colors',
-        'border-l-[3px]',
-        statusConfig.color,
-        isShadow && 'opacity-70',
-        isActive && 'ring-1 ring-primary'
-      )}
-    >
-      {/* 头部：名称 + 盈亏 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <span
-            className={cn(
-              'w-1.5 h-1.5 rounded-full flex-shrink-0',
-              statusConfig.dotClass
-            )}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        }}
+        className={cn(
+          'w-full text-left rounded-md p-2.5 mb-1.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
+          'bg-muted/50 hover:bg-muted transition-colors',
+          'border-l-[3px]',
+          statusConfig.color,
+          isShadow && 'opacity-70',
+          isActive && 'ring-1 ring-primary'
+        )}
+      >
+        {/* 选中状态动画背景/指示条 (Shared Layout) */}
+        {isActive && (
+          <motion.div
+            layoutId="active-agent-highlight"
+            className="absolute inset-0 bg-primary/5 rounded-md -z-10"
+            initial={false}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
           />
-          <span className="text-[11px] font-semibold truncate">
-            {agent.name}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span
-            className={cn(
-              'text-[11px] font-mono font-medium',
-              isShadow
-                ? 'text-muted-foreground'
-                : isPositive
-                  ? 'text-green-500'
-                  : 'text-red-500'
-            )}
-          >
-            {isShadow ? (
-              `虚拟 ${isPositive ? '+' : ''}$${agent.pnl}`
-            ) : (
-              `${isPositive ? '+' : ''}$${agent.pnl}`
-            )}
-          </span>
-          {/* 更多菜单按钮 */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setMenuOpen(!menuOpen)
-            }}
-            className={cn(
-              'h-5 w-5 rounded flex items-center justify-center',
-              'opacity-0 group-hover:opacity-100 hover:bg-background/80 transition-opacity',
-              menuOpen && 'opacity-100'
-            )}
-          >
-            <MoreVertical className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
+        )}
 
-      {/* 底部：状态 + 交易对 */}
-      <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground">
-        <span>{statusConfig.label}</span>
-        <span>·</span>
-        <span>{agent.symbol}</span>
-      </div>
-
-      {/* Glass Box: Thinking Indicator (Visible when active and has process) */}
-      {isActive && thinkingProcess && (
-        <div className="mt-2 pt-2 border-t border-border/50">
-          <ThinkingIndicator process={thinkingProcess} compact defaultExpanded={false} />
+        {/* Sparkline Background (Subtle activity indicator) */}
+        <div className="absolute bottom-0 left-0 right-0 h-10 opacity-10 pointer-events-none overflow-hidden rounded-b-md">
+          <Sparkline
+            data={[// Mock data generation based on PnL sign - deterministic for demo
+              agent.pnl >= 0 ? 10 : 40,
+              agent.pnl >= 0 ? 15 : 35,
+              agent.pnl >= 0 ? 12 : 38,
+              agent.pnl >= 0 ? 25 : 25,
+              agent.pnl >= 0 ? 20 : 30,
+              agent.pnl >= 0 ? 35 : 15,
+              agent.pnl >= 0 ? 30 : 20,
+              Math.abs(agent.pnl) > 0 ? (agent.pnl >= 0 ? 40 : 10) : 25,
+            ]}
+            color={agent.pnl >= 0 ? '#10b981' : '#ef4444'}
+            height={40}
+            showGradient={true}
+          />
         </div>
-      )}
-    </div>
+
+        {/* 头部：名称 + 盈亏 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <span
+              className={cn(
+                'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                statusConfig.dotClass
+              )}
+            />
+            <span className="text-xs font-semibold truncate">
+              {agent.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span
+              className={cn(
+                'text-xs font-mono font-medium',
+                isShadow
+                  ? 'text-muted-foreground'
+                  : isPositive
+                    ? 'text-green-500'
+                    : 'text-red-500'
+              )}
+            >
+              {isShadow ? (
+                `虚拟 ${isPositive ? '+' : ''}$${agent.pnl}`
+              ) : (
+                <span className={isPositive ? 'text-glow-green' : 'text-glow-red'}>
+                  {isPositive ? '+' : ''}${agent.pnl}
+                </span>
+              )}
+            </span>
+            {/* 更多菜单按钮 */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setMenuOpen(!menuOpen)
+              }}
+              className={cn(
+                'h-5 w-5 rounded flex items-center justify-center',
+                'opacity-0 group-hover:opacity-100 hover:bg-background/80 transition-opacity',
+                menuOpen && 'opacity-100'
+              )}
+            >
+              <MoreVertical className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* 底部：状态 + 交易对 */}
+        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+          <span>{statusConfig.label}</span>
+          <span>·</span>
+          <span>{agent.symbol}</span>
+        </div>
+
+        {/* Glass Box: Thinking Indicator (Visible when active and has process) */}
+        {isActive && thinkingProcess && (
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <ThinkingIndicator process={thinkingProcess} compact defaultExpanded={false} />
+          </div>
+        )}
+      </div>
 
       {/* 下拉菜单 */}
       {menuOpen && (
@@ -335,7 +369,7 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
           />
           {/* 菜单内容 */}
           <div className="absolute right-0 top-full mt-1 z-[101] w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
-            <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase">
+            <div className="px-2 py-1 text-xs text-muted-foreground font-semibold uppercase">
               基本操作
             </div>
             <button
@@ -361,7 +395,7 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
             </button>
 
             <div className="border-t border-border my-1" />
-            <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase">
+            <div className="px-2 py-1 text-xs text-muted-foreground font-semibold uppercase">
               高级分析
             </div>
 
@@ -414,12 +448,11 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
 }
 
 export function AgentList() {
-  const router = useRouter()
   const { agents, activeAgentId, setActiveAgent } = useAgentStore()
+  const [wizardOpen, setWizardOpen] = React.useState(false)
 
   const handleNewAgent = () => {
-    // 跳转到 /chat 页面开始新策略对话
-    router.push('/chat')
+    setWizardOpen(true)
   }
 
   // TODO: 连接到真实的 ThinkingStore 获取 Agent 的思考过程
@@ -430,10 +463,10 @@ export function AgentList() {
     <div className="agent-list flex-1 overflow-y-auto p-3">
       {/* 标题 */}
       <div className="flex items-center justify-between mb-2">
-        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-glow-cyan">
           Agents ({agents.length})
         </div>
-        <button 
+        <button
           onClick={handleNewAgent}
           className="text-primary hover:bg-primary/10 p-1 rounded transition-colors"
           title="新建"
@@ -450,8 +483,8 @@ export function AgentList() {
             agent={agent}
             isActive={agent.id === activeAgentId}
             onClick={() => { setActiveAgent(agent.id); }}
-            // TODO: 传入真实的 thinkingProcess 当后端 API 可用时
-            // thinkingProcess={thinkingProcess}
+          // TODO: 传入真实的 thinkingProcess 当后端 API 可用时
+          // thinkingProcess={thinkingProcess}
           />
         ))}
       </div>
@@ -464,7 +497,7 @@ export function AgentList() {
             'w-full mt-2 p-2.5 rounded-md',
             'border border-dashed border-primary/50',
             'bg-primary/5 hover:bg-primary/10',
-            'text-primary text-[11px] font-semibold',
+            'text-primary text-xs font-semibold',
             'flex items-center justify-center gap-1.5',
             'transition-colors'
           )}
@@ -473,6 +506,9 @@ export function AgentList() {
           创建第一个策略
         </button>
       )}
+
+      {/* Spirit Creation Wizard */}
+      <SpiritCreationWizard open={wizardOpen} onOpenChange={setWizardOpen} />
     </div>
   )
 }

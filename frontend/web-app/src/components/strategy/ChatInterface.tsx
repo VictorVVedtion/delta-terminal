@@ -1,45 +1,45 @@
 'use client'
 
-import { Bot, Check, ChevronDown, Send, Settings2, Sparkles, User, X } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { BarChart2, Bot, Brain, Check, ChevronDown, Coins, Globe, Library, type LucideIcon, MessageSquare, Microscope, Network, Rocket, Scale, Search, Send, Settings2, Sparkles, Target, Terminal, User, Wind, X, Zap } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import React from 'react'
 
-import { AIConfigPanel } from '@/components/ai'
-import { CanvasPanel } from '@/components/canvas'
+import { AIConfigPanel } from '@/components/ai/AIConfigPanel'
 import { AttributionCanvas } from '@/components/canvas/AttributionCanvas'
 import { BacktestCanvas } from '@/components/canvas/BacktestCanvas'
+import { CanvasPanel } from '@/components/canvas/CanvasPanel'
 import { ComparisonCanvas } from '@/components/canvas/ComparisonCanvas'
-import type { DeployConfig } from '@/components/canvas/DeployCanvas'
+import type { DeployConfig } from '@/components/canvas/DeployCanvas';
 import { DeployCanvas } from '@/components/canvas/DeployCanvas'
-import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
-import { MonitorCanvas } from '@/components/canvas/MonitorCanvas'
-// EPIC-008: Analysis Canvas Components
+import type { StrategyStatus } from '@/components/canvas/MonitorCanvas';
+import { MonitorCanvas  } from '@/components/canvas/MonitorCanvas'
 import { SensitivityCanvas } from '@/components/canvas/SensitivityCanvas'
-// EPIC-009: Version & Intervention Components
 import { VersionHistoryCanvas } from '@/components/canvas/VersionHistoryCanvas'
 import { InsightMessage } from '@/components/insight'
 import { EmergencyActions } from '@/components/intervention/EmergencyActions'
-import { TemplateSelector } from '@/components/strategy/TemplateSelector'
-import { InsightCardLoading, useInsightLoadingState } from '@/components/thinking'
+import { SpiritBeam } from '@/components/spirit/SpiritBeam'
+import { SpiritOrb } from '@/components/spirit/SpiritOrb'
+import { InsightCardLoading , useInsightLoadingState } from '@/components/thinking'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { isClarificationInsight,useA2UIInsight } from '@/hooks/useA2UIInsight'
+import { MagneticButton } from '@/components/ui/magnetic-button'
+import { notify, notifyWarning } from '@/components/ui/use-toast'
+import { useA2UIInsight } from '@/hooks/useA2UIInsight'
 import { useBacktest } from '@/hooks/useBacktest'
 import { useDeployment } from '@/hooks/useDeployment'
 import { useMonitor } from '@/hooks/useMonitor'
-import { notify, notifyWarning } from '@/lib/notification'
+import { useSpiritController } from '@/hooks/useSpiritController'
 import type { StrategyTemplate } from '@/lib/templates/strategies'
 import { cn } from '@/lib/utils'
 import { useMarketStore } from '@/store'
-import type { Agent } from '@/store/agent'
-import { useAgentStore } from '@/store/agent'
+import { type Agent,useAgentStore } from '@/store/agent'
 import { useAIStore } from '@/store/ai'
 import { useAnalysisStore } from '@/store/analysis'
-// =============================================================================
-// Types
-// =============================================================================
 import { useModeStore } from '@/store/mode'
 import { usePaperTradingStore } from '@/store/paperTrading'
-import { SIMPLE_PRESETS, type SimplePreset } from '@/types/ai'
+import type { SimplePreset } from '@/types/ai';
+import { SIMPLE_PRESETS } from '@/types/ai'
 import type { BacktestConfig } from '@/types/backtest'
 import type {
   AttributionInsightData,
@@ -51,10 +51,18 @@ import type {
   InsightCardStatus,
   InsightData,
   InsightParam,
-  SensitivityInsightData,
+  SensitivityInsightData} from '@/types/insight';
+import {
+  isClarificationInsight
 } from '@/types/insight'
 import type { EmergencyAction } from '@/types/intervention'
 import type { ResearchReport } from '@/types/research'
+
+import { TemplateSelector } from './TemplateSelector'
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Brain, Sparkles, Zap, Rocket, Wind, Target, Coins, Library, Globe, Network, Bot, Terminal, Search, BarChart2, MessageSquare, Scale, Microscope
+}
 
 // =============================================================================
 // Trading Spirit Persona
@@ -62,7 +70,6 @@ import type { ResearchReport } from '@/types/research'
 
 const SPIRIT_CONFIG = {
   name: 'Trading Spirit',
-  icon: '🔮',
   greeting: `你好！我是 **Trading Spirit**，你的智能交易伙伴。
 
 我可以帮你：
@@ -77,7 +84,6 @@ const SPIRIT_CONFIG = {
 // Research Mode Persona
 const RESEARCH_CONFIG = {
   name: 'Research Analyst',
-  icon: '🔬',
   greeting: `你好！我是 **Research Analyst**，使用 Claude Opus 进行深度研究。
 
 **深度研究模式**将从多个维度综合分析：
@@ -144,6 +150,18 @@ export function ChatInterface({
   onStrategyStatusChange,
 }: ChatInterfaceProps) {
   // ==========================================================================
+  // Active Agent State (Story 1.3: Trait-Based Flavoring)
+  // ==========================================================================
+  const searchParams = useSearchParams()
+  const agentId = searchParams.get('agent')
+  const { addAgent, agents, updatePnLDashboard } = useAgentStore()
+
+  const activeAgent = React.useMemo(() =>
+    agents.find(a => a.id === agentId),
+    [agents, agentId]
+  )
+
+  // ==========================================================================
   // Mode & Persona State
   // ==========================================================================
   const { currentMode } = useModeStore()
@@ -153,7 +171,7 @@ export function ChatInterface({
   // ==========================================================================
   // Agent Store - 连接 InsightCard 批准 → Agent 创建
   // ==========================================================================
-  const { addAgent, agents, updatePnLDashboard } = useAgentStore()
+  // const { addAgent, agents, updatePnLDashboard } = useAgentStore() // Moved up for Active Agent logic
 
   // ==========================================================================
   // Market & Paper Trading Store - 真实数据源
@@ -342,6 +360,14 @@ export function ChatInterface({
       onDeployComplete?.({ success: false, message: error.message })
     },
   })
+
+  // Story 1.3: Spirit Neural Link (Reactive Orb)
+  const lastMessageWithInsight = messages.slice().reverse().find(m => m.insight)
+  const { state: orbState, colors: orbColors, turbulence: orbTurbulence, intensity: orbIntensity } = useSpiritController(
+    lastMessageWithInsight?.insight,
+    isLoading || isThinking,
+    activeAgent
+  )
 
   // ==========================================================================
   // Story 2.3: useBacktest Hook
@@ -571,8 +597,8 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
       // 提取初始资金
       const initialCapital = (params.find(p => p.key === 'investment')?.value as number) ||
-                             (params.find(p => p.key === 'initialCapital')?.value as number) ||
-                             10000
+        (params.find(p => p.key === 'initialCapital')?.value as number) ||
+        10000
 
       // 调用回测 API
       const response = await fetch('/api/backtest/run', {
@@ -1055,7 +1081,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   React.useEffect(() => {
     // Auto-detect actions from insights
     const lastMessage = messages[messages.length - 1]
-    if (lastMessage?.insight?.actions) {
+    if (lastMessage.insight?.actions) {
       // Check for deploy actions
       const deployAction = lastMessage.insight.actions.find(
         (a): a is 'deploy_paper' | 'deploy_live' =>
@@ -1085,7 +1111,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     }
 
     // EPIC-008: Auto-trigger analysis canvas based on insight type
-    if (lastMessage?.insight) {
+    if (lastMessage.insight) {
       const insight = lastMessage.insight
 
       // Sensitivity analysis
@@ -1184,10 +1210,13 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       console.log('[ChatInterface] NLP did not return InsightData, using text response')
 
       // 使用 NLP 返回的消息作为回复
+      const fallbackContent = nlpMessage || (nlpError
+        ? `⚠️ **AI 服务连接异常**\n\n${nlpError}\n\n**可能的原因：**\n• 后端 NLP 服务未启动\n• API 地址配置错误\n• 网络连接问题\n\n请联系管理员或稍后重试。`
+        : '我理解了你的需求！让我来帮你分析一下。\n\n**请提供更多细节，例如：**\n• 📈 交易什么币种？(如 BTC/USDT)\n• 📊 使用什么指标？(如 RSI、MACD、均线)\n• 🎯 入场和出场条件是什么？\n• 💰 预期的风险收益比？\n\n这样我可以为你生成更精准的策略建议！')
       const fallbackMessage: Message = {
         id: `text_${Date.now()}`,
         role: 'assistant',
-        content: nlpMessage || '我理解了你的需求，但目前无法生成结构化的策略建议。请尝试更具体地描述你的交易策略需求，例如：\n\n• 交易什么币种？\n• 使用什么指标？\n• 入场和出场条件是什么？',
+        content: fallbackContent,
         timestamp: Date.now(),
       }
       setMessages((prev) => [...prev, fallbackMessage])
@@ -1220,9 +1249,23 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       (canvasOpen || deployOpen || backtestOpen || monitorOpen) && 'lg:mr-[520px]',
     )}>
       {/* Chat Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl relative overflow-hidden">
+        {/* Spirit Beam Effect (Projecting downwards) */}
+        <SpiritBeam
+          isActive={isLoading || isThinking}
+          color={orbColors.primary}
+        />
+
+        <div className="flex items-center gap-3 relative z-10">
           <div className="flex items-center gap-2">
+            <SpiritOrb
+              className="w-8 h-8 pointer-events-none"
+              state={orbState as any} // Cast to match SpiritOrb specific string literals
+              primaryColor={orbColors.primary}
+              secondaryColor={orbColors.secondary}
+              turbulence={orbTurbulence}
+              intensity={orbIntensity}
+            />
             <h1 className="font-semibold">Delta AI</h1>
             {/* 模型快速切换下拉菜单 */}
             <div className="relative">
@@ -1232,7 +1275,12 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 onClick={() => { setPresetMenuOpen(!presetMenuOpen); }}
                 className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
               >
-                <span className="text-sm">{currentPresetConfig.icon}</span>
+                <span className="text-sm">
+                  {(() => {
+                    const Icon = ICON_MAP[currentPresetConfig.icon] || Sparkles
+                    return <Icon className="w-4 h-4" />
+                  })()}
+                </span>
                 <span className="text-xs">{currentPresetConfig.name}</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
@@ -1261,7 +1309,12 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                             isActive && 'bg-primary/10'
                           )}
                         >
-                          <span className="text-lg">{presetConfig.icon}</span>
+                          <span className="text-lg">
+                            {(() => {
+                              const Icon = ICON_MAP[presetConfig.icon] || Sparkles
+                              return <Icon className="w-5 h-5" />
+                            })()}
+                          </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium">{presetConfig.name}</span>
@@ -1336,8 +1389,8 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
           {(isLoading || isThinking) && (
             <div className="flex gap-3">
               {/* AI Avatar */}
-              <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                <Bot className="h-4 w-4 animate-pulse" />
+              <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center">
+                <SpiritOrb className="w-8 h-8" state="thinking" primaryColor="#a855f7" secondaryColor="#fbbf24" />
               </div>
               {/* InsightCard 3 阶段加载: skeleton → thinking → filling */}
               <div className="flex-1 max-w-xl">
@@ -1349,11 +1402,11 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         </div>
       </div>
 
-      {/* Quick Prompts */}
-      {messages.length === 1 && (
+      {/* Quick Prompts - 显示直到有足够对话 */}
+      {messages.length <= 3 && (
         <div className="max-w-3xl mx-auto w-full px-4 pb-2">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-muted-foreground">快速开始:</div>
+            <div className="text-xs text-muted-foreground">{messages.length === 1 ? '快速开始:' : '继续探索:'}</div>
             {/* EPIC-010 S10.3: Template Button */}
             <Button
               variant="outline"
@@ -1385,7 +1438,14 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       <div className="border-t border-border bg-background">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <form onSubmit={handleSubmit} className="flex gap-3">
-            <div className="flex-1 relative">
+            <motion.div
+              className="flex-1 relative"
+              initial={false}
+              animate={{
+                scale: input.trim() ? 1.01 : 1,
+              }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
               <input
                 value={input}
                 onChange={(e) => { setInput(e.target.value); }}
@@ -1398,17 +1458,21 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                   'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
                   'disabled:opacity-50',
                   'transition-all duration-200',
+                  'shadow-sm focus:shadow-lg' // Add shadow on focus
                 )}
               />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={isLoading || isThinking || !input.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <MagneticButton
+                  type="submit"
+                  size="icon"
+                  disabled={isLoading || isThinking || !input.trim()}
+                  className="h-8 w-8 rounded-lg"
+                  springConfig={{ stiffness: 200, damping: 10, mass: 0.5 }}
+                >
+                  <Send className="h-4 w-4" />
+                </MagneticButton>
+              </div>
+            </motion.div>
           </form>
           <p className="text-xs text-center text-muted-foreground mt-2">
             Delta AI 可能会产生错误。请核实重要信息。

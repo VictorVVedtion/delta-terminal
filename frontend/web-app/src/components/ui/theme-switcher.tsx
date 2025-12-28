@@ -87,7 +87,7 @@ function ThemeDropdown({ className }: ThemeDropdownProps) {
   ]
 
   const currentTheme = themes.find((t) => t.value === theme) ?? themes[1]
-  const CurrentIcon = currentTheme?.icon ?? Moon
+  const CurrentIcon = currentTheme.icon ?? Moon
 
   return (
     <div className={cn('relative', className)}>

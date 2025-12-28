@@ -40,8 +40,7 @@ export function FunctionalSidebar({ className }: FunctionalSidebarProps) {
       className={cn(
         // Header 高度: 主导航 64px + 行情 Ticker ~30px = ~94px
         'fixed left-0 top-[94px] h-[calc(100vh-94px)]',
-        'w-[260px] bg-background/95 backdrop-blur',
-        'border-r border-border',
+        'w-[260px] glass border-l-0 border-y-0 rounded-none',
         'flex flex-col',
         'z-30',
         className

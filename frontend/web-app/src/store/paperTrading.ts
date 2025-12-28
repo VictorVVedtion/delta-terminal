@@ -281,7 +281,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
 
                 if (existingPosIndex >= 0) {
                   // 更新现有持仓
-                  const existingPos = newPositions[existingPosIndex]!
+                  const existingPos = newPositions[existingPosIndex]
                   const totalSize = existingPos.size + size
                   const newEntryPrice =
                     (existingPos.entryPrice * existingPos.size +
@@ -323,7 +323,7 @@ export const usePaperTradingStore = create<PaperTradingStore>()(
                 )
 
                 if (existingPosIndex >= 0) {
-                  const existingPos = newPositions[existingPosIndex]!
+                  const existingPos = newPositions[existingPosIndex]
 
                   // 计算已实现盈亏 - 创建符合 PaperPosition 类型的对象
                   const posForCalc: PaperPosition = {

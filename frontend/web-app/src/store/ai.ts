@@ -640,5 +640,5 @@ export const selectMonthlyUsage = (state: AIState) => state.usage.thisMonth
 export const selectSupportsThinking = (state: AIState) => {
   if (!state.currentModel) return false
   const model = AI_MODELS[state.currentModel]
-  return model?.supportsThinking ?? false
+  return model.supportsThinking ?? false
 }

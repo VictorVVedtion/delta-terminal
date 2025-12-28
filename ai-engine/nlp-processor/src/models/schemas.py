@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ============================================================================
@@ -171,15 +171,12 @@ class StrategyAction(BaseModel):
         default=None, description="价格偏移百分比"
     )
 
-    @field_validator("amount", "amount_percent")
-    @classmethod
-    def validate_amount(cls, v: Optional[float], info: Any) -> Optional[float]:
-        """验证数量参数"""
-        values = info.data
-        if "amount" in values and "amount_percent" in values:
-            if values.get("amount") and values.get("amount_percent"):
-                raise ValueError("不能同时指定 amount 和 amount_percent")
-        return v
+    @model_validator(mode="after")
+    def validate_amount_fields(self) -> "StrategyAction":
+        """验证不能同时指定 amount 和 amount_percent"""
+        if self.amount is not None and self.amount_percent is not None:
+            raise ValueError("不能同时指定 amount 和 amount_percent")
+        return self
 
 
 class RiskManagement(BaseModel):
@@ -226,11 +223,13 @@ class StrategyConfig(BaseModel):
         default=None, description="其他参数"
     )
 
-    @field_validator("symbol")
+    @field_validator("symbol", mode="before")
     @classmethod
     def validate_symbol(cls, v: str) -> str:
-        """验证交易对格式"""
-        return v.upper()
+        """验证交易对格式，先转换为大写"""
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
 
 class ParseStrategyRequest(BaseModel):

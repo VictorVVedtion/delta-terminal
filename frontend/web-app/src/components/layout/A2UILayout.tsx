@@ -1,5 +1,6 @@
 'use client'
 
+import { AnimatePresence,motion } from 'framer-motion'
 import React, { useCallback } from 'react'
 
 import { CanvasPanel } from '@/components/canvas/CanvasPanel'
@@ -175,27 +176,36 @@ export function A2UILayout({ children, showSidebar = true }: A2UILayoutProps) {
 
       {/* Main Container */}
       <div className="flex relative">
-        {/* Sidebar - 桌面端显示 */}
-        {showSidebar && (
-          <div className="hidden md:block">
-            <FunctionalSidebar />
-          </div>
-        )}
+        {/* Sidebar - Shared Layout Transition */}
+        <AnimatePresence mode="popLayout">
+          {showSidebar && (
+            <motion.div
+              className="hidden md:block z-30"
+              initial={{ x: -260, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -260, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            >
+              <FunctionalSidebar />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Main Content Area */}
-        <main
+        {/* Main Content Area - Shared Layout Transition */}
+        <motion.main
           className={cn(
             'flex-1 min-h-[calc(100vh-4rem)]',
-            showSidebar && 'md:ml-[260px]', // Sidebar 宽度
             'pb-[100px] md:pb-0', // 移动端底部导航空间
-            'transition-all duration-300',
-            // Canvas 打开时收缩主内容区
-            canvasOpen && 'lg:mr-[480px]'
           )}
+          animate={{
+            marginLeft: showSidebar ? 260 : 0,
+            marginRight: canvasOpen ? 480 : 0
+          }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
           {/* 子组件直接渲染，Canvas 通过 store.openCanvas() 触发 */}
           {children}
-        </main>
+        </motion.main>
 
         {/* Canvas Panel - 滑出面板，监听 store 状态 */}
         <CanvasPanel

@@ -1,6 +1,6 @@
 'use client'
 
-import { HelpCircle, TrendingDown,TrendingUp } from 'lucide-react'
+import { HelpCircle, TrendingDown, TrendingUp } from 'lucide-react'
 import React from 'react'
 
 import {
@@ -59,7 +59,7 @@ export function PnLPanel() {
         <div
           className={cn(
             'text-xl font-bold font-mono',
-            isPositive ? 'text-green-500' : 'text-red-500'
+            isPositive ? 'text-green-500 text-glow-green' : 'text-red-500 text-glow-red'
           )}
         >
           {isPositive ? '+' : ''}${pnlDashboard.totalPnL.toLocaleString()}

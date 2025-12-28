@@ -442,3 +442,105 @@ async def test_get_insight_service():
         assert service.user_id == "test_user"
         mock_get_llm.assert_called_once()
         mock_get_router.assert_called_once()
+
+
+class TestStrategyPerspectiveRecommendation:
+    """测试策略角度推荐功能 (A2UI 分层澄清机制 - Level 1)"""
+
+    @pytest.fixture
+    def mock_llm_service(self):
+        """创建 LLM 服务模拟对象"""
+        mock = AsyncMock()
+        return mock
+
+    @pytest.fixture
+    def mock_llm_router(self):
+        """创建 LLM 路由模拟对象"""
+        mock = AsyncMock()
+        return mock
+
+    @pytest.fixture
+    def insight_service(self, mock_llm_service, mock_llm_router):
+        """创建 InsightGeneratorService 实例"""
+        return InsightGeneratorService(
+            llm_service=mock_llm_service,
+            llm_router=mock_llm_router,
+            user_id="test_user"
+        )
+
+    def test_check_perspective_needed_with_trading_concept(self, insight_service):
+        """测试：有交易概念且无技术指标时需要推荐"""
+        needs, concept = insight_service._check_perspective_needed(
+            user_input="我想抄底 BTC",
+            entities={},
+            collected_params={}
+        )
+
+        assert needs is True
+        assert concept is not None
+        assert concept.value == "bottom_fishing"
+
+    def test_check_perspective_needed_with_indicator(self, insight_service):
+        """测试：有交易概念但已有技术指标时不需要推荐"""
+        needs, concept = insight_service._check_perspective_needed(
+            user_input="当 RSI 低于 30 时抄底",
+            entities={},
+            collected_params={}
+        )
+
+        assert needs is False
+        assert concept is not None  # 仍能检测到概念
+        assert concept.value == "bottom_fishing"
+
+    def test_check_perspective_needed_already_collected(self, insight_service):
+        """测试：已在多步骤引导中选择策略角度时不需要推荐"""
+        needs, concept = insight_service._check_perspective_needed(
+            user_input="我想抄底",
+            entities={},
+            collected_params={"strategy_perspective": "rsi_oversold"}
+        )
+
+        assert needs is False
+        assert concept is None  # 不再检测概念
+
+    def test_check_perspective_needed_no_concept(self, insight_service):
+        """测试：无交易概念时不需要推荐"""
+        needs, concept = insight_service._check_perspective_needed(
+            user_input="帮我创建一个策略",
+            entities={},
+            collected_params={}
+        )
+
+        assert needs is False
+        assert concept is None
+
+    def test_check_perspective_needed_with_entry_conditions(self, insight_service):
+        """测试：已有入场条件实体时不需要推荐"""
+        needs, concept = insight_service._check_perspective_needed(
+            user_input="我想抄底",
+            entities={"entry_conditions": [{"indicator": "RSI", "operator": "<", "value": 30}]},
+            collected_params={}
+        )
+
+        assert needs is False
+        assert concept is not None
+
+    @pytest.mark.asyncio
+    async def test_generate_perspective_insight(self, insight_service):
+        """测试：生成策略角度推荐 ClarificationInsight"""
+        from src.models.strategy_perspectives import TradingConcept
+
+        insight = await insight_service._generate_perspective_insight(
+            user_input="我想抄底",
+            concept=TradingConcept.BOTTOM_FISHING,
+            chat_history=[],
+            context={}
+        )
+
+        assert isinstance(insight, ClarificationInsight)
+        assert insight.category == ClarificationCategory.STRATEGY_PERSPECTIVE
+        assert insight.option_type.value == "multi"  # 允许多选
+        assert len(insight.options) > 0
+        assert insight.allow_custom_input is True
+        assert "抄底" in insight.question
+        assert "抄底" in insight.explanation

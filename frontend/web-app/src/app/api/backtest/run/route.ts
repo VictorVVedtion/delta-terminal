@@ -506,12 +506,12 @@ interface EngineResult {
     largest_win: number
     largest_loss: number
   }
-  equity_curve: Array<{
+  equity_curve: {
     timestamp: string
     equity: number
     drawdown: number
-  }>
-  trades: Array<{
+  }[]
+  trades: {
     trade_id: string
     symbol: string
     direction: 'long' | 'short'
@@ -522,7 +522,7 @@ interface EngineResult {
     quantity: number
     pnl: number
     commission: number
-  }>
+  }[]
 }
 
 function transformEngineResult(

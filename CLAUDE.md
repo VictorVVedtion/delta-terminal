@@ -99,40 +99,40 @@ graph TD
 
 | 模块路径 | 职责 | 技术栈 | 状态 |
 |---------|------|--------|------|
-| `frontend/web-app` | 主Web应用界面 | Next.js 14, TypeScript, TailwindCSS | 待创建 |
+| `frontend/web-app` | 主Web应用界面 | Next.js 15, TypeScript, TailwindCSS | ✅ 已完成 |
 | `frontend/mobile-app` | 移动端应用 | React Native / Flutter | 待创建 |
 
 ### 后端服务模块
 
 | 模块路径 | 职责 | 技术栈 | 状态 |
 |---------|------|--------|------|
-| `backend/api-gateway` | API网关与路由 | Node.js, Express/Fastify | 待创建 |
-| `backend/auth-service` | 用户认证与授权 | Node.js, JWT, OAuth2 | 待创建 |
-| `backend/user-service` | 用户管理服务 | Node.js, PostgreSQL | 待创建 |
-| `backend/strategy-service` | 策略管理服务 | Node.js, PostgreSQL | 待创建 |
+| `backend/api-gateway` | API网关与路由 | Node.js, Express/Fastify | ✅ 已完成 |
+| `backend/auth-service` | 用户认证与授权 | Node.js, JWT, OAuth2 | ✅ 已完成 |
+| `backend/user-service` | 用户管理服务 | Node.js, PostgreSQL | ✅ 已完成 |
+| `backend/strategy-service` | 策略管理服务 | Node.js, PostgreSQL | ✅ 已完成 |
 
 ### AI引擎模块
 
 | 模块路径 | 职责 | 技术栈 | 状态 |
 |---------|------|--------|------|
-| `ai-engine/nlp-processor` | 自然语言处理 | Python, LangChain, Claude | 待创建 |
+| `ai-engine/nlp-processor` | 自然语言处理 | Python, LangChain, Claude | ✅ 已完成 |
 | `ai-engine/strategy-generator` | AI策略生成器 | Python, LangChain | 待创建 |
-| `ai-engine/signal-analyzer` | 交易信号分析 | Python, ML模型 | 待创建 |
+| `ai-engine/signal-analyzer` | 交易信号分析 | Python, ML模型 | ✅ 已完成 |
 
 ### 交易引擎模块
 
 | 模块路径 | 职责 | 技术栈 | 状态 |
 |---------|------|--------|------|
-| `trading-engine/order-executor` | 订单执行引擎 | Node.js/Python, CCXT | 待创建 |
-| `trading-engine/risk-manager` | 风险管理系统 | Python, 实时计算 | 待创建 |
-| `trading-engine/exchange-connector` | 交易所连接器 | Node.js, WebSocket | 待创建 |
+| `trading-engine/order-executor` | 订单执行引擎 | Python, CCXT, FastAPI | ✅ 已完成 |
+| `trading-engine/risk-manager` | 风险管理系统 | Python, Redis, FastAPI | ✅ 已完成 |
+| `trading-engine/exchange-connector` | 交易所连接器 | Python, CCXT, WebSocket | ✅ 已完成 |
 
 ### 数据管道模块
 
 | 模块路径 | 职责 | 技术栈 | 状态 |
 |---------|------|--------|------|
-| `data-pipeline/market-data-collector` | 市场数据采集 | Python, WebSocket, Redis | 待创建 |
-| `data-pipeline/backtest-engine` | 回测引擎 | Python, Pandas, NumPy | 待创建 |
+| `data-pipeline/market-data-collector` | 市场数据采集 | Python, WebSocket, Redis | ✅ 已完成 |
+| `data-pipeline/backtest-engine` | 回测引擎 | Python, Pandas, NumPy | ✅ 已完成 |
 | `data-pipeline/analytics-service` | 数据分析服务 | Python, TimescaleDB | 待创建 |
 
 ### 共享模块

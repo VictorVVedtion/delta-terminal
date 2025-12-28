@@ -15,6 +15,8 @@ import { NextResponse } from 'next/server'
 
 import type { AIUserStatus } from '@/types/ai'
 
+export const dynamic = 'force-dynamic'
+
 // =============================================================================
 // Configuration
 // =============================================================================

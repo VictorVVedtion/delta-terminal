@@ -65,7 +65,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: true,
     description: '最强推理能力，复杂任务首选',
-    icon: '🏆'
+    icon: 'Brain'
   },
   'anthropic/claude-sonnet-4.5': {
     id: 'anthropic/claude-sonnet-4.5',
@@ -79,7 +79,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: true,
     description: '性价比之王，策略分析推荐',
-    icon: '⭐'
+    icon: 'Sparkles'
   },
   'anthropic/claude-3.5-haiku': {
     id: 'anthropic/claude-3.5-haiku',
@@ -93,7 +93,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: false,
     description: '快速响应，执行确认推荐',
-    icon: '⚡'
+    icon: 'Zap'
   },
   'openai/gpt-5.1': {
     id: 'openai/gpt-5.1',
@@ -107,7 +107,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: true,
     description: '全能旗舰，综合能力最强',
-    icon: '🚀'
+    icon: 'Rocket'
   },
   'openai/gpt-5-mini': {
     id: 'openai/gpt-5-mini',
@@ -121,7 +121,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: false,
     description: '经济实惠，市场扫描推荐',
-    icon: '💨'
+    icon: 'Wind'
   },
   'openai/gpt-4o': {
     id: 'openai/gpt-4o',
@@ -135,7 +135,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: false,
     description: '多模态强，对话交互推荐',
-    icon: '🎯'
+    icon: 'Target'
   },
   'deepseek/deepseek-v3.2': {
     id: 'deepseek/deepseek-v3.2',
@@ -149,7 +149,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: true,
     description: '超高性价比，中文优化',
-    icon: '💰'
+    icon: 'Coins'
   },
   'google/gemini-3-pro-preview': {
     id: 'google/gemini-3-pro-preview',
@@ -163,7 +163,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: true,
     description: '超长上下文 2M tokens',
-    icon: '📚'
+    icon: 'Library'
   },
   'google/gemini-3-flash': {
     id: 'google/gemini-3-flash',
@@ -177,7 +177,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: false,
     description: '快速多模态，1M 上下文',
-    icon: '⚡'
+    icon: 'Zap'
   },
 
   // ==================== Tier 2: 推荐模型 ====================
@@ -193,7 +193,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: true,
     description: 'Agent 专精，200-300 次工具调用',
-    icon: '🤖'
+    icon: 'Bot'
   },
   'qwen/qwen3-max': {
     id: 'qwen/qwen3-max',
@@ -207,7 +207,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: true,
     description: '中文优化，多语言支持',
-    icon: '🇨🇳'
+    icon: 'Globe'
   },
   'xai/grok-4.1': {
     id: 'xai/grok-4.1',
@@ -221,7 +221,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: false,
     description: '实时知识，X/Twitter 数据',
-    icon: '🌐'
+    icon: 'Network'
   },
 
   // ==================== Tier 3: 可选模型 ====================
@@ -237,7 +237,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: false,
     description: '智谱出品，中文能力强',
-    icon: '🔮'
+    icon: 'Sparkles'
   },
   'qwen/qwen3-coder': {
     id: 'qwen/qwen3-coder',
@@ -251,7 +251,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsStreaming: true,
     supportsThinking: false,
     description: '代码专精，Agent 工作流',
-    icon: '💻'
+    icon: 'Terminal'
   }
 }
 
@@ -299,7 +299,7 @@ export const TASK_TYPES: Record<AITaskType, TaskTypeConfig> = {
     priority: 'speed',
     recommendedModel: 'openai/gpt-5-mini',
     alternativeModels: ['google/gemini-3-flash', 'deepseek/deepseek-v3.2'],
-    icon: '🔍'
+    icon: 'Search'
   },
   analysis: {
     type: 'analysis',
@@ -308,7 +308,7 @@ export const TASK_TYPES: Record<AITaskType, TaskTypeConfig> = {
     priority: 'intelligence',
     recommendedModel: 'anthropic/claude-sonnet-4.5',
     alternativeModels: ['openai/gpt-5.1', 'deepseek/deepseek-v3.2'],
-    icon: '📊'
+    icon: 'BarChart2'
   },
   execution: {
     type: 'execution',
@@ -317,7 +317,7 @@ export const TASK_TYPES: Record<AITaskType, TaskTypeConfig> = {
     priority: 'reliability',
     recommendedModel: 'anthropic/claude-3.5-haiku',
     alternativeModels: ['deepseek/deepseek-v3.2', 'openai/gpt-5-mini'],
-    icon: '⚡'
+    icon: 'Zap'
   },
   chat: {
     type: 'chat',
@@ -326,7 +326,7 @@ export const TASK_TYPES: Record<AITaskType, TaskTypeConfig> = {
     priority: 'natural',
     recommendedModel: 'openai/gpt-4o',
     alternativeModels: ['qwen/qwen3-max', 'anthropic/claude-sonnet-4.5'],
-    icon: '💬'
+    icon: 'MessageSquare'
   },
   reasoning: {
     type: 'reasoning',
@@ -335,7 +335,7 @@ export const TASK_TYPES: Record<AITaskType, TaskTypeConfig> = {
     priority: 'intelligence',
     recommendedModel: 'anthropic/claude-opus-4.5',
     alternativeModels: ['openai/gpt-5.1', 'google/gemini-3-pro-preview'],
-    icon: '🧠'
+    icon: 'Brain'
   },
   agent: {
     type: 'agent',
@@ -344,7 +344,7 @@ export const TASK_TYPES: Record<AITaskType, TaskTypeConfig> = {
     priority: 'reliability',
     recommendedModel: 'moonshotai/kimi-k2-thinking',
     alternativeModels: ['anthropic/claude-sonnet-4.5', 'qwen/qwen3-coder'],
-    icon: '🤖'
+    icon: 'Bot'
   }
 }
 
@@ -372,7 +372,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     description: '成本最低，适合高频调用',
     defaultModel: 'anthropic/claude-sonnet-4',
     estimatedCostPerCall: 0.003,
-    icon: '💰'
+    icon: 'Coins'
   },
   balanced: {
     preset: 'balanced',
@@ -380,7 +380,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     description: '性能与成本平衡，大多数场景推荐',
     defaultModel: 'anthropic/claude-sonnet-4',
     estimatedCostPerCall: 0.003,
-    icon: '⚖️'
+    icon: 'Scale'
   },
   performance: {
     preset: 'performance',
@@ -388,7 +388,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     description: '最强智能，复杂任务首选',
     defaultModel: 'anthropic/claude-opus-4.5',
     estimatedCostPerCall: 0.10,
-    icon: '🚀'
+    icon: 'Rocket'
   },
   chinese: {
     preset: 'chinese',
@@ -396,7 +396,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     description: '中文理解和生成最佳',
     defaultModel: 'qwen/qwen3-max',
     estimatedCostPerCall: 0.005,
-    icon: '🇨🇳'
+    icon: 'Globe'
   },
   agent: {
     preset: 'agent',
@@ -404,7 +404,7 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
     description: '自动化交易、多步骤工具调用',
     defaultModel: 'moonshotai/kimi-k2-thinking',
     estimatedCostPerCall: 0.008,
-    icon: '🤖'
+    icon: 'Bot'
   }
 }
 

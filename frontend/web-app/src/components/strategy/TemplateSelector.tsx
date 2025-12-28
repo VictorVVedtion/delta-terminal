@@ -7,7 +7,7 @@
  * 提供策略模板浏览和一键应用功能
  */
 
-import { AlertTriangle, ChevronRight, Percent, Search, Sparkles,TrendingUp, X } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Flame, LineChart, type LucideIcon, Percent, RefreshCcw, Search, ShieldCheck, Sparkles, TrendingUp, X, Zap } from 'lucide-react'
 import React from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +22,16 @@ import {
 } from '@/lib/templates/strategies'
 import { cn } from '@/lib/utils'
 import type { InsightData } from '@/types/insight'
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  TrendingUp,
+  RefreshCcw,
+  LineChart,
+  Zap,
+  ShieldCheck,
+  AlertTriangle,
+  Flame,
+}
 
 // =============================================================================
 // Types
@@ -152,7 +162,12 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
                   onClick={() => { setSelectedCategory(category); }}
                   className="flex-shrink-0 gap-1.5"
                 >
-                  <span>{config.icon}</span>
+                  <span>
+                    {(() => {
+                      const Icon = ICON_MAP[config.icon] || TrendingUp
+                      return <Icon className="w-4 h-4" />
+                    })()}
+                  </span>
                   {config.label}
                 </Button>
               )
@@ -244,8 +259,12 @@ function TemplateCard({ template, isSelected, onSelect, onPreview }: TemplateCar
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <h3 className="font-medium text-sm truncate">{template.name}</h3>
-            <Badge variant="outline" className="flex-shrink-0 text-xs">
-              {riskConfig.icon} {riskConfig.label}
+            <Badge variant="outline" className="flex-shrink-0 text-xs gap-1.5">
+              {(() => {
+                const Icon = ICON_MAP[riskConfig.icon] || ShieldCheck
+                return <Icon className="w-3 h-3" />
+              })()}
+              {riskConfig.label}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
@@ -282,8 +301,12 @@ function TemplateCard({ template, isSelected, onSelect, onPreview }: TemplateCar
 
         {/* Category Badge & Arrow */}
         <div className="flex flex-col items-end gap-2">
-          <Badge variant="secondary" className="text-xs">
-            {categoryConfig.icon} {categoryConfig.label}
+          <Badge variant="secondary" className="text-xs gap-1.5">
+            {(() => {
+              const Icon = ICON_MAP[categoryConfig.icon] || TrendingUp
+              return <Icon className="w-3 h-3" />
+            })()}
+            {categoryConfig.label}
           </Badge>
           <Button
             variant="ghost"
@@ -323,13 +346,22 @@ function TemplatePreview({ template, onSelect, onClose }: TemplatePreviewProps) 
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">{categoryConfig.icon}</span>
+            <span className="text-2xl">
+              {(() => {
+                const Icon = ICON_MAP[categoryConfig.icon] || TrendingUp
+                return <Icon className="w-6 h-6" />
+              })()}
+            </span>
             <h3 className="text-xl font-semibold">{template.name}</h3>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{categoryConfig.label}</Badge>
-            <Badge variant="outline" className={riskConfig.color}>
-              {riskConfig.icon} {riskConfig.label}
+            <Badge variant="outline" className={`${riskConfig.color} gap-1.5`}>
+              {(() => {
+                const Icon = ICON_MAP[riskConfig.icon] || ShieldCheck
+                return <Icon className="w-3 h-3" />
+              })()}
+              {riskConfig.label}
             </Badge>
           </div>
         </div>

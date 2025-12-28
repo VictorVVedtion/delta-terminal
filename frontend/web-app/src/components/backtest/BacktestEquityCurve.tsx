@@ -409,7 +409,7 @@ export function CompactEquityCurve({
     }))
   }, [data])
 
-  const isPositive = data.length >= 2 && data[data.length - 1]!.equity >= data[0]!.equity
+  const isPositive = data.length >= 2 && data[data.length - 1].equity >= data[0].equity
 
   if (data.length === 0) {
     return (

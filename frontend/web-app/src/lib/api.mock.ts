@@ -210,7 +210,7 @@ export async function mockGetDeploymentStatus(
     mockDeploymentStatusCompleted,
   ]
   const index = Math.floor(Math.random() * statuses.length)
-  return statuses[index]!
+  return statuses[index]
 }
 
 /**
@@ -306,7 +306,7 @@ export const mockEquityCurve: EquityPoint[] = Array.from({ length: 180 }, (_, i)
   const baseGrowth = 10000 * (1 + (i / 180) * 0.25)
   const volatility = Math.sin(i / 10) * 500 + Math.random() * 300
   return {
-    date: date.toISOString().split('T')[0]!,
+    date: date.toISOString().split('T')[0],
     equity: baseGrowth + volatility,
     drawdown: Math.random() * -5,
   }
@@ -436,7 +436,7 @@ export async function mockGetBacktestRunStatus(
   if (mockProgressIndex < mockBacktestProgressSequence.length - 1) {
     mockProgressIndex++
   }
-  return status!
+  return status
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, HelpCircle } from 'lucide-react'
+import { Activity, ChevronDown, HelpCircle, Link, type LucideIcon, MessageSquare, Microscope, Moon, Terminal } from 'lucide-react'
 import React, { useState } from 'react'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -8,7 +8,16 @@ import { cn } from '@/lib/utils'
 import { useAIStore } from '@/store/ai'
 import type { WorkMode } from '@/store/mode';
 import { MODE_CONFIGS, useModeStore } from '@/store/mode'
-import { AI_MODELS,SIMPLE_PRESETS } from '@/types/ai'
+import { AI_MODELS, SIMPLE_PRESETS } from '@/types/ai'
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  MessageSquare,
+  Microscope,
+  Terminal,
+  Link,
+  Activity,
+  Moon,
+}
 
 /**
  * 模式选择器组件
@@ -25,7 +34,7 @@ export function ModeSelector() {
   const currentPresetConfig = SIMPLE_PRESETS[currentPreset]
   const actualModelId = aiConfig.simple.customModel || currentPresetConfig.defaultModel
   const actualModelInfo = AI_MODELS[actualModelId]
-  const actualModelName = actualModelInfo?.name || currentPresetConfig.name
+  const actualModelName = actualModelInfo.name || currentPresetConfig.name
 
   const handleSelect = (mode: WorkMode) => {
     setMode(mode)
@@ -67,7 +76,12 @@ export function ModeSelector() {
                 'transition-colors cursor-pointer'
               )}
             >
-              <span className="text-lg">{currentConfig.icon}</span>
+              <span className="text-lg">
+                {(() => {
+                  const Icon = ICON_MAP[currentConfig.icon] || MessageSquare
+                  return <Icon className="w-5 h-5" />
+                })()}
+              </span>
               <span className="flex-1 text-left text-sm font-semibold">
                 {currentConfig.name}
               </span>
@@ -115,7 +129,7 @@ export function ModeSelector() {
             />
 
             {/* 模式列表 */}
-            <div className="absolute left-3 right-3 top-full mt-1 z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
+            <div className="absolute left-3 right-3 top-full mt-1 z-50 glass-strong rounded-lg shadow-lg overflow-hidden">
               {Object.values(MODE_CONFIGS).map((modeItem) => (
                 <button
                   key={modeItem.id}
@@ -126,7 +140,12 @@ export function ModeSelector() {
                     modeItem.id === currentMode && 'bg-primary/10'
                   )}
                 >
-                  <span className="text-lg">{modeItem.icon}</span>
+                  <span className="text-lg">
+                    {(() => {
+                      const Icon = ICON_MAP[modeItem.icon] || MessageSquare
+                      return <Icon className="w-5 h-5" />
+                    })()}
+                  </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{modeItem.name}</span>

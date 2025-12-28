@@ -367,7 +367,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         const modelInfo = AI_MODELS[model]
-        const supportsThinking = modelInfo?.supportsThinking ?? false
+        const supportsThinking = modelInfo.supportsThinking ?? false
         let isClosed = false
 
         // 创建思考步骤提取器

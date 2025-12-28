@@ -354,6 +354,9 @@ class InsightGeneratorService:
                 except Exception as e:
                     logger.warning(f"Failed to generate reasoning chain: {e}")
 
+            # 获取多步骤引导中已收集的参数
+            collected_params = (context or {}).get("collected_params", {})
+
             # =================================================================
             # A2UI 分层澄清机制 - Level 1: 策略角度推荐
             # =================================================================
@@ -361,7 +364,7 @@ class InsightGeneratorService:
             # 优先推荐合适的策略角度，帮助用户理清交易思路。
             if intent == IntentType.CREATE_STRATEGY:
                 needs_perspective, concept = self._check_perspective_needed(
-                    user_input, entities
+                    user_input, entities, collected_params
                 )
                 if needs_perspective and concept is not None:
                     logger.info(
@@ -377,8 +380,6 @@ class InsightGeneratorService:
             # A2UI 分层澄清机制 - Level 2: 技术参数补全
             # =================================================================
             # A2UI Core: Check intent completeness before proceeding
-            # 传入 collected_params 以便在多步骤引导中正确评估已收集的参数
-            collected_params = (context or {}).get("collected_params", {})
             is_complete, missing_params, has_abstract = self._assess_intent_completeness(
                 user_input, intent, entities, collected_params
             )
@@ -776,6 +777,7 @@ class InsightGeneratorService:
         self,
         user_input: str,
         entities: Dict[str, Any],
+        collected_params: Optional[Dict[str, Any]] = None,
     ) -> tuple[bool, Optional[TradingConcept]]:
         """
         检查是否需要策略角度推荐
@@ -783,14 +785,23 @@ class InsightGeneratorService:
         分层澄清的核心判断逻辑：
         - 用户表达了交易概念（抄底、追涨等）
         - 但没有指定具体的技术指标或策略逻辑
+        - 且尚未在多步骤引导中选择策略角度
 
         Args:
             user_input: 用户输入文本
             entities: 已提取的实体
+            collected_params: 多步骤引导中已收集的参数
 
         Returns:
             (是否需要推荐, 检测到的交易概念)
         """
+        collected_params = collected_params or {}
+
+        # 检查是否已经在多步骤引导中选择了策略角度
+        if "strategy_perspective" in collected_params:
+            logger.debug("User already selected strategy perspective in multi-step flow")
+            return False, None
+
         # 检测交易概念
         concept = detect_trading_concept(user_input)
 

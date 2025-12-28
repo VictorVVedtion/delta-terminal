@@ -3,7 +3,7 @@
  * Story 2: 虚拟账户与模拟订单系统
  */
 
-import { beforeEach,describe, expect, it } from '@jest/globals'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { act,renderHook } from '@testing-library/react'
 
 import { usePaperTrading } from '@/hooks/usePaperTrading'

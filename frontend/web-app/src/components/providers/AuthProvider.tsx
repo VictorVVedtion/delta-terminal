@@ -9,7 +9,7 @@
  * - 所有页面都可以自由访问
  */
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect } from 'react'
 
 import { apiClient } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
