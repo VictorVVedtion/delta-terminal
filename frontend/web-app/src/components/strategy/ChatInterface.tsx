@@ -542,6 +542,38 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       const symbol = insight.target?.symbol || 'BTC/USDT'
       const timeframe = params.find(p => p.key === 'timeframe')?.value as string || '1h'
 
+      // 从参数提取回测天数，或根据 timeframe 设置合理默认值
+      const backtestDaysParam = params.find(p => p.key === 'backtestDays')?.value as number
+      let backtestDays = backtestDaysParam || 90 // 默认 90 天
+
+      // 如果没有明确指定，根据 timeframe 调整
+      if (!backtestDaysParam) {
+        switch (timeframe) {
+          case '1m':
+          case '5m':
+            backtestDays = 7 // 分钟级别用 7 天
+            break
+          case '15m':
+          case '30m':
+            backtestDays = 30 // 15/30 分钟用 30 天
+            break
+          case '1h':
+          case '4h':
+            backtestDays = 90 // 小时级别用 90 天
+            break
+          case '1d':
+            backtestDays = 365 // 日线用 1 年
+            break
+          default:
+            backtestDays = 90
+        }
+      }
+
+      // 提取初始资金
+      const initialCapital = (params.find(p => p.key === 'investment')?.value as number) ||
+                             (params.find(p => p.key === 'initialCapital')?.value as number) ||
+                             10000
+
       // 调用回测 API
       const response = await fetch('/api/backtest/run', {
         method: 'POST',
@@ -553,9 +585,9 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
             strategyDescription: insight.explanation || 'AI 生成的交易策略',
             symbol,
             timeframe,
-            startDate: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30天前
+            startDate: Date.now() - backtestDays * 24 * 60 * 60 * 1000,
             endDate: Date.now(),
-            initialCapital: 10000,
+            initialCapital,
             parameters: params.map(p => ({
               name: p.key,
               value: p.value,

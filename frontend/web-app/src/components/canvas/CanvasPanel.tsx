@@ -17,13 +17,17 @@ import React from 'react'
 
 import { ParamControl } from '@/components/a2ui/controls/ParamControl'
 import { BacktestKlineChart } from '@/components/backtest/BacktestKlineChart'
+import { SchemaParamRenderer } from '@/components/schema'
+import { GridVisualization } from '@/components/visualization'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useParamConstraints } from '@/hooks/useParamConstraints'
+import { schemaRegistry, detectStrategyType, computeAllDerivedFields } from '@/lib/schema'
 import { notify } from '@/lib/notification'
 import { cn } from '@/lib/utils'
-import type { BacktestInsightData, ImpactMetric,InsightData, InsightParam } from '@/types/insight'
+import type { BacktestInsightData, ImpactMetric,InsightData, InsightParam, ParamValue } from '@/types/insight'
+import type { StrategyType, ParamSchemaField } from '@/types/strategy-schema'
 
 // =============================================================================
 // CanvasPanel Props
@@ -72,12 +76,69 @@ export function CanvasPanel({
   const [editedParams, setEditedParams] = React.useState<InsightParam[]>([])
   const [showAdvanced, setShowAdvanced] = React.useState(false)
 
+  // Detect strategy type from insight
+  const strategyType = React.useMemo<StrategyType | null>(() => {
+    if (!insight) return null
+    // 尝试从 insight 的解释或目标中检测策略类型
+    const text = `${insight.explanation || ''} ${insight.target?.name || ''}`
+    return detectStrategyType(text)
+  }, [insight])
+
+  // Get schema fields for the detected strategy type
+  const schemaFields = React.useMemo<ParamSchemaField[]>(() => {
+    if (!strategyType) return []
+    return schemaRegistry.getFields(strategyType)
+  }, [strategyType])
+
+  // Check if we're using schema-based rendering
+  const useSchemaMode = schemaFields.length > 0
+
   // Reset edited params when insight changes
   React.useEffect(() => {
     if (insight) {
-      setEditedParams(insight.params)
+      // 如果有 Schema，使用 Schema 来补全和计算字段
+      if (useSchemaMode && schemaFields.length > 0) {
+        const paramsObj: Record<string, ParamValue> = {}
+        for (const param of insight.params) {
+          paramsObj[param.key] = param.value
+        }
+        // 计算派生字段
+        const computed = computeAllDerivedFields(schemaFields, paramsObj, {})
+        // 更新参数
+        const updatedParams = insight.params.map(p => ({
+          ...p,
+          value: computed[p.key] ?? p.value,
+        }))
+        // 添加 Schema 中有但 insight 中没有的字段
+        const existingKeys = new Set(updatedParams.map(p => p.key))
+        for (const field of schemaFields) {
+          if (!existingKeys.has(field.key)) {
+            const param: InsightParam = {
+              key: field.key,
+              label: field.label,
+              type: field.type,
+              value: computed[field.key] ?? field.defaultValue,
+              level: field.level,
+              config: field.config,
+            }
+            if (field.constraints) {
+              param.constraints = field.constraints
+            }
+            if (field.description) {
+              param.description = field.description
+            }
+            if (field.readonly || field.computed) {
+              param.disabled = true
+            }
+            updatedParams.push(param)
+          }
+        }
+        setEditedParams(updatedParams)
+      } else {
+        setEditedParams(insight.params)
+      }
     }
-  }, [insight])
+  }, [insight, useSchemaMode, schemaFields])
 
   // Separate core (L1) and advanced (L2) params
   const coreParams = React.useMemo(
@@ -101,15 +162,35 @@ export function CanvasPanel({
     })
   }, [editedParams, insight])
 
-  // Handle param value change
+  // Handle param value change (with computed field recalculation)
   const handleParamChange = React.useCallback(
     (key: string, value: unknown) => {
-      const newParams = editedParams.map((p) =>
+      // 先更新直接值
+      let newParams = editedParams.map((p) =>
         p.key === key ? { ...p, value: value as InsightParam['value'] } : p
       )
+
+      // 如果使用 Schema 模式，重新计算派生字段
+      if (useSchemaMode && schemaFields.length > 0) {
+        const paramsObj: Record<string, ParamValue> = {}
+        for (const param of newParams) {
+          paramsObj[param.key] = param.value
+        }
+        // 重新计算所有派生字段
+        const computed = computeAllDerivedFields(schemaFields, paramsObj, {})
+        // 更新计算字段的值
+        newParams = newParams.map(p => {
+          const field = schemaFields.find(f => f.key === p.key)
+          if (field?.computed) {
+            return { ...p, value: computed[p.key] ?? p.value }
+          }
+          return p
+        })
+      }
+
       setEditedParams(newParams)
     },
-    [editedParams]
+    [editedParams, useSchemaMode, schemaFields]
   )
 
   // Reset to original values
@@ -374,41 +455,63 @@ export function CanvasPanel({
               </section>
             )}
 
-            {/* L1 参数区: 核心参数 */}
-            <section className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">
-                核心参数
-              </h3>
-              <div className="space-y-4">
-                {coreParams.map((param) => (
-                  <ParamControl
-                    key={param.key}
-                    param={param}
-                    value={param.value}
-                    onChange={(value) => { handleParamChange(param.key, value); }}
-                    disabled={isLoading}
-                  />
-                ))}
-              </div>
-            </section>
+            {/* 网格可视化 - 仅对网格策略显示 */}
+            {strategyType === 'grid' && (() => {
+              // 从参数中获取网格数据
+              const upperBound = editedParams.find(p => p.key === 'upperBound')?.value as number
+              const lowerBound = editedParams.find(p => p.key === 'lowerBound')?.value as number
+              const gridCount = editedParams.find(p => p.key === 'gridCount')?.value as number
 
-            {/* L2 参数区: 高级参数 (折叠) */}
-            {advancedParams.length > 0 && (
-              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+              if (upperBound && lowerBound && gridCount) {
+                return (
+                  <section className="space-y-3">
+                    <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      网格分布
+                    </h3>
+                    <GridVisualization
+                      upperBound={upperBound}
+                      lowerBound={lowerBound}
+                      gridCount={gridCount}
+                      height={180}
+                      showLabels={true}
+                      showSpacing={true}
+                    />
+                  </section>
+                )
+              }
+              return null
+            })()}
+
+            {/* 参数区: 使用 SchemaParamRenderer 或 fallback 到原来的渲染 */}
+            {useSchemaMode ? (
+              <SchemaParamRenderer
+                params={editedParams}
+                schemaFields={schemaFields}
+                onParamChange={handleParamChange}
+                errors={new Map(
+                  constraintValidation.violations
+                    .filter(v => v.severity === 'error')
+                    .map(v => [v.paramKey, v.message])
+                )}
+                warnings={new Map(
+                  constraintValidation.violations
+                    .filter(v => v.severity === 'warning')
+                    .map(v => [v.paramKey, v.message])
+                )}
+                disabled={isLoading}
+                showAdvanced={showAdvanced}
+                onToggleAdvanced={() => setShowAdvanced(!showAdvanced)}
+              />
+            ) : (
+              <>
+                {/* L1 参数区: 核心参数 (fallback 渲染) */}
                 <section className="space-y-4">
-                  <CollapsibleTrigger asChild>
-                    <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full">
-                      {showAdvanced ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                      高级参数 ({advancedParams.length})
-                    </button>
-                  </CollapsibleTrigger>
-
-                  <CollapsibleContent className="space-y-4 pl-4 border-l-2 border-muted">
-                    {advancedParams.map((param) => (
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    核心参数
+                  </h3>
+                  <div className="space-y-4">
+                    {coreParams.map((param) => (
                       <ParamControl
                         key={param.key}
                         param={param}
@@ -417,9 +520,39 @@ export function CanvasPanel({
                         disabled={isLoading}
                       />
                     ))}
-                  </CollapsibleContent>
+                  </div>
                 </section>
-              </Collapsible>
+
+                {/* L2 参数区: 高级参数 (折叠) */}
+                {advancedParams.length > 0 && (
+                  <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                    <section className="space-y-4">
+                      <CollapsibleTrigger asChild>
+                        <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full">
+                          {showAdvanced ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                          高级参数 ({advancedParams.length})
+                        </button>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent className="space-y-4 pl-4 border-l-2 border-muted">
+                        {advancedParams.map((param) => (
+                          <ParamControl
+                            key={param.key}
+                            param={param}
+                            value={param.value}
+                            onChange={(value) => { handleParamChange(param.key, value); }}
+                            disabled={isLoading}
+                          />
+                        ))}
+                      </CollapsibleContent>
+                    </section>
+                  </Collapsible>
+                )}
+              </>
             )}
 
             {/* 参数重置按钮 */}
@@ -548,8 +681,20 @@ interface MetricCardProps {
 function MetricCard({ metric }: MetricCardProps) {
   // 计算变化百分比
   const getChangePercent = (current: number, old?: number): string | null => {
-    if (old === undefined || old === 0) return null
+    // 防止除零和无效值
+    if (old === undefined || old === 0 || !Number.isFinite(old)) return null
+    if (!Number.isFinite(current)) return null
+
     const change = ((current - old) / Math.abs(old)) * 100
+
+    // 防止 Infinity 和 NaN 显示
+    if (!Number.isFinite(change)) return null
+
+    // 限制显示范围 (超过1000%显示为 >1000%)
+    if (Math.abs(change) > 1000) {
+      return change > 0 ? '>+1000%' : '<-1000%'
+    }
+
     return change > 0 ? `+${change.toFixed(1)}%` : `${change.toFixed(1)}%`
   }
 
