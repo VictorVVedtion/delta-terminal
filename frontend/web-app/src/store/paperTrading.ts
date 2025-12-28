@@ -6,6 +6,10 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
+import {
+  fetchRemoteAccountsFromSupabase,
+  persistAccountsToSupabase,
+} from '@/lib/paperTradingSync'
 import type {
   ClosePositionParams,
   ClosePositionResult,
@@ -18,11 +22,6 @@ import type {
   PositionSide,
   TradeSide,
 } from '@/types/paperTrading'
-
-import {
-  fetchRemoteAccountsFromSupabase,
-  persistAccountsToSupabase,
-} from '@/lib/paperTradingSync'
 
 // =============================================================================
 // Constants

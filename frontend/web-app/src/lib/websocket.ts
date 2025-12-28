@@ -23,6 +23,7 @@ class WebSocketClient {
   private subscriptions = new Set<string>()
   private isConnecting = false
   private connectPromise: Promise<void> | null = null
+  private hasLoggedConnectionError = false
 
   constructor(url?: string) {
     this.url = url || process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000'
@@ -50,6 +51,7 @@ class WebSocketClient {
           this.isConnecting = false
           this.connectPromise = null
           this.reconnectAttempts = 0
+          this.hasLoggedConnectionError = false
 
           // 重新订阅之前的频道
           this.subscriptions.forEach(channel => {
@@ -69,7 +71,10 @@ class WebSocketClient {
         }
 
         this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error)
+          if (!this.hasLoggedConnectionError) {
+            console.warn('WebSocket 连接失败 - 后端服务可能未启动')
+            this.hasLoggedConnectionError = true
+          }
           this.isConnecting = false
           this.connectPromise = null
           reject(error)
@@ -102,7 +107,10 @@ class WebSocketClient {
 
   private attemptReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnect attempts reached')
+      if (!this.hasLoggedConnectionError) {
+        console.warn('WebSocket 重连次数已达上限，停止重连')
+        this.hasLoggedConnectionError = true
+      }
       return
     }
 
@@ -110,8 +118,8 @@ class WebSocketClient {
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1)
 
     setTimeout(() => {
-      this.connect().catch(error => {
-        console.error('Reconnect failed:', error)
+      this.connect().catch(() => {
+        // 错误已在 onerror 中处理，这里静默失败
       })
     }, delay)
   }

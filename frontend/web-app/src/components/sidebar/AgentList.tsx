@@ -339,21 +339,21 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
               基本操作
             </div>
             <button
-              onClick={(e) => { handleMenuClick(e, 'edit'); }}
+              onClick={(e) => { void handleMenuClick(e, 'edit'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <Edit className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">编辑策略</span>
             </button>
             <button
-              onClick={(e) => { handleMenuClick(e, 'toggle_status'); }}
+              onClick={(e) => { void handleMenuClick(e, 'toggle_status'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               {isRunning ? <Pause className="h-3.5 w-3.5 text-orange-500" /> : <Play className="h-3.5 w-3.5 text-green-500" />}
               <span className="text-xs">{isRunning ? '暂停运行' : '启动运行'}</span>
             </button>
             <button
-              onClick={(e) => { handleMenuClick(e, 'delete'); }}
+              onClick={(e) => { void handleMenuClick(e, 'delete'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-red-500"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -366,38 +366,38 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
             </div>
 
             <button
-              onClick={(e) => { handleMenuClick(e, 'sensitivity'); }}
+              onClick={(e) => { void handleMenuClick(e, 'sensitivity'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">敏感度分析</span>
             </button>
             <button
-              onClick={(e) => { handleMenuClick(e, 'attribution'); }}
+              onClick={(e) => { void handleMenuClick(e, 'attribution'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">归因分析</span>
             </button>
             <button
-              onClick={(e) => { handleMenuClick(e, 'comparison'); }}
+              onClick={(e) => { void handleMenuClick(e, 'comparison'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <GitCompare className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">对比分析</span>
             </button>
-            
+
             <div className="border-t border-border my-1" />
-            
+
             <button
-              onClick={(e) => { handleMenuClick(e, 'version'); }}
+              onClick={(e) => { void handleMenuClick(e, 'version'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <History className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">版本历史</span>
             </button>
             <button
-              onClick={(e) => { handleMenuClick(e, 'emergency'); }}
+              onClick={(e) => { void handleMenuClick(e, 'emergency'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-orange-600"
             >
               <AlertTriangle className="h-3.5 w-3.5" />

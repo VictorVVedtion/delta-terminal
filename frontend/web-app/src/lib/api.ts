@@ -118,13 +118,22 @@ class ApiClient {
       url += `?${searchParams.toString()}`
     }
 
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers: {
-        ...this.getHeaders(),
-        ...fetchOptions.headers,
-      },
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        ...fetchOptions,
+        headers: {
+          ...this.getHeaders(),
+          ...fetchOptions.headers,
+        },
+      })
+    } catch (error) {
+      // 网络错误 - 后端服务可能未运行
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('无法连接到服务器，请确认后端服务已启动')
+      }
+      throw error
+    }
 
     // 处理 401 错误 - 尝试刷新 Token
     if (response.status === 401 && retry && this.refreshToken) {

@@ -698,7 +698,9 @@ function MetricCard({ metric }: MetricCardProps) {
     return change > 0 ? `+${change.toFixed(1)}%` : `${change.toFixed(1)}%`
   }
 
-  const changePercent = getChangePercent(metric.value, metric.old_value)
+  const numValue = typeof metric.value === 'number' ? metric.value : undefined
+  const numOldValue = typeof metric.old_value === 'number' ? metric.old_value : undefined
+  const changePercent = numValue !== undefined ? getChangePercent(numValue, numOldValue) : null
 
   // 趋势图标
   const TrendIcon =

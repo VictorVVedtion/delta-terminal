@@ -431,7 +431,9 @@ function ImpactSection({ impact }: { impact: InsightImpact }) {
 
       <div className="grid grid-cols-2 gap-3">
         {impact.metrics.map(metric => {
-          const changePercent = getChangePercent(metric.value, metric.old_value)
+          const numValue = typeof metric.value === 'number' ? metric.value : undefined
+          const numOldValue = typeof metric.old_value === 'number' ? metric.old_value : undefined
+          const changePercent = numValue !== undefined ? getChangePercent(numValue, numOldValue) : null
           const icon = IMPACT_METRIC_ICONS[metric.key] || '📋'
 
           return (

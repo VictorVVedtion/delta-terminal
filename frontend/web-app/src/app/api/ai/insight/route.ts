@@ -58,7 +58,8 @@ interface InsightResponse {
 const NLP_PROCESSOR_URL = process.env.NLP_PROCESSOR_URL || process.env.AI_ORCHESTRATOR_URL
 
 // 后端请求超时时间 (毫秒)
-const BACKEND_TIMEOUT = 25000
+// LLM 响应通常需要 20-30 秒，设置 60 秒超时
+const BACKEND_TIMEOUT = 60000
 
 /**
  * 带超时的 fetch 请求

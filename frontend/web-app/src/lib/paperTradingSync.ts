@@ -1,4 +1,4 @@
-import { supabaseClient, getDeviceId } from '@/lib/supabase'
+import { getDeviceId,supabaseClient } from '@/lib/supabase'
 import type { PaperAccount, PaperPosition, PaperTrade } from '@/types/paperTrading'
 
 const TABLE_NAME = 'paper_accounts'

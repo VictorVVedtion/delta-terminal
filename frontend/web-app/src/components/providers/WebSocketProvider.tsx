@@ -75,7 +75,7 @@ export function WebSocketProvider({ children, autoConnect = true }: WebSocketPro
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Connection failed'
       setError(errorMessage)
-      console.error('WebSocket connection error:', err)
+      // 错误已在 wsClient 中记录，此处静默处理
     } finally {
       setIsConnecting(false)
     }

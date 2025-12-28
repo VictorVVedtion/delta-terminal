@@ -18,7 +18,7 @@ export function getDeviceId(): string | null {
     return null
   }
 
-  let deviceId = localStorage.getItem(DEVICE_ID_STORAGE_KEY)
+  const deviceId = localStorage.getItem(DEVICE_ID_STORAGE_KEY)
   if (deviceId) {
     return deviceId
   }
