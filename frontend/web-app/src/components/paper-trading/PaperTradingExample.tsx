@@ -32,7 +32,7 @@ export function PaperTradingExample({ agentId }: PaperTradingExampleProps) {
     canSell,
   } = usePaperTrading({ agentId })
 
-  const [btcPrice, setBtcPrice] = useState(50000)
+  const [btcPrice, setBtcPrice] = useState(95500)
 
   // 初始化账户
   useEffect(() => {
@@ -42,12 +42,12 @@ export function PaperTradingExample({ agentId }: PaperTradingExampleProps) {
     }
   }, [account, agentId, initAccount])
 
-  // 模拟价格变化
+  // 模拟价格变化 - 基于 2025年12月 BTC 价格范围
   useEffect(() => {
     const interval = setInterval(() => {
       setBtcPrice((prev) => {
-        const change = (Math.random() - 0.5) * 100
-        return Math.max(45000, Math.min(55000, prev + change))
+        const change = (Math.random() - 0.5) * 200
+        return Math.max(93000, Math.min(98000, prev + change))
       })
     }, 2000)
     return () => { clearInterval(interval); }
