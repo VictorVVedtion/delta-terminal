@@ -38,11 +38,47 @@ export function ModelSelector({ className, onConfigChange }: ModelSelectorProps)
     setMode,
     setSimplePreset,
     setTaskModel,
-    estimateCost
+    estimateCost,
+    saveToBackend,
+    loadFromBackend,
   } = useAIStore()
 
   const [expandedTask, setExpandedTask] = useState<AITaskType | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const costEstimate = estimateCost()
+
+  // 同步到后端
+  const handleSyncToBackend = async () => {
+    setIsSyncing(true)
+    setSyncStatus('idle')
+    try {
+      const success = await saveToBackend()
+      setSyncStatus(success ? 'saved' : 'error')
+      if (success) {
+        // 3秒后清除状态
+        setTimeout(() => setSyncStatus('idle'), 3000)
+      }
+    } catch {
+      setSyncStatus('error')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  // 从后端加载
+  const handleLoadFromBackend = async () => {
+    setIsSyncing(true)
+    try {
+      await loadFromBackend()
+      setSyncStatus('saved')
+      setTimeout(() => setSyncStatus('idle'), 3000)
+    } catch {
+      setSyncStatus('error')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -104,6 +140,40 @@ export function ModelSelector({ className, onConfigChange }: ModelSelectorProps)
 
       {/* 成本预估 */}
       <CostEstimateCard estimate={costEstimate} />
+
+      {/* 同步按钮 (仅高级模式) */}
+      {config.mode === 'advanced' && (
+        <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border">
+          <div>
+            <div className="text-sm font-medium">配置同步</div>
+            <div className="text-xs text-muted-foreground">
+              将模型配置同步到后端，所有设备生效
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {syncStatus === 'saved' && (
+              <span className="text-xs text-green-500">✓ 已保存</span>
+            )}
+            {syncStatus === 'error' && (
+              <span className="text-xs text-red-500">保存失败</span>
+            )}
+            <button
+              onClick={handleLoadFromBackend}
+              disabled={isSyncing}
+              className="px-3 py-1.5 text-xs rounded-md border hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              {isSyncing ? '同步中...' : '从云端加载'}
+            </button>
+            <button
+              onClick={handleSyncToBackend}
+              disabled={isSyncing}
+              className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {isSyncing ? '保存中...' : '保存到云端'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

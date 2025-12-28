@@ -82,19 +82,20 @@ function ThinkingPhase({
   thinking?: ThinkingProcess
   className?: string
 }) {
-  // 如果没有 thinking 数据，显示默认的思考状态
+  // 使用传入的 thinking 数据（现在由 useInsightLoadingState 提供模拟数据）
   const defaultProcess: ThinkingProcess = thinking ?? {
     process_id: 'default',
     user_message: '',
     status: 'thinking',
     todos: [
-      { id: '1', description: '分析用户意图', status: 'completed' },
-      { id: '2', description: '检索因子库', status: 'in_progress' },
+      { id: '1', description: '分析用户意图', status: 'in_progress' },
+      { id: '2', description: '检索策略模式', status: 'pending' },
       { id: '3', description: '评估风控约束', status: 'pending' },
       { id: '4', description: '生成策略配置', status: 'pending' },
     ],
     tool_history: [],
     started_at: Date.now(),
+    progress: { percentage: 0 },
   }
 
   return (
@@ -309,24 +310,74 @@ export function useInsightLoadingState(
 ) {
   const { skeletonDuration = 500, autoProgress = true } = options
   const [phase, setPhase] = React.useState<InsightLoadingPhase>('skeleton')
+  const [simulatedProgress, setSimulatedProgress] = React.useState(0)
+  const [simulatedTodos, setSimulatedTodos] = React.useState<ThinkingProcess['todos']>([
+    { id: '1', description: '分析用户意图', status: 'pending' },
+    { id: '2', description: '检索策略模式', status: 'pending' },
+    { id: '3', description: '评估风控约束', status: 'pending' },
+    { id: '4', description: '生成策略配置', status: 'pending' },
+  ])
 
   React.useEffect(() => {
     if (!isLoading) {
       setPhase('ready')
+      setSimulatedProgress(100)
       return
     }
 
-    // 开始加载时重置为 skeleton
+    // 开始加载时重置
     setPhase('skeleton')
+    setSimulatedProgress(0)
+    setSimulatedTodos([
+      { id: '1', description: '分析用户意图', status: 'pending' },
+      { id: '2', description: '检索策略模式', status: 'pending' },
+      { id: '3', description: '评估风控约束', status: 'pending' },
+      { id: '4', description: '生成策略配置', status: 'pending' },
+    ])
 
     if (!autoProgress) return
 
-    // 自动切换到 thinking 阶段
-    const timer = setTimeout(() => {
+    // 阶段 1: skeleton → thinking (0.5s)
+    const timer1 = setTimeout(() => {
       setPhase('thinking')
+      setSimulatedTodos(prev => prev.map((t, i) =>
+        i === 0 ? { ...t, status: 'completed' as const } :
+        i === 1 ? { ...t, status: 'in_progress' as const } : t
+      ))
+      setSimulatedProgress(25)
     }, skeletonDuration)
 
-    return () => { clearTimeout(timer); }
+    // 阶段 2: 模拟进度更新 (1.5s)
+    const timer2 = setTimeout(() => {
+      setSimulatedTodos(prev => prev.map((t, i) =>
+        i <= 1 ? { ...t, status: 'completed' as const } :
+        i === 2 ? { ...t, status: 'in_progress' as const } : t
+      ))
+      setSimulatedProgress(50)
+    }, skeletonDuration + 1000)
+
+    // 阶段 3: 模拟进度更新 (2.5s)
+    const timer3 = setTimeout(() => {
+      setSimulatedTodos(prev => prev.map((t, i) =>
+        i <= 2 ? { ...t, status: 'completed' as const } :
+        i === 3 ? { ...t, status: 'in_progress' as const } : t
+      ))
+      setSimulatedProgress(75)
+    }, skeletonDuration + 2000)
+
+    // 阶段 4: 切换到 filling (3s)
+    const timer4 = setTimeout(() => {
+      setPhase('filling')
+      setSimulatedTodos(prev => prev.map(t => ({ ...t, status: 'completed' as const })))
+      setSimulatedProgress(90)
+    }, skeletonDuration + 3000)
+
+    return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+      clearTimeout(timer3)
+      clearTimeout(timer4)
+    }
   }, [isLoading, skeletonDuration, autoProgress])
 
   // 根据 thinkingProcess 状态自动切换到 filling
@@ -336,10 +387,25 @@ export function useInsightLoadingState(
     }
   }, [thinkingProcess?.status, phase])
 
+  // 构建模拟的 thinking process（当没有真实数据时）
+  const currentStep = simulatedTodos.find(t => t.status === 'in_progress')?.description ?? '处理中...'
+  const simulatedThinking: ThinkingProcess = thinkingProcess ?? {
+    process_id: 'simulated',
+    user_message: '',
+    status: phase === 'thinking' ? 'thinking' : phase === 'filling' ? 'generating' : 'idle',
+    todos: simulatedTodos,
+    tool_history: [],
+    started_at: Date.now(),
+    progress: {
+      percentage: simulatedProgress,
+      current_step: currentStep,
+    },
+  }
+
   // 只在有值时包含属性，避免 exactOptionalPropertyTypes 问题
   const state: InsightLoadingState = {
     phase,
-    ...(thinkingProcess ? { thinking: thinkingProcess } : {}),
+    thinking: simulatedThinking,
   }
 
   return {

@@ -79,6 +79,14 @@ interface AISessionMessage {
 // Actions
 // ============================================================================
 
+/** 后端模型路由配置响应 */
+interface BackendRoutingConfig {
+  system_defaults: Record<string, string>
+  user_overrides: Record<string, string>
+  effective_config: Record<string, string>
+  available_tasks: string[]
+}
+
 interface AIActions {
   // 配置管理
   setMode: (mode: 'simple' | 'advanced') => void
@@ -87,6 +95,11 @@ interface AIActions {
   setTaskModel: (taskType: AITaskType, model: string) => void
   updateSettings: (settings: Partial<AIConfig['settings']>) => void
   resetConfig: () => void
+
+  // 后端同步 (新增)
+  syncWithBackend: () => Promise<void>
+  saveToBackend: () => Promise<boolean>
+  loadFromBackend: () => Promise<void>
 
   // 用户状态管理
   setUserStatus: (status: AIUserStatus) => void
@@ -221,6 +234,106 @@ export const useAIStore = create<AIState & AIActions>()(
 
       resetConfig: () => {
         set({ config: DEFAULT_AI_CONFIG })
+      },
+
+      // ==================== 后端同步 ====================
+
+      syncWithBackend: async () => {
+        // 同时加载配置和保存本地更改
+        await get().loadFromBackend()
+      },
+
+      saveToBackend: async () => {
+        try {
+          const { config } = get()
+          // 只在高级模式下同步任务模型配置
+          if (config.mode !== 'advanced') return true
+
+          // 将前端任务类型映射到后端任务类型
+          const taskMapping: Record<AITaskType, string> = {
+            scan: 'market_analysis',
+            analysis: 'insight_generation',
+            execution: 'intent_recognition',
+            chat: 'simple_chat',
+            reasoning: 'complex_reasoning',
+            agent: 'strategy_generation',
+          }
+
+          const taskRouting: Record<string, string> = {}
+          for (const [frontendTask, backendTask] of Object.entries(taskMapping)) {
+            const model = config.advanced.taskModels[frontendTask as AITaskType]
+            if (model) {
+              taskRouting[backendTask] = model
+            }
+          }
+
+          const response = await fetch('/api/ai/config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              task_routing: taskRouting,
+              prefer_speed: false,
+              prefer_cost: false,
+              prefer_quality: true,
+            }),
+          })
+
+          if (!response.ok) {
+            console.error('Failed to save AI config to backend')
+            return false
+          }
+
+          console.log('AI config saved to backend successfully')
+          return true
+        } catch (error) {
+          console.error('Error saving AI config to backend:', error)
+          return false
+        }
+      },
+
+      loadFromBackend: async () => {
+        try {
+          const response = await fetch('/api/ai/config')
+          if (!response.ok) {
+            console.warn('Failed to load AI config from backend, using local config')
+            return
+          }
+
+          const data = await response.json() as BackendRoutingConfig
+          console.log('Loaded AI config from backend:', data)
+
+          // 后端任务类型到前端的映射
+          const reverseMapping: Record<string, AITaskType> = {
+            market_analysis: 'scan',
+            insight_generation: 'analysis',
+            intent_recognition: 'execution',
+            simple_chat: 'chat',
+            complex_reasoning: 'reasoning',
+            strategy_generation: 'agent',
+          }
+
+          // 更新高级模式的任务模型配置
+          const taskModels: Record<AITaskType, string> = { ...get().config.advanced.taskModels }
+
+          for (const [backendTask, model] of Object.entries(data.effective_config)) {
+            const frontendTask = reverseMapping[backendTask]
+            if (frontendTask && model) {
+              taskModels[frontendTask] = model
+            }
+          }
+
+          set((state) => ({
+            config: {
+              ...state.config,
+              advanced: {
+                ...state.config.advanced,
+                taskModels,
+              },
+            },
+          }))
+        } catch (error) {
+          console.error('Error loading AI config from backend:', error)
+        }
       },
 
       // ==================== 用户状态管理 ====================
