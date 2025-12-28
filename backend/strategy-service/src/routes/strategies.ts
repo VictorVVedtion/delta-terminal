@@ -16,14 +16,14 @@ const createStrategySchema = z.object({
 });
 
 export async function strategyRoutes(fastify: FastifyInstance, service: StrategyService) {
-  fastify.post('/strategies', async (request, reply) => {
+  fastify.post('/strategies', async (request, _reply) => {
     const userId = (request as any).user.id;
     const data = createStrategySchema.parse(request.body);
-    const strategy = await service.createStrategy(userId, data);
+    const strategy = await service.createStrategy(userId, data as any);
     return { success: true, data: strategy };
   });
 
-  fastify.get('/strategies', async (request, reply) => {
+  fastify.get('/strategies', async (request, _reply) => {
     const userId = (request as any).user.id;
     const query = request.query as any;
     const result = await service.getUserStrategies(userId, query);
@@ -39,37 +39,37 @@ export async function strategyRoutes(fastify: FastifyInstance, service: Strategy
     return { success: true, data: strategy };
   });
 
-  fastify.put('/strategies/:id', async (request, reply) => {
+  fastify.put('/strategies/:id', async (request, _reply) => {
     const { id } = request.params as { id: string };
     const strategy = await service.updateStrategy(id, request.body as any);
     return { success: true, data: strategy };
   });
 
-  fastify.delete('/strategies/:id', async (request, reply) => {
+  fastify.delete('/strategies/:id', async (request, _reply) => {
     const { id } = request.params as { id: string };
     await service.deleteStrategy(id);
     return { success: true };
   });
 
-  fastify.post('/strategies/:id/start', async (request, reply) => {
+  fastify.post('/strategies/:id/start', async (request, _reply) => {
     const { id } = request.params as { id: string };
     const strategy = await service.startStrategy(id);
     return { success: true, data: strategy };
   });
 
-  fastify.post('/strategies/:id/pause', async (request, reply) => {
+  fastify.post('/strategies/:id/pause', async (request, _reply) => {
     const { id } = request.params as { id: string };
     const strategy = await service.pauseStrategy(id);
     return { success: true, data: strategy };
   });
 
-  fastify.post('/strategies/:id/stop', async (request, reply) => {
+  fastify.post('/strategies/:id/stop', async (request, _reply) => {
     const { id } = request.params as { id: string };
     const strategy = await service.stopStrategy(id);
     return { success: true, data: strategy };
   });
 
-  fastify.post('/strategies/:id/share', async (request, reply) => {
+  fastify.post('/strategies/:id/share', async (request, _reply) => {
     const { id } = request.params as { id: string };
     const strategy = await service.shareStrategy(id);
     return { success: true, data: { shareCode: strategy.shareCode } };

@@ -13,13 +13,13 @@ const executeStrategySchema = z.object({
 });
 
 export async function executionRoutes(fastify: FastifyInstance, service: ExecutionService) {
-  fastify.post('/executions', async (request, reply) => {
+  fastify.post('/executions', async (request, _reply) => {
     const data = executeStrategySchema.parse(request.body);
     const execution = await service.createExecution(data);
     return { success: true, data: execution };
   });
 
-  fastify.get('/executions', async (request, reply) => {
+  fastify.get('/executions', async (request, _reply) => {
     const query = request.query as any;
     const result = await service.listExecutions(query);
     return { success: true, ...result };

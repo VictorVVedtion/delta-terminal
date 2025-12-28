@@ -7,8 +7,9 @@ import { randomBytes, createCipheriv, createDecipheriv, createHash } from 'crypt
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const TAG_LENGTH = 16;
-const SALT_LENGTH = 32;
+// TAG_LENGTH and SALT_LENGTH reserved for future use
+// const TAG_LENGTH = 16;
+// const SALT_LENGTH = 32;
 
 /**
  * 生成随机字符串

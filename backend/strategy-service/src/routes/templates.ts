@@ -14,14 +14,14 @@ const createTemplateSchema = z.object({
 });
 
 export async function templateRoutes(fastify: FastifyInstance, service: TemplateService) {
-  fastify.post('/templates', async (request, reply) => {
+  fastify.post('/templates', async (request, _reply) => {
     const userId = (request as any).user.id;
     const data = createTemplateSchema.parse(request.body);
-    const template = await service.createTemplate(userId, data);
+    const template = await service.createTemplate(userId, data as any);
     return { success: true, data: template };
   });
 
-  fastify.get('/templates', async (request, reply) => {
+  fastify.get('/templates', async (request, _reply) => {
     const query = request.query as any;
     const result = await service.listTemplates(query);
     return { success: true, ...result };
@@ -36,7 +36,7 @@ export async function templateRoutes(fastify: FastifyInstance, service: Template
     return { success: true, data: template };
   });
 
-  fastify.delete('/templates/:id', async (request, reply) => {
+  fastify.delete('/templates/:id', async (request, _reply) => {
     const { id } = request.params as { id: string };
     await service.deleteTemplate(id);
     return { success: true };

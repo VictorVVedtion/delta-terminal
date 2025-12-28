@@ -1,6 +1,6 @@
 // 策略服务类型定义
 
-import { Decimal } from '@prisma/client/runtime/library';
+// Decimal type from Prisma is used via string conversion in responses
 
 // 策略状态
 export enum StrategyStatus {

@@ -1,6 +1,7 @@
 // 策略数据仓库层
 
-import { PrismaClient, Strategy, StrategyStatus, StrategyType } from '@prisma/client';
+import { PrismaClient, Strategy, StrategyStatus } from '@prisma/client';
+// StrategyType imported from Prisma but used via types/strategy.ts
 import type { CreateStrategyRequest, UpdateStrategyRequest, ListStrategiesQuery } from '../types/strategy.js';
 
 export class StrategyRepository {
