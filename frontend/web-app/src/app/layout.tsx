@@ -24,19 +24,23 @@ export const metadata: Metadata = {
 };
 
 // Inline script to prevent theme flash
+// Only add 'dark' class for dark theme; light uses :root defaults
 const themeScript = `
   (function() {
     try {
       var stored = localStorage.getItem('ui-storage');
+      var theme = 'dark';
       if (stored) {
         var parsed = JSON.parse(stored);
-        var theme = parsed.state && parsed.state.theme ? parsed.state.theme : 'dark';
-        document.documentElement.classList.add(theme);
-      } else {
+        theme = parsed.state && parsed.state.theme ? parsed.state.theme : 'dark';
+      }
+      if (theme === 'dark') {
         document.documentElement.classList.add('dark');
       }
+      document.documentElement.style.colorScheme = theme;
     } catch (e) {
       document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
     }
   })();
 `;

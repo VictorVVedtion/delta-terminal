@@ -15,6 +15,7 @@ interface ThemeProviderProps {
 /**
  * Theme provider that syncs theme state with document class
  * Applies 'dark' class to html element when dark theme is active
+ * Light theme is the default (no class needed) per CSS :root variables
  */
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const { theme } = useUIStore()
@@ -22,11 +23,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     const root = window.document.documentElement
 
-    // Remove old theme class
+    // Remove theme classes first
     root.classList.remove('light', 'dark')
 
-    // Add current theme class
-    root.classList.add(theme)
+    // Only add 'dark' class for dark theme
+    // Light theme uses :root CSS variables (no class needed)
+    if (theme === 'dark') {
+      root.classList.add('dark')
+    }
 
     // Update meta theme-color for mobile browsers
     const metaThemeColor = document.querySelector('meta[name="theme-color"]')
@@ -36,6 +40,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         theme === 'dark' ? '#070E12' : '#ffffff'
       )
     }
+
+    // Also update color-scheme for native elements
+    root.style.colorScheme = theme
   }, [theme])
 
   return <>{children}</>

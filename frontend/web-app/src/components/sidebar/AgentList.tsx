@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation'
 import React from 'react'
 import { toast } from 'sonner'
 
+import { RISK_PRESETS,useRiskWarning } from '@/components/common/RiskWarningDialog'
 import { ThinkingIndicator } from '@/components/thinking/ThinkingIndicator'
 import { cn } from '@/lib/utils'
 import type { Agent, AgentStatus} from '@/store/agent';
@@ -52,6 +53,9 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
   const isShadow = agent.status === 'shadow'
   const [menuOpen, setMenuOpen] = React.useState(false)
 
+  // Risk warning hook for dangerous operations
+  const { showWarning, RiskWarning } = useRiskWarning()
+
   const {
     openSensitivityAnalysis,
     openAttributionAnalysis,
@@ -61,7 +65,7 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
   } = useAnalysisStore()
 
   // 处理菜单项点击
-  const handleMenuClick = (e: React.MouseEvent, action: string) => {
+  const handleMenuClick = async (e: React.MouseEvent, action: string) => {
     e.stopPropagation() // 阻止冒泡，避免触发卡片点击
     setMenuOpen(false)
 
@@ -70,19 +74,32 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
       case 'edit':
         router.push(`/chat?agent=${agent.id}`)
         break
-      
-      case 'toggle_status':
-        const newStatus = (agent.status === 'live' || agent.status === 'paper') ? 'paused' : 'paper'
-        updateAgent(agent.id, { status: newStatus })
-        toast.success(`策略状态已更新为 ${newStatus}`)
-        break
 
-      case 'delete':
-        if (confirm('确定要删除此策略吗？')) {
+      case 'toggle_status': {
+        const isRunning = agent.status === 'live' || agent.status === 'paper'
+        if (isRunning) {
+          // 暂停策略需要确认
+          const confirmed = await showWarning(RISK_PRESETS.stopStrategy(agent.name))
+          if (confirmed) {
+            updateAgent(agent.id, { status: 'paused' })
+            toast.success('策略已暂停')
+          }
+        } else {
+          // 启动策略直接执行
+          updateAgent(agent.id, { status: 'paper' })
+          toast.success('策略已启动（模拟模式）')
+        }
+        break
+      }
+
+      case 'delete': {
+        const confirmed = await showWarning(RISK_PRESETS.deleteStrategy(agent.name))
+        if (confirmed) {
           removeAgent(agent.id)
           toast.success('策略已删除')
         }
         break
+      }
 
       case 'sensitivity':
         // 创建敏感度分析数据
@@ -389,6 +406,9 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
           </div>
         </>
       )}
+
+      {/* Risk Warning Dialog Portal */}
+      {RiskWarning}
     </div>
   )
 }
