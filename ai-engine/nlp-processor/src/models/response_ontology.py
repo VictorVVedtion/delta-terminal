@@ -9,12 +9,27 @@ UserResponse (顶层)
 ├── Affirmative (肯定类) → 触发确认行为
 ├── Negative (否定类) → 触发拒绝/重新开始
 ├── Inquiry (询问类) → 保持当前意图，补充信息
-└── Action (行动类) → 触发具体操作
+├── Action (行动类) → 触发具体操作
+└── Compound (混合类) → 包含多个意图
+
+设计原则:
+1. 否定优先: "不太好" 优先识别为否定，即使包含"好"
+2. 长模式优先: "非常好" 优先于 "好"，精确匹配更高分
+3. 语气词剥离: "好啊" → "好"，支持各种语气词
+4. 方言兼容: 支持北方/四川/粤语等常见地方表达
+5. Emoji 感知: 支持 👍✅👎❌ 等常用表情符号
+6. 上下文继承: 根据前一意图推断确认行为的目标
+
+应用场景:
+- 用户说"都可以啊"后 AI 分析市场 → 识别为确认 → 继承为 create_strategy
+- 用户说"不太好，换一个" → 识别为否定 + 替代方案
+- 用户说"👍" → 识别为肯定确认
 """
 
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Set
+from dataclasses import dataclass, field
+import re
 
 
 # =============================================================================
@@ -67,42 +82,70 @@ AFFIRMATIVE_PATTERNS: Dict[AffirmativeType, List[str]] = {
     AffirmativeType.DIRECT: [
         # 单字确认
         "好", "行", "是", "对", "嗯", "恩", "哦", "噢",
+        # 方言 - 北方
+        "中", "成", "得", "得嘞", "妥", "妥了", "靠谱",
+        # 方言 - 四川/西南
+        "要得", "巴适", "可以撒",
+        # 方言 - 粤语
+        "得", "冇问题", "ok啦",
         # 双字确认
         "好的", "行的", "可以", "可行", "好啊", "行啊", "是的", "对的",
         "没错", "正确", "同意", "认可", "确认", "确定",
         # 英文
-        "ok", "OK", "Ok", "yes", "Yes", "yeah", "yep", "sure",
+        "ok", "OK", "Ok", "yes", "Yes", "yeah", "yep", "sure", "alright",
+        # Emoji
+        "👍", "✅", "👌", "🙆", "💪", "🎉",
     ],
     AffirmativeType.ENTHUSIASTIC: [
         "太好了", "太棒了", "完美", "非常好", "很好", "不错",
         "就这样", "就这个", "就这么定了", "没问题", "没毛病",
-        "支持", "赞成", "可以的",
+        "支持", "赞成", "可以的", "绝了", "牛", "厉害", "nice",
+        # Emoji 热情确认
+        "🔥", "💯", "🚀",
     ],
     AffirmativeType.CONDITIONAL: [
         "都可以", "都行", "都好", "随便", "随意", "怎样都行",
         "都可以啊", "都行啊", "无所谓", "你决定", "你说了算",
-        "听你的", "按你说的", "你定",
+        "听你的", "按你说的", "你定", "你来定", "随你",
+        "都ok", "都OK", "啥都行", "咋都行",
     ],
     AffirmativeType.IMPLICIT: [
         "那就开始吧", "开始吧", "做吧", "干吧", "搞吧",
         "那就这样", "那就这样吧", "就这样吧",
         "那制定这个策略吧", "制定吧", "创建吧", "建吧",
         "那就创建", "去创建", "帮我创建",
+        "走起", "来吧", "搞起来", "弄吧", "整吧",
     ],
 }
 
 NEGATIVE_PATTERNS: Dict[NegativeType, List[str]] = {
     NegativeType.DIRECT: [
+        # 直接拒绝
         "不", "不要", "不行", "不可以", "不用", "不了", "算了",
-        "拒绝", "取消", "放弃", "停止", "别", "no", "No", "NO",
+        "拒绝", "取消", "放弃", "停止", "别", "免了", "罢了",
+        # 否定短语（否定优先规则）
+        "不太好", "不太行", "不咋样", "不怎么样", "不理想",
+        "不合适", "不靠谱", "不满意", "不喜欢",
+        # 英文
+        "no", "No", "NO", "nope", "nah", "never",
+        # Emoji
+        "👎", "❌", "🙅", "🚫",
+        # 方言
+        "不中", "不成", "算球了", "得了吧",
     ],
     NegativeType.HESITATION: [
         "再想想", "考虑一下", "等等", "等一下", "稍等",
         "让我想想", "我想想", "再看看", "观望", "暂时不",
+        "再说", "以后再说", "下次吧", "先不", "先别",
+        "容我想想", "让我考虑", "不着急",
+        # Emoji
+        "🤔", "😕",
     ],
     NegativeType.ALTERNATIVE: [
         "换一个", "换个", "其他的", "别的", "有没有别的",
         "还有其他", "其他方案", "另一种", "不同的",
+        "换个思路", "换种方式", "重新来", "再来一个",
+        "有没有更好的", "能不能换",
     ],
 }
 
@@ -203,6 +246,12 @@ class ResponseOntologyClassifier:
 
         Returns:
             ClassificationResult 包含类别、子类型、置信度
+
+        分类优先级:
+        1. 否定优先: 如果检测到否定词，优先识别为否定类
+        2. 精确匹配: 完全匹配模式库
+        3. 长模式优先: 较长的匹配模式得分更高
+        4. 短文本启发: 对简短回复进行特殊处理
         """
         # 清理文本
         cleaned = text.strip().lower()
@@ -210,7 +259,17 @@ class ResponseOntologyClassifier:
         # 移除常见语气词进行匹配
         normalized = self._normalize(cleaned)
 
+        # ========================================
+        # 0. 否定优先检测 (关键改进)
+        # ========================================
+        # "不太好"、"不咋样" 即使包含肯定词也应识别为否定
+        negative_result = self._check_negative_priority(cleaned)
+        if negative_result:
+            return negative_result
+
+        # ========================================
         # 1. 精确匹配
+        # ========================================
         if normalized in self._pattern_index:
             category, sub_type = self._pattern_index[normalized]
             return ClassificationResult(
@@ -221,12 +280,16 @@ class ResponseOntologyClassifier:
                 is_confirmation=category == ResponseCategory.AFFIRMATIVE,
             )
 
-        # 2. 包含匹配 (检查文本是否包含任何模式)
+        # ========================================
+        # 2. 包含匹配 (长模式优先)
+        # ========================================
         best_match = self._find_best_match(cleaned)
         if best_match:
             return best_match
 
+        # ========================================
         # 3. 短文本启发式判断
+        # ========================================
         if len(cleaned) <= 5:
             # 非常短的回复，检查是否是肯定语气
             if self._is_short_affirmative(cleaned):
@@ -237,12 +300,142 @@ class ResponseOntologyClassifier:
                     is_confirmation=True,
                 )
 
-        # 4. 无法分类
+        # ========================================
+        # 4. Emoji 检测
+        # ========================================
+        emoji_result = self._check_emoji(cleaned)
+        if emoji_result:
+            return emoji_result
+
+        # ========================================
+        # 5. 无法分类
+        # ========================================
         return ClassificationResult(
             category=ResponseCategory.AMBIGUOUS,
             confidence=0.0,
             is_confirmation=False,
         )
+
+    def _check_negative_priority(self, text: str) -> Optional[ClassificationResult]:
+        """
+        否定优先检测
+
+        当文本包含否定前缀（不、没、无）+ 肯定词时，
+        应优先识别为否定类。
+
+        例如：
+        - "不太好" → NEGATIVE (不是 "好" → AFFIRMATIVE)
+        - "不咋样" → NEGATIVE
+        - "没问题" → AFFIRMATIVE (这是例外，"没问题"本身是肯定)
+
+        例外情况：
+        - "非常好" → AFFIRMATIVE (非常是程度副词，不是否定)
+        - "不错" → AFFIRMATIVE (习惯用语)
+        """
+        # 例外：这些"否定+肯定"组合实际是肯定意思
+        positive_exceptions = {
+            # 程度副词 "非常" 不是否定
+            "非常好", "非常棒", "非常不错", "非常可以",
+            # 习惯用语
+            "没问题", "没毛病", "没事", "没关系",
+            "不错", "不差", "无妨", "无所谓",
+        }
+
+        # 检查是否是肯定例外
+        for exception in positive_exceptions:
+            if exception in text:
+                # 这是肯定表达
+                return None
+
+        # 否定前缀 - 注意："非" 需要特殊处理
+        # "非常" 是程度副词，不是否定
+        if "非常" in text:
+            # 跳过，不作为否定处理
+            pass
+        elif "非" in text:
+            # 检查是否是否定用法
+            affirmative_words = ["好", "行", "可以", "对", "是", "成", "中", "靠谱"]
+            for word in affirmative_words:
+                if f"非{word}" in text:
+                    return ClassificationResult(
+                        category=ResponseCategory.NEGATIVE,
+                        sub_type=NegativeType.DIRECT.value,
+                        confidence=0.95,
+                        matched_pattern=f"非{word}",
+                        is_confirmation=False,
+                    )
+
+        # 其他否定前缀
+        other_negative_prefixes = ["不", "没", "无", "别", "莫"]
+
+        for prefix in other_negative_prefixes:
+            if prefix in text:
+                # 再次检查是否是例外
+                is_exception = False
+                for exception in positive_exceptions:
+                    if exception in text:
+                        is_exception = True
+                        break
+
+                if is_exception:
+                    continue
+
+                # 检查是否跟着肯定词
+                affirmative_words = ["好", "行", "可以", "对", "是", "成", "中", "靠谱"]
+                for word in affirmative_words:
+                    # 检查 "不好"、"不行" 等模式
+                    pattern = prefix + word
+                    if pattern in text:
+                        return ClassificationResult(
+                            category=ResponseCategory.NEGATIVE,
+                            sub_type=NegativeType.DIRECT.value,
+                            confidence=0.95,
+                            matched_pattern=pattern,
+                            is_confirmation=False,
+                        )
+
+        return None
+
+    def _check_emoji(self, text: str) -> Optional[ClassificationResult]:
+        """检测 Emoji 表情"""
+        # 肯定 Emoji
+        positive_emojis = {"👍", "✅", "👌", "🙆", "💪", "🎉", "🔥", "💯", "🚀", "❤️", "😊", "😄"}
+        # 否定 Emoji
+        negative_emojis = {"👎", "❌", "🙅", "🚫", "😔", "😢", "😞"}
+        # 犹豫 Emoji
+        hesitation_emojis = {"🤔", "😕", "🤷"}
+
+        for emoji in positive_emojis:
+            if emoji in text:
+                return ClassificationResult(
+                    category=ResponseCategory.AFFIRMATIVE,
+                    sub_type=AffirmativeType.DIRECT.value,
+                    confidence=0.9,
+                    matched_pattern=emoji,
+                    is_confirmation=True,
+                )
+
+        for emoji in negative_emojis:
+            if emoji in text:
+                return ClassificationResult(
+                    category=ResponseCategory.NEGATIVE,
+                    sub_type=NegativeType.DIRECT.value,
+                    confidence=0.9,
+                    matched_pattern=emoji,
+                    is_confirmation=False,
+                )
+
+        for emoji in hesitation_emojis:
+            if emoji in text:
+                return ClassificationResult(
+                    category=ResponseCategory.NEGATIVE,
+                    sub_type=NegativeType.HESITATION.value,
+                    confidence=0.8,
+                    matched_pattern=emoji,
+                    is_confirmation=False,
+                )
+
+        return None
 
     def _normalize(self, text: str) -> str:
         """规范化文本，移除语气词"""
@@ -255,20 +448,44 @@ class ResponseOntologyClassifier:
         return result.strip()
 
     def _find_best_match(self, text: str) -> Optional[ClassificationResult]:
-        """在文本中查找最佳匹配模式"""
+        """
+        在文本中查找最佳匹配模式
+
+        评分规则 (长模式优先):
+        1. 基础分 = 模式长度 / 文本长度
+        2. 否定类别加权 +0.1 (否定优先原则)
+        3. 精确匹配（模式=文本）额外加权 +0.2
+
+        例如：
+        - "非常好" 比 "好" 得分高 (长模式优先)
+        - "不行" 比 "行" 得分高 (否定优先 + 长模式)
+        """
         best_result = None
         best_score = 0
 
         for pattern, (category, sub_type) in self._pattern_index.items():
             if pattern in text:
-                # 计算匹配分数 (模式长度占文本比例)
-                score = len(pattern) / len(text) if len(text) > 0 else 0
+                # 基础分: 模式长度占文本比例
+                base_score = len(pattern) / len(text) if len(text) > 0 else 0
+
+                # 长模式奖励: 模式越长，额外加分
+                length_bonus = len(pattern) * 0.05
+
+                # 否定优先: 否定类别加权
+                negative_bonus = 0.1 if category == ResponseCategory.NEGATIVE else 0
+
+                # 精确匹配奖励
+                exact_bonus = 0.2 if pattern == text else 0
+
+                # 总分
+                score = base_score + length_bonus + negative_bonus + exact_bonus
+
                 if score > best_score:
                     best_score = score
                     best_result = ClassificationResult(
                         category=category,
                         sub_type=sub_type,
-                        confidence=min(0.9, score + 0.3),
+                        confidence=min(0.95, base_score + 0.3),
                         matched_pattern=pattern,
                         is_confirmation=category == ResponseCategory.AFFIRMATIVE,
                     )
