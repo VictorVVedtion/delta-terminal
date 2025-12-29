@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand'
-import { createJSONStorage,persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 
 import type {
   AIConfig,
@@ -15,12 +15,9 @@ import type {
   AIUserStatus,
   CostEstimate,
   SimplePreset,
-  ThinkingStep} from '@/types/ai';
-import {
-  AI_MODELS,
-  DEFAULT_AI_CONFIG,
-  DEFAULT_AI_USER_STATUS,
-  SIMPLE_PRESETS} from '@/types/ai'
+  ThinkingStep,
+} from '@/types/ai'
+import { AI_MODELS, DEFAULT_AI_CONFIG, DEFAULT_AI_USER_STATUS, SIMPLE_PRESETS } from '@/types/ai'
 
 // ============================================================================
 // State Types
@@ -150,8 +147,8 @@ const createEmptyUsageStats = (period: 'day' | 'week' | 'month'): AIUsageStats =
     execution: { calls: 0, cost: 0, avgLatency: 0 },
     chat: { calls: 0, cost: 0, avgLatency: 0 },
     reasoning: { calls: 0, cost: 0, avgLatency: 0 },
-    agent: { calls: 0, cost: 0, avgLatency: 0 }
-  }
+    agent: { calls: 0, cost: 0, avgLatency: 0 },
+  },
 })
 
 const initialState: AIState = {
@@ -166,11 +163,11 @@ const initialState: AIState = {
   usage: {
     today: createEmptyUsageStats('day'),
     thisWeek: createEmptyUsageStats('week'),
-    thisMonth: createEmptyUsageStats('month')
+    thisMonth: createEmptyUsageStats('month'),
   },
   sessions: {},
   currentSessionId: null,
-  error: null
+  error: null,
 }
 
 // ============================================================================
@@ -186,7 +183,7 @@ export const useAIStore = create<AIState & AIActions>()(
 
       setMode: (mode) => {
         set((state) => ({
-          config: { ...state.config, mode }
+          config: { ...state.config, mode },
         }))
       },
 
@@ -194,8 +191,8 @@ export const useAIStore = create<AIState & AIActions>()(
         set((state) => ({
           config: {
             ...state.config,
-            simple: { preset } // 切换预设时清除自定义模型
-          }
+            simple: { preset }, // 切换预设时清除自定义模型
+          },
         }))
       },
 
@@ -203,8 +200,8 @@ export const useAIStore = create<AIState & AIActions>()(
         set((state) => ({
           config: {
             ...state.config,
-            simple: { ...state.config.simple, customModel: model }
-          }
+            simple: { ...state.config.simple, customModel: model },
+          },
         }))
       },
 
@@ -216,10 +213,10 @@ export const useAIStore = create<AIState & AIActions>()(
               ...state.config.advanced,
               taskModels: {
                 ...state.config.advanced.taskModels,
-                [taskType]: model
-              }
-            }
-          }
+                [taskType]: model,
+              },
+            },
+          },
         }))
       },
 
@@ -227,8 +224,8 @@ export const useAIStore = create<AIState & AIActions>()(
         set((state) => ({
           config: {
             ...state.config,
-            settings: { ...state.config.settings, ...settings }
-          }
+            settings: { ...state.config.settings, ...settings },
+          },
         }))
       },
 
@@ -239,8 +236,19 @@ export const useAIStore = create<AIState & AIActions>()(
       // ==================== 后端同步 ====================
 
       syncWithBackend: async () => {
-        // 同时加载配置和保存本地更改
-        await get().loadFromBackend()
+        // 双向同步：先从后端加载最新配置，然后保存本地更改
+        try {
+          // 1. 先从后端加载配置
+          await get().loadFromBackend()
+
+          // 2. 将本地配置保存到后端 (如果是高级模式)
+          const { config } = get()
+          if (config.mode === 'advanced') {
+            await get().saveToBackend()
+          }
+        } catch (error) {
+          console.error('[AI Store] Sync with backend failed:', error)
+        }
       },
 
       saveToBackend: async () => {
@@ -299,7 +307,7 @@ export const useAIStore = create<AIState & AIActions>()(
             return
           }
 
-          const data = await response.json() as BackendRoutingConfig
+          const data = (await response.json()) as BackendRoutingConfig
           console.log('Loaded AI config from backend:', data)
 
           // 后端任务类型到前端的映射
@@ -375,7 +383,7 @@ export const useAIStore = create<AIState & AIActions>()(
 
       addThinkingStep: (step) => {
         set((state) => ({
-          thinkingSteps: [...state.thinkingSteps, step]
+          thinkingSteps: [...state.thinkingSteps, step],
         }))
       },
 
@@ -383,7 +391,7 @@ export const useAIStore = create<AIState & AIActions>()(
         set((state) => ({
           thinkingSteps: state.thinkingSteps.map((step, index) =>
             index === stepIndex ? { ...step, ...update } : step
-          )
+          ),
         }))
       },
 
@@ -393,7 +401,7 @@ export const useAIStore = create<AIState & AIActions>()(
 
       appendStreamingContent: (content) => {
         set((state) => ({
-          streamingContent: state.streamingContent + content
+          streamingContent: state.streamingContent + content,
         }))
       },
 
@@ -416,12 +424,12 @@ export const useAIStore = create<AIState & AIActions>()(
           messages: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          totalCost: 0
+          totalCost: 0,
         }
 
         set((state) => ({
           sessions: { ...state.sessions, [sessionId]: session },
-          currentSessionId: sessionId
+          currentSessionId: sessionId,
         }))
 
         return sessionId
@@ -432,7 +440,7 @@ export const useAIStore = create<AIState & AIActions>()(
         const fullMessage: AISessionMessage = {
           ...message,
           id: messageId,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         }
 
         set((state) => {
@@ -443,11 +451,11 @@ export const useAIStore = create<AIState & AIActions>()(
             ...session,
             messages: [...session.messages, fullMessage],
             updatedAt: Date.now(),
-            totalCost: session.totalCost + (message.usage?.totalCost || 0)
+            totalCost: session.totalCost + (message.usage?.totalCost || 0),
           }
 
           return {
-            sessions: { ...state.sessions, [sessionId]: updatedSession }
+            sessions: { ...state.sessions, [sessionId]: updatedSession },
           }
         })
       },
@@ -457,7 +465,7 @@ export const useAIStore = create<AIState & AIActions>()(
           const { [sessionId]: _, ...rest } = state.sessions
           return {
             sessions: rest,
-            currentSessionId: state.currentSessionId === sessionId ? null : state.currentSessionId
+            currentSessionId: state.currentSessionId === sessionId ? null : state.currentSessionId,
           }
         })
       },
@@ -475,7 +483,7 @@ export const useAIStore = create<AIState & AIActions>()(
               calls: 0,
               inputTokens: 0,
               outputTokens: 0,
-              cost: 0
+              cost: 0,
             }
 
             const taskStats = stats.byTaskType[taskType]
@@ -492,17 +500,17 @@ export const useAIStore = create<AIState & AIActions>()(
                   calls: modelStats.calls + 1,
                   inputTokens: modelStats.inputTokens + usage.inputTokens,
                   outputTokens: modelStats.outputTokens + usage.outputTokens,
-                  cost: modelStats.cost + usage.totalCost
-                }
+                  cost: modelStats.cost + usage.totalCost,
+                },
               },
               byTaskType: {
                 ...stats.byTaskType,
                 [taskType]: {
                   calls: taskStats.calls + 1,
                   cost: taskStats.cost + usage.totalCost,
-                  avgLatency: taskStats.avgLatency // TODO: 更新平均延迟
-                }
-              }
+                  avgLatency: taskStats.avgLatency, // TODO: 更新平均延迟
+                },
+              },
             }
           }
 
@@ -510,8 +518,8 @@ export const useAIStore = create<AIState & AIActions>()(
             usage: {
               today: updateStats(state.usage.today),
               thisWeek: updateStats(state.usage.thisWeek),
-              thisMonth: updateStats(state.usage.thisMonth)
-            }
+              thisMonth: updateStats(state.usage.thisMonth),
+            },
           }
         })
       },
@@ -521,8 +529,8 @@ export const useAIStore = create<AIState & AIActions>()(
           usage: {
             ...state.usage,
             [period === 'day' ? 'today' : period === 'week' ? 'thisWeek' : 'thisMonth']:
-              createEmptyUsageStats(period)
-          }
+              createEmptyUsageStats(period),
+          },
         }))
       },
 
@@ -548,12 +556,12 @@ export const useAIStore = create<AIState & AIActions>()(
 
         // 预估每日调用量
         const estimatedDailyCalls: Record<AITaskType, number> = {
-          scan: 50,       // 市场扫描：每天 50 次
-          analysis: 10,   // 策略分析：每天 10 次
-          execution: 5,   // 执行确认：每天 5 次
-          chat: 20,       // 对话交互：每天 20 次
-          reasoning: 3,   // 复杂推理：每天 3 次
-          agent: 5        // Agent 任务：每天 5 次
+          scan: 50, // 市场扫描：每天 50 次
+          analysis: 10, // 策略分析：每天 10 次
+          execution: 5, // 执行确认：每天 5 次
+          chat: 20, // 对话交互：每天 20 次
+          reasoning: 3, // 复杂推理：每天 3 次
+          agent: 5, // Agent 任务：每天 5 次
         }
 
         const breakdown = Object.entries(estimatedDailyCalls).map(([taskType, calls]) => {
@@ -565,14 +573,15 @@ export const useAIStore = create<AIState & AIActions>()(
           const avgOutputTokens = taskType === 'analysis' ? 1000 : taskType === 'agent' ? 2000 : 300
 
           const costPerCall = modelInfo
-            ? (avgInputTokens * modelInfo.inputPrice + avgOutputTokens * modelInfo.outputPrice) / 1000000
+            ? (avgInputTokens * modelInfo.inputPrice + avgOutputTokens * modelInfo.outputPrice) /
+              1000000
             : 0.01
 
           return {
             taskType: taskType as AITaskType,
             estimatedCalls: calls,
             costPerCall,
-            totalCost: calls * costPerCall
+            totalCost: calls * costPerCall,
           }
         })
 
@@ -582,7 +591,7 @@ export const useAIStore = create<AIState & AIActions>()(
           daily,
           weekly: daily * 7,
           monthly: daily * 30,
-          breakdown
+          breakdown,
         }
       },
 
@@ -598,7 +607,7 @@ export const useAIStore = create<AIState & AIActions>()(
         // '*' 表示全部模型
         if (allowedModels.includes('*')) return true
         return allowedModels.includes(model)
-      }
+      },
     }),
     {
       name: 'delta-ai-store',
@@ -607,8 +616,8 @@ export const useAIStore = create<AIState & AIActions>()(
         // 只持久化配置和使用统计，不持久化临时状态
         config: state.config,
         usage: state.usage,
-        sessions: state.sessions
-      })
+        sessions: state.sessions,
+      }),
     }
   )
 )

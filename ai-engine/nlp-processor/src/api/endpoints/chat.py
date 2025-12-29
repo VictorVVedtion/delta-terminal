@@ -78,19 +78,37 @@ async def send_message(
             context = request.context or {}
             chat_history_raw = context.get("chatHistory", [])
 
-            # 重建消息历史
+            # 重建消息历史 (安全验证)
             restored_messages = []
+            valid_roles = {"user", "assistant"}  # 只接受有效的 role 值
+
             if chat_history_raw and isinstance(chat_history_raw, list):
                 logger.info(
                     f"Restoring conversation from frontend chatHistory: "
                     f"{len(chat_history_raw)} messages"
                 )
-                for msg in chat_history_raw:
-                    if isinstance(msg, dict) and "role" in msg and "content" in msg:
-                        role = MessageRole.USER if msg["role"] == "user" else MessageRole.ASSISTANT
-                        restored_messages.append(
-                            Message(role=role, content=msg["content"])
-                        )
+                for idx, msg in enumerate(chat_history_raw):
+                    if not isinstance(msg, dict):
+                        logger.warning(f"Skipping invalid message at index {idx}: not a dict")
+                        continue
+
+                    msg_role = msg.get("role", "").lower()
+                    msg_content = msg.get("content")
+
+                    # 验证 role 字段
+                    if msg_role not in valid_roles:
+                        logger.warning(f"Skipping message at index {idx}: invalid role '{msg_role}'")
+                        continue
+
+                    # 验证 content 字段
+                    if not msg_content or not isinstance(msg_content, str):
+                        logger.warning(f"Skipping message at index {idx}: invalid content")
+                        continue
+
+                    role = MessageRole.USER if msg_role == "user" else MessageRole.ASSISTANT
+                    restored_messages.append(
+                        Message(role=role, content=msg_content)
+                    )
 
             conversation = Conversation(
                 conversation_id=conversation_id,

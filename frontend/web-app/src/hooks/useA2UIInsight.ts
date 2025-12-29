@@ -10,7 +10,7 @@
  * 4. 管理对话状态和历史
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { useAuthStore } from '@/store/auth'
 import { useInsightStore } from '@/store/insight'
@@ -86,14 +86,17 @@ interface UseA2UIInsightReturn extends UseA2UIInsightState {
 // Constants
 // =============================================================================
 
-/** API 请求超时时间 (毫秒) */
-const REQUEST_TIMEOUT = 30000
+/** API 请求超时时间 (毫秒) - 降低以提供更快反馈 */
+const REQUEST_TIMEOUT = 20000
 
 /** 最大重试次数 */
 const MAX_RETRIES = 2
 
-/** 重试延迟基数 (毫秒) */
+/** 重试延迟基数 (毫秒) - 用于指数退避 */
 const RETRY_DELAY_BASE = 1000
+
+/** 最大重试延迟 (毫秒) */
+const MAX_RETRY_DELAY = 10000
 
 // =============================================================================
 // Initial State
@@ -121,26 +124,39 @@ const initialState: UseA2UIInsightState = {
 export function useA2UIInsight(): UseA2UIInsightReturn {
   const [state, setState] = useState<UseA2UIInsightState>(initialState)
 
+  // AbortController ref for request deduplication
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   // Store hooks
   const { addToHistory, setLoading: setStoreLoading } = useInsightStore()
   const { accessToken } = useAuthStore()
 
   /**
-   * 带超时的 fetch 请求
+   * 带超时的 fetch 请求 (支持外部取消)
    */
   const fetchWithTimeout = useCallback(
-    async (url: string, options: RequestInit, timeout: number): Promise<Response> => {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), timeout)
+    async (
+      url: string,
+      options: RequestInit,
+      timeout: number,
+      externalSignal?: AbortSignal
+    ): Promise<Response> => {
+      const timeoutController = new AbortController()
+      const timeoutId = setTimeout(() => timeoutController.abort(), timeout)
+
+      // Combine timeout signal with external signal
+      const abortHandler = () => timeoutController.abort()
+      externalSignal?.addEventListener('abort', abortHandler)
 
       try {
         const response = await fetch(url, {
           ...options,
-          signal: controller.signal,
+          signal: timeoutController.signal,
         })
         return response
       } finally {
         clearTimeout(timeoutId)
+        externalSignal?.removeEventListener('abort', abortHandler)
       }
     },
     []
@@ -152,13 +168,30 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
   /**
-   * 调用后端 API 获取 InsightData (带超时和重试)
+   * 计算指数退避延迟
+   */
+  const getExponentialDelay = (attempt: number): number => {
+    const delay = RETRY_DELAY_BASE * Math.pow(2, attempt)
+    // 添加随机抖动 (±20%)
+    const jitter = delay * (0.8 + Math.random() * 0.4)
+    return Math.min(jitter, MAX_RETRY_DELAY)
+  }
+
+  /**
+   * 调用后端 API 获取 InsightData (带超时、重试和请求去重)
    */
   const fetchInsight = useCallback(
     async (
       message: string,
       context?: Record<string, unknown>
     ): Promise<InsightApiResponse | null> => {
+      // 请求去重：取消任何进行中的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -190,12 +223,20 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
 
       let lastError: Error | null = null
 
-      // 重试逻辑
+      // 重试逻辑 (使用指数退避)
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        // 检查是否已被取消
+        if (abortController.signal.aborted) {
+          throw new Error('请求已取消')
+        }
+
         try {
           if (attempt > 0) {
-            console.log(`[useA2UIInsight] Retry attempt ${attempt}/${MAX_RETRIES}...`)
-            await delay(RETRY_DELAY_BASE * attempt)
+            const retryDelay = getExponentialDelay(attempt)
+            console.log(
+              `[useA2UIInsight] 重试 ${attempt}/${MAX_RETRIES}, 延迟 ${Math.round(retryDelay)}ms`
+            )
+            await delay(retryDelay)
           }
 
           const response = await fetchWithTimeout(
@@ -205,7 +246,8 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
               headers,
               body: requestBody,
             },
-            REQUEST_TIMEOUT
+            REQUEST_TIMEOUT,
+            abortController.signal
           )
 
           if (!response.ok) {
@@ -213,19 +255,33 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
             throw new Error(errorData.error || `API 错误: ${response.status}`)
           }
 
-          return await response.json()
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error(String(error))
-
-          // 超时错误特殊处理
-          if (lastError.name === 'AbortError') {
-            lastError = new Error('请求超时，请稍后重试')
+          // 请求完成，清除 ref
+          if (abortControllerRef.current === abortController) {
+            abortControllerRef.current = null
           }
 
-          console.error(`[useA2UIInsight] Fetch error (attempt ${attempt + 1}):`, lastError.message)
+          return await response.json()
+        } catch (error) {
+          // 如果是被新请求取消，直接抛出不重试
+          if (abortController.signal.aborted) {
+            throw new Error('请求已取消')
+          }
+
+          lastError = error instanceof Error ? error : new Error(String(error))
+
+          // 超时错误提供友好提示
+          if (lastError.name === 'AbortError') {
+            lastError = new Error('AI 响应较慢，请稍候...')
+          }
+
+          console.error(`[useA2UIInsight] 请求失败 (尝试 ${attempt + 1}):`, lastError.message)
 
           // 最后一次重试失败，抛出错误
           if (attempt === MAX_RETRIES) {
+            // 清除 ref
+            if (abortControllerRef.current === abortController) {
+              abortControllerRef.current = null
+            }
             throw lastError
           }
         }
@@ -312,6 +368,12 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         return handleResponse(response)
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '请求失败'
+
+        // 忽略被取消的请求（不显示错误）
+        if (errorMessage === '请求已取消') {
+          return null
+        }
+
         setState((prev) => ({
           ...prev,
           isLoading: false,
@@ -390,6 +452,12 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         return handleResponse(response)
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '提交回答失败'
+
+        // 忽略被取消的请求（不显示错误）
+        if (errorMessage === '请求已取消') {
+          return null
+        }
+
         setState((prev) => ({
           ...prev,
           isLoading: false,
@@ -423,6 +491,11 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
    * 重置状态
    */
   const reset = useCallback(() => {
+    // 取消任何进行中的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
     setState(initialState)
   }, [])
 

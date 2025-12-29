@@ -10,6 +10,11 @@ import { ApiClient, ApiError } from '../api-client'
 const mockFetch = vi.fn()
 global.fetch = mockFetch
 
+// Helper to create mock headers
+const createMockHeaders = (contentType: string | null = 'application/json') => ({
+  get: (name: string) => (name.toLowerCase() === 'content-type' ? contentType : null),
+})
+
 // Mock toast
 vi.mock('@/components/ui/use-toast', () => ({
   notify: vi.fn(),
@@ -38,6 +43,7 @@ describe('ApiClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
+        headers: createMockHeaders(),
         json: async () => mockData,
       })
 
@@ -62,6 +68,7 @@ describe('ApiClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 201,
+        headers: createMockHeaders(),
         json: async () => mockData,
       })
 
@@ -84,6 +91,7 @@ describe('ApiClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
+        headers: createMockHeaders(),
         json: async () => mockData,
       })
 
@@ -104,6 +112,7 @@ describe('ApiClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 204,
+        headers: createMockHeaders(null), // 204 No Content 通常没有 content-type
         json: async () => null,
       })
 
@@ -128,6 +137,7 @@ describe('ApiClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
+        headers: createMockHeaders(),
         json: async () => ({ code: 'NOT_FOUND', message: '资源不存在' }),
       })
 
@@ -153,6 +163,7 @@ describe('ApiClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
+        headers: createMockHeaders(),
         json: async () => ({ code: 'SERVER_ERROR', message: '服务器错误' }),
       })
 

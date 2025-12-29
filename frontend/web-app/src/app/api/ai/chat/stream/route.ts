@@ -13,7 +13,7 @@
 
 import type { NextRequest } from 'next/server'
 
-import type { AIRequest, AIStreamChunk,ThinkingStep } from '@/types/ai';
+import type { AIRequest, AIStreamChunk, ThinkingStep } from '@/types/ai'
 import { AI_MODELS, SIMPLE_PRESETS } from '@/types/ai'
 
 // Type definitions for OpenRouter streaming response
@@ -106,7 +106,7 @@ async function proxyToOrchestratorWithBody(
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     })
   } catch (error) {
@@ -135,7 +135,10 @@ class ThinkingStepExtractor {
     // 问题理解
     { pattern: /^(首先|让我|先|OK|好的|理解|分析问题|看看|思考|了解)/i, title: '理解问题' },
     // 数据分析
-    { pattern: /(数据|指标|价格|行情|趋势|市场|技术分析|基本面|K线|均线|MACD|RSI)/i, title: '分析数据' },
+    {
+      pattern: /(数据|指标|价格|行情|趋势|市场|技术分析|基本面|K线|均线|MACD|RSI)/i,
+      title: '分析数据',
+    },
     // 策略设计
     { pattern: /(策略|方案|建议|推荐|参数|配置|设置|逻辑|规则)/i, title: '设计方案' },
     // 风险评估
@@ -166,9 +169,11 @@ class ThinkingStepExtractor {
       const completedStep: ThinkingStep = {
         step: this.currentStep,
         title: this.currentTitle || this.getDefaultTitle(this.currentStep),
-        content: this.getStepSummary(this.currentContent.slice(0, this.currentContent.length - reasoningChunk.length)),
+        content: this.getStepSummary(
+          this.currentContent.slice(0, this.currentContent.length - reasoningChunk.length)
+        ),
         status: 'completed',
-        duration: Date.now() - this.stepStartTime
+        duration: Date.now() - this.stepStartTime,
       }
 
       // 开始新步骤
@@ -194,7 +199,7 @@ class ThinkingStepExtractor {
         step: 1,
         title: this.currentTitle,
         content: this.getStepSummary(reasoningChunk),
-        status: 'processing'
+        status: 'processing',
       }
     }
 
@@ -206,7 +211,7 @@ class ThinkingStepExtractor {
         step: this.currentStep,
         title: this.currentTitle || this.getDefaultTitle(this.currentStep),
         content: this.getStepSummary(this.currentContent),
-        status: 'processing'
+        status: 'processing',
       }
     }
 
@@ -224,7 +229,7 @@ class ThinkingStepExtractor {
         title: this.currentTitle || this.getDefaultTitle(this.currentStep),
         content: this.getStepSummary(this.currentContent),
         status: 'completed',
-        duration: Date.now() - this.stepStartTime
+        duration: Date.now() - this.stepStartTime,
       }
     }
     return null
@@ -235,7 +240,8 @@ class ThinkingStepExtractor {
    */
   private detectNewStep(chunk: string): { title: string } | null {
     // 检查段落分隔（换行符表示可能的新阶段）
-    const hasNewParagraph = chunk.includes('\n\n') || (chunk.includes('\n') && this.currentContent.length > 150)
+    const hasNewParagraph =
+      chunk.includes('\n\n') || (chunk.includes('\n') && this.currentContent.length > 150)
 
     if (!hasNewParagraph && this.currentContent.length < 200) {
       return null
@@ -323,10 +329,10 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return new Response(
-      JSON.stringify({ error: '无效的请求格式' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: '无效的请求格式' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   // ==========================================================================
@@ -347,10 +353,10 @@ export async function POST(request: NextRequest) {
   try {
     // 检查平台 API Key 配置
     if (!apiKey || apiKey === 'your-openrouter-api-key-here') {
-      return new Response(
-        JSON.stringify({ error: '服务暂不可用，请稍后再试' }),
-        { status: 503, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: '服务暂不可用，请稍后再试' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     // 使用已解析的 body
@@ -358,11 +364,14 @@ export async function POST(request: NextRequest) {
       messages,
       model = DEFAULT_MODEL, // 使用前端配置的默认模型
       maxTokens = 2048,
-      temperature = 0.7
+      temperature = 0.7,
     } = body
 
     // 创建 ReadableStream 用于 SSE
     const encoder = new TextEncoder()
+
+    // Track active reader for cleanup on cancel
+    let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -392,11 +401,22 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Cleanup function for connection close
+        const cleanup = () => {
+          isClosed = true
+          if (activeReader) {
+            activeReader.cancel().catch(() => {
+              // Ignore cancel errors
+            })
+            activeReader = null
+          }
+        }
+
         // 发送思考步骤的辅助函数
         const emitThinkingStep = (step: ThinkingStep) => {
           const chunk: AIStreamChunk = {
             type: 'thinking',
-            data: { thinking: step }
+            data: { thinking: step },
           }
           safeEnqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`))
         }
@@ -407,7 +427,7 @@ export async function POST(request: NextRequest) {
             step: 0,
             title: '启动推理',
             content: '正在连接 AI 模型...',
-            status: 'processing'
+            status: 'processing',
           }
           emitThinkingStep(initialStep)
         }
@@ -417,13 +437,13 @@ export async function POST(request: NextRequest) {
           // 对于支持思考的模型，添加 include_reasoning 选项
           const requestBody: Record<string, unknown> = {
             model,
-            messages: messages.map(msg => ({
+            messages: messages.map((msg) => ({
               role: msg.role,
-              content: msg.content
+              content: msg.content,
             })),
             max_tokens: maxTokens,
             temperature,
-            stream: true
+            stream: true,
           }
 
           // 注意：不添加额外参数（如 stream_options、reasoning）
@@ -433,19 +453,21 @@ export async function POST(request: NextRequest) {
           const openRouterResponse = await fetch(`${apiUrl}/chat/completions`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${apiKey}`,
+              Authorization: `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
               'HTTP-Referer': 'https://delta-terminal.app',
-              'X-Title': 'Delta Terminal'
+              'X-Title': 'Delta Terminal',
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
           })
 
           if (!openRouterResponse.ok) {
-            const errorData = await openRouterResponse.json().catch(() => ({})) as OpenRouterStreamParsed
+            const errorData = (await openRouterResponse
+              .json()
+              .catch(() => ({}))) as OpenRouterStreamParsed
             const errorChunk: AIStreamChunk = {
               type: 'error',
-              data: { error: errorData.error?.message ?? 'AI 服务暂时不可用' }
+              data: { error: errorData.error?.message ?? 'AI 服务暂时不可用' },
             }
             safeEnqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
             safeClose()
@@ -459,7 +481,7 @@ export async function POST(request: NextRequest) {
               title: '启动推理',
               content: '已连接到 AI 模型',
               status: 'completed',
-              duration: 100
+              duration: 100,
             }
             emitThinkingStep(connectedStep)
           }
@@ -469,6 +491,8 @@ export async function POST(request: NextRequest) {
           if (!reader) {
             throw new Error('无法读取响应流')
           }
+          // Store reader reference for cleanup on cancel
+          activeReader = reader
 
           const decoder = new TextDecoder()
           let buffer = ''
@@ -516,7 +540,7 @@ export async function POST(request: NextRequest) {
                 if (content) {
                   const contentChunk: AIStreamChunk = {
                     type: 'content',
-                    data: { content }
+                    data: { content },
                   }
                   safeEnqueue(encoder.encode(`data: ${JSON.stringify(contentChunk)}\n\n`))
 
@@ -558,7 +582,7 @@ export async function POST(request: NextRequest) {
                 title: '生成回复',
                 content: '已完成响应生成',
                 status: 'completed',
-                duration: 200
+                duration: 200,
               }
               emitThinkingStep(genericStep)
             }
@@ -575,29 +599,39 @@ export async function POST(request: NextRequest) {
               usage: {
                 inputTokens,
                 outputTokens,
-                totalCost
-              }
-            }
+                totalCost,
+              },
+            },
           }
           safeEnqueue(encoder.encode(`data: ${JSON.stringify(usageChunk)}\n\n`))
 
           // 发送完成信号
           const doneChunk: AIStreamChunk = {
             type: 'done',
-            data: {}
+            data: {},
           }
           safeEnqueue(encoder.encode(`data: ${JSON.stringify(doneChunk)}\n\n`))
           safeEnqueue(encoder.encode('data: [DONE]\n\n'))
         } catch (error) {
           const errorChunk: AIStreamChunk = {
             type: 'error',
-            data: { error: error instanceof Error ? error.message : 'AI 服务异常' }
+            data: { error: error instanceof Error ? error.message : 'AI 服务异常' },
           }
           safeEnqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
         } finally {
+          cleanup()
           safeClose()
         }
-      }
+      },
+      // Handle client disconnection - clean up resources
+      cancel() {
+        if (activeReader) {
+          activeReader.cancel().catch(() => {
+            // Ignore cancel errors
+          })
+          activeReader = null
+        }
+      },
     })
 
     // 返回 SSE 响应
@@ -605,8 +639,8 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
+        Connection: 'keep-alive',
+      },
     })
   } catch (error) {
     return new Response(

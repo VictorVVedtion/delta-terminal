@@ -58,7 +58,7 @@ class RedisConversationStore(ConversationStore):
         return f"{self.key_prefix}{conversation_id}"
 
     async def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
-        """从 Redis 获取对话"""
+        """从 Redis 获取对话 (安全反序列化)"""
         try:
             key = self._make_key(conversation_id)
             data = await self.redis.get(key)
@@ -66,30 +66,81 @@ class RedisConversationStore(ConversationStore):
             if not data:
                 return None
 
-            # 反序列化
-            conversation_dict = json.loads(data)
+            # 安全反序列化 JSON
+            try:
+                conversation_dict = json.loads(data)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error for conversation {conversation_id}: {e}")
+                # 删除损坏的数据
+                await self.redis.delete(key)
+                return None
 
-            # 手动重建 Message 对象
-            messages = [
-                Message(
-                    role=MessageRole(msg["role"]),
-                    content=msg["content"],
-                    timestamp=datetime.fromisoformat(msg["timestamp"]),
-                    metadata=msg.get("metadata")
-                )
-                for msg in conversation_dict.get("messages", [])
-            ]
+            # 验证必需字段
+            required_fields = ["conversation_id", "user_id", "created_at", "updated_at"]
+            for field in required_fields:
+                if field not in conversation_dict:
+                    logger.error(f"Missing required field '{field}' in conversation {conversation_id}")
+                    return None
+
+            # 安全重建 Message 对象 - 跳过无效消息而非丢弃整个对话
+            messages = []
+            for idx, msg in enumerate(conversation_dict.get("messages", [])):
+                try:
+                    # 验证消息字段
+                    if not isinstance(msg, dict):
+                        logger.warning(f"Skipping invalid message at index {idx}: not a dict")
+                        continue
+
+                    role_str = msg.get("role")
+                    content = msg.get("content")
+                    timestamp_str = msg.get("timestamp")
+
+                    if not role_str or content is None or not timestamp_str:
+                        logger.warning(f"Skipping message at index {idx}: missing required fields")
+                        continue
+
+                    # 安全解析 role
+                    try:
+                        role = MessageRole(role_str)
+                    except ValueError:
+                        logger.warning(f"Skipping message at index {idx}: invalid role '{role_str}'")
+                        continue
+
+                    # 安全解析 timestamp
+                    try:
+                        timestamp = datetime.fromisoformat(timestamp_str)
+                    except ValueError:
+                        logger.warning(f"Skipping message at index {idx}: invalid timestamp '{timestamp_str}'")
+                        continue
+
+                    messages.append(Message(
+                        role=role,
+                        content=content,
+                        timestamp=timestamp,
+                        metadata=msg.get("metadata")
+                    ))
+                except Exception as e:
+                    logger.warning(f"Skipping message at index {idx} due to error: {e}")
+                    continue
+
+            # 安全解析时间戳
+            try:
+                created_at = datetime.fromisoformat(conversation_dict["created_at"])
+                updated_at = datetime.fromisoformat(conversation_dict["updated_at"])
+            except ValueError as e:
+                logger.error(f"Invalid timestamp in conversation {conversation_id}: {e}")
+                return None
 
             conversation = Conversation(
                 conversation_id=conversation_dict["conversation_id"],
                 user_id=conversation_dict["user_id"],
                 messages=messages,
                 context=conversation_dict.get("context", {}),
-                created_at=datetime.fromisoformat(conversation_dict["created_at"]),
-                updated_at=datetime.fromisoformat(conversation_dict["updated_at"]),
+                created_at=created_at,
+                updated_at=updated_at,
             )
 
-            logger.debug(f"Retrieved conversation {conversation_id} from Redis")
+            logger.debug(f"Retrieved conversation {conversation_id} from Redis ({len(messages)} messages)")
             return conversation
 
         except Exception as e:
