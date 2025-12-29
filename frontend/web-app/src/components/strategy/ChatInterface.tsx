@@ -109,28 +109,147 @@ const ICON_MAP: Record<string, LucideIcon> = {
 // =============================================================================
 
 const SPIRIT_CONFIG = {
-  name: 'Trading Spirit',
-  greeting: `你好！我是 **Trading Spirit** 🚀
+  name: 'Delta',
+  greeting: `我是 **Delta**，帮你把交易想法变成自动执行的规则。
 
-我是你的 AI 交易策略助手，帮你 **创建、优化、回测** 交易策略。
+告诉我你的想法，比如：
 
-**试试输入：**
+> "在 BTC 跌到支撑位时买入"
 
-> "帮我创建一个简单的 BTC 网格策略"`,
+我会帮你：**想法 → 规则 → 验证 → 执行**`,
 }
 
 // Research Mode Persona
 const RESEARCH_CONFIG = {
-  name: 'Research Analyst',
-  greeting: `你好！我是 **Research Analyst** 🔬
+  name: 'Delta Research',
+  greeting: `**Delta Research** - 深度分析模式
 
-使用 Claude Opus 进行多维度深度分析。
+在把想法变成规则之前，先搞清楚市场在发生什么。
 
-**试试输入：**
+> "BTC 现在是什么阶段？适合做什么策略？"
 
-> "帮我分析一下 ETH 的投资价值"
+我会帮你分析，然后你带着清晰的想法去创建规则。`,
+}
 
-我会从技术面、链上数据、宏观事件、市场情绪为你生成详尽报告。`,
+// =============================================================================
+// Intent Classification - 区分探索性请求和行动性请求
+// =============================================================================
+
+type UserIntent = 'exploratory' | 'action'
+
+/**
+ * 分类用户意图：探索性 (分析/了解) vs 行动性 (创建策略/执行)
+ *
+ * 探索性请求：用户想了解市场情况、获取分析、寻求建议
+ * 行动性请求：用户想创建策略、执行交易、设置规则
+ */
+function classifyIntent(message: string): UserIntent {
+  const normalizedMessage = message.toLowerCase().trim()
+
+  // 快速路径：问号结尾的疑问句大概率是探索性
+  // 但需要排除一些明显的行动请求（如 "帮我做一个网格策略好吗？"）
+  if (/[?？]$/.test(normalizedMessage)) {
+    // 如果是明确的行动请求+问号，仍然判定为行动
+    const actionWithQuestion = /(帮我|给我|替我|想要).{0,20}(做|创建|设置|买|卖)/
+    if (!actionWithQuestion.test(normalizedMessage)) {
+      return 'exploratory'
+    }
+  }
+
+  // 行动性关键词 - 明确想要创建/执行的意图
+  const actionPatterns = [
+    // 创建/执行动词
+    /^(创建|做|买入?|卖出?|开|平仓?|设置|配置|执行|部署|启动|运行)/,
+    /帮我(做|创建|设置|配置|生成|建立|验证)/,
+    /给我(一个|做|生成|创建)(策略|规则)/,
+    // 条件式表达 (在...时/当...时) - 更宽松的匹配
+    /(在|当).{2,30}(时|的时候|就|后).*(买|卖|开|平)/,
+    /(在|当).{2,30}(买|卖|开多|开空|做多|做空)/,
+    /如果.{2,20}(就|则|时).*(买|卖|开|平)/,
+    // 直接的交易动作描述
+    /.{0,20}(跌|涨|突破|回调|反弹).{0,15}(买|卖|开|平)/,
+    /.{0,20}(买入|卖出|做多|做空|开仓|平仓)/,
+    // 具体交易动作
+    /(止损|止盈|加仓|减仓|做空|做多|开多|开空)/,
+    /(网格|定投|马丁|套利).*策略?/,
+    // 明确的策略意图
+    /想(做|创建|设置|配置|执行|要)/,
+    /不知道(参数|怎么设)/,
+    // 祈使句/命令式
+    /(帮我|给我|替我).{0,10}(买|卖|做|创建|设置)/,
+  ]
+
+  // 探索性关键词 - 想了解/分析的意图
+  const exploratoryPatterns = [
+    // 疑问式
+    /\?$|？$/,
+    /^(什么是|为什么|如何|怎么|怎样|哪个|哪些)/,
+    /(是什么|怎么样|什么情况|什么阶段|什么趋势)/,
+    /(适合什么|该怎么|应该|建议|推荐)/,
+    // 分析/了解动词
+    /^(分析|了解|查看|看看|告诉我|解释|说明|介绍)/,
+    /(分析一下|看一下|了解一下)/,
+    // 市场状态查询
+    /(现在|目前|当前).{0,10}(怎么样|情况|状态|走势|趋势)/,
+    /(行情|市场|价格).{0,10}(怎么样|如何|怎样)/,
+    // 观点/预测请求
+    /(你觉得|你认为|你怎么看)/,
+  ]
+
+  // 先检查是否匹配行动性模式
+  for (const pattern of actionPatterns) {
+    if (pattern.test(normalizedMessage)) {
+      return 'action'
+    }
+  }
+
+  // 再检查是否匹配探索性模式
+  for (const pattern of exploratoryPatterns) {
+    if (pattern.test(normalizedMessage)) {
+      return 'exploratory'
+    }
+  }
+
+  // 默认：短消息倾向于探索性，长消息倾向于行动性
+  // 短问题通常是在询问，长描述通常是在说明需求
+  if (normalizedMessage.length < 15) {
+    return 'exploratory'
+  }
+
+  return 'action'
+}
+
+/**
+ * 格式化探索性响应
+ * 将 InsightData 转换为用户友好的纯文本分析报告
+ */
+function formatExploratoryResponse(insight: InsightData, fallbackMessage: string): string {
+  // 优先使用 explanation
+  if (insight.explanation) {
+    let response = insight.explanation
+
+    // 如果有参数，添加关键信息摘要
+    if (insight.params && insight.params.length > 0) {
+      const keyParams = insight.params
+        .filter((p) => p.value !== undefined && p.value !== null && p.value !== '')
+        .slice(0, 5) // 最多显示 5 个关键参数
+
+      if (keyParams.length > 0) {
+        response += '\n\n**关键信息**：\n'
+        keyParams.forEach((p) => {
+          response += `• **${p.label}**: ${p.value}\n`
+        })
+      }
+    }
+
+    // 添加行动建议提示
+    response += '\n\n---\n💡 *如果你想基于这个分析创建策略，可以告诉我具体的入场和出场条件。*'
+
+    return response
+  }
+
+  // 如果没有 explanation，使用 fallback
+  return fallbackMessage || '我理解了你的问题，让我为你分析一下...'
 }
 
 interface Message {
@@ -235,14 +354,20 @@ export function ChatInterface({
   // ==========================================================================
   // State
   // ==========================================================================
-  const [messages, setMessages] = React.useState<Message[]>([])
-  const isInitializedRef = React.useRef(false)
-  const lastModeRef = React.useRef(currentMode)
+  // Initialize with welcome message
+  const [messages, setMessages] = React.useState<Message[]>(() => [
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content: persona.greeting,
+      timestamp: Date.now() - 60000,
+    },
+  ])
+  const lastModeRef = React.useRef<string>(currentMode)
 
-  // Initialize messages based on mode
+  // Re-initialize messages when mode changes
   React.useEffect(() => {
-    // Mode change or initial load
-    if (lastModeRef.current !== currentMode || !isInitializedRef.current) {
+    if (lastModeRef.current !== currentMode) {
       setMessages([
         {
           id: 'welcome',
@@ -252,7 +377,6 @@ export function ChatInterface({
         },
       ])
       lastModeRef.current = currentMode
-      isInitializedRef.current = true
     }
   }, [currentMode, persona.greeting])
   const [input, setInput] = React.useState('')
@@ -1267,12 +1391,21 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         .filter((m) => m.role === 'user' || m.role === 'assistant')
         .map((m) => ({ role: m.role, content: m.content }))
 
+      // =======================================================================
+      // 意图分类: 探索性 (分析/了解) vs 行动性 (创建策略/执行)
+      // =======================================================================
+      const userIntent = classifyIntent(userInput)
+      console.log(`[ChatInterface] User intent classified as: ${userIntent}`)
+
       const nlpResult = await sendToNLP(userInput, {
         marketData: getMarketContext(),
         chatHistory,
+        // 传递意图给后端，便于未来优化
+        userIntent,
       })
 
       // 如果 NLP Processor 返回 ClarificationInsight，直接显示澄清问题卡片
+      // (无论意图类型，澄清问题总是需要显示)
       if (nlpResult && isClarificationInsight(nlpResult)) {
         console.log('[ChatInterface] NLP returned ClarificationInsight:', nlpResult)
 
@@ -1289,10 +1422,33 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         return // 等待用户回答澄清问题，不继续调用 LLM
       }
 
-      // 如果 NLP Processor 返回其他类型的 InsightData，直接使用
+      // 如果 NLP Processor 返回 InsightData
       if (nlpResult) {
-        console.log('[ChatInterface] NLP returned InsightData:', nlpResult)
+        console.log('[ChatInterface] NLP returned InsightData:', nlpResult, 'Intent:', userIntent)
 
+        // =======================================================================
+        // 探索性意图: 返回纯文本分析，不显示 InsightCard
+        // 用户只是想了解情况，不需要审批/执行操作
+        // =======================================================================
+        if (userIntent === 'exploratory') {
+          // 从 InsightData 提取分析内容，格式化为 Markdown
+          const analysisContent = formatExploratoryResponse(nlpResult, nlpMessage)
+
+          const analysisMessage: Message = {
+            id: `analysis_${Date.now()}`,
+            role: 'assistant',
+            content: analysisContent,
+            timestamp: Date.now(),
+            // 不设置 insight，确保显示为纯文本
+          }
+          setMessages((prev) => [...prev, analysisMessage])
+          setIsLoading(false)
+          return
+        }
+
+        // =======================================================================
+        // 行动性意图: 显示 InsightCard，需要用户审批
+        // =======================================================================
         const nlpInsightMessage: Message = {
           id: `nlp_insight_${Date.now()}`,
           role: 'assistant',
@@ -1339,11 +1495,14 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     }
   }
 
+  // 快速提示：分为探索性（分析）和行动性（策略）两类
   const quickPrompts = [
-    '创建一个简单的 BTC 网格策略',
-    '分析 BTC 当前趋势',
-    '基于 RSI 指标的交易策略',
-    '优化我的均线策略',
+    // 探索性请求 - 返回分析报告
+    'BTC 现在是什么行情？',
+    '分析一下 ETH 的趋势',
+    // 行动性请求 - 返回策略卡片
+    '在 BTC 跌到支撑位时买入',
+    '帮我做一个网格策略',
   ]
 
   return (
