@@ -110,29 +110,27 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 const SPIRIT_CONFIG = {
   name: 'Trading Spirit',
-  greeting: `你好！我是 **Trading Spirit**，你的智能交易伙伴。
+  greeting: `你好！我是 **Trading Spirit** 🚀
 
-我可以帮你：
-- 📈 创建和优化交易策略
-- 🔍 分析市场趋势和信号
-- ⚡ 快速部署 Paper/Live 交易
-- 🛡️ 设置风控规则和预警
+我是你的 AI 交易策略助手，帮你 **创建、优化、回测** 交易策略。
 
-告诉我你的交易想法，我会将其转化为可执行的策略！`,
+**试试输入：**
+
+> "帮我创建一个简单的 BTC 网格策略"`,
 }
 
 // Research Mode Persona
 const RESEARCH_CONFIG = {
   name: 'Research Analyst',
-  greeting: `你好！我是 **Research Analyst**，使用 Claude Opus 进行深度研究。
+  greeting: `你好！我是 **Research Analyst** 🔬
 
-**深度研究模式**将从多个维度综合分析：
-- 📈 技术面分析 (K线形态、指标信号)
-- ⛓️ 链上数据 (巨鲸动向、资金流向)
-- 🌍 宏观事件 (政策动态、行业新闻)
-- 😊 市场情绪 (社媒热度、恐慌贪婪指数)
+使用 Claude Opus 进行多维度深度分析。
 
-告诉我你想研究的标的，我会生成一份详尽的分析报告！`,
+**试试输入：**
+
+> "帮我分析一下 ETH 的投资价值"
+
+我会从技术面、链上数据、宏观事件、市场情绪为你生成详尽报告。`,
 }
 
 interface Message {
@@ -1342,10 +1340,9 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   }
 
   const quickPrompts = [
-    '构建复杂逻辑',
-    '创建一个简单的网格交易策略',
-    '基于RSI指标的交易策略',
-    '分析BTC当前趋势',
+    '创建一个简单的 BTC 网格策略',
+    '分析 BTC 当前趋势',
+    '基于 RSI 指标的交易策略',
     '优化我的均线策略',
   ]
 
