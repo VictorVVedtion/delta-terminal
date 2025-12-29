@@ -15,6 +15,12 @@ from ..models.strategy_perspectives import (
     TRADING_CONCEPT_KEYWORDS,
 )
 from ..models.llm_routing import LLMTaskType
+from ..models.response_ontology import (
+    ResponseOntologyClassifier,
+    ResponseCategory,
+    get_response_classifier,
+    get_inherited_intent,
+)
 from ..prompts.strategy_prompts import INTENT_RECOGNITION_PROMPT
 from .llm_service import LLMService, get_llm_service
 from .llm_router import LLMRouter, get_llm_router
@@ -142,6 +148,46 @@ class IntentService:
                     return cached_response
 
             logger.info(f"Recognizing intent for text: {safe_input[:100]}...")
+
+            # ====================================================================
+            # 本体论预分类: 快速识别确认/拒绝等简单回复
+            # ====================================================================
+            previous_intent = (request.context or {}).get("previous_intent")
+            if previous_intent:
+                classifier = get_response_classifier()
+                classification = classifier.classify(safe_input)
+
+                if classification.confidence >= 0.7:
+                    # 高置信度分类，可以跳过 LLM 调用
+                    inherited_intent = get_inherited_intent(
+                        previous_intent, classification.category
+                    )
+
+                    if inherited_intent:
+                        # 将字符串意图转换为 IntentType
+                        try:
+                            mapped_intent = IntentType(inherited_intent.upper())
+                        except ValueError:
+                            mapped_intent = IntentType.CREATE_STRATEGY if classification.is_confirmation else IntentType.UNKNOWN
+
+                        elapsed = (time.time() - start_time) * 1000
+                        logger.info(
+                            f"Ontology fast-path: {classification.category.value} -> {mapped_intent} "
+                            f"(confidence: {classification.confidence:.2f}, pattern: {classification.matched_pattern}, "
+                            f"latency: {elapsed:.0f}ms)"
+                        )
+
+                        return IntentRecognitionResponse(
+                            intent=mapped_intent,
+                            confidence=classification.confidence,
+                            entities={
+                                "is_confirmation": classification.is_confirmation,
+                                "inherited_from": previous_intent,
+                                "ontology_category": classification.category.value,
+                                "ontology_subtype": classification.sub_type,
+                            },
+                            reasoning=f"本体论快速分类: {classification.category.value}/{classification.sub_type}",
+                        )
 
             # 构建提示
             context = json.dumps(request.context or {}, ensure_ascii=False)
