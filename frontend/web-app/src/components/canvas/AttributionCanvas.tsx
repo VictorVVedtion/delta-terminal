@@ -18,6 +18,7 @@ import {
 import React from 'react'
 
 import { Button } from '@/components/ui/button'
+import { safeNumber, formatSafePercent } from '@/lib/safe-number'
 import { cn } from '@/lib/utils'
 import type { AttributionBreakdownItem,AttributionInsightData } from '@/types/insight'
 
@@ -44,8 +45,10 @@ interface AttributionBarProps {
 }
 
 function AttributionBar({ item, maxAbsValue }: AttributionBarProps) {
-  const isPositive = item.contribution >= 0
-  const widthPercent = Math.abs(item.contribution) / maxAbsValue * 50
+  const contribution = safeNumber(item.contribution, 0)
+  const maxAbs = safeNumber(maxAbsValue, 1)
+  const isPositive = contribution >= 0
+  const widthPercent = (Math.abs(contribution) / maxAbs) * 50
 
   return (
     <div className="space-y-1">

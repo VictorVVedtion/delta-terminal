@@ -350,6 +350,39 @@ class InsightGeneratorService:
             context = context or {}
 
             # ================================================================
+            # A2UI 2.0: 推理链交互处理
+            # 处理用户对推理链的分支选择和质疑
+            # ================================================================
+            is_branch_selection = context.get("isBranchSelection", False)
+            is_challenge = context.get("isChallenge", False)
+
+            # 处理分支选择 - 用户选择了不同的策略角度
+            if is_branch_selection:
+                selected_branch_id = context.get("selectedBranchId")
+                strategy_perspective = context.get("strategyPerspective")
+                logger.info(
+                    f"Branch selection detected: branch={selected_branch_id}, "
+                    f"perspective={strategy_perspective}"
+                )
+                # 将选中的策略角度添加到已收集的参数中
+                collected_params = context.get("collected_params", {})
+                collected_params["strategy_perspective"] = strategy_perspective
+                context["collected_params"] = collected_params
+                # 重新触发策略生成流程
+                return await self._generate_strategy_with_perspective(
+                    user_input, chat_history, context, strategy_perspective
+                )
+
+            # 处理质疑 - 用户质疑某个推理步骤
+            if is_challenge:
+                challenged_node_id = context.get("challengedNodeId")
+                reasoning_chain = context.get("reasoningChain")
+                logger.info(f"Challenge detected: node={challenged_node_id}")
+                return await self._handle_reasoning_challenge(
+                    user_input, chat_history, context, challenged_node_id, reasoning_chain
+                )
+
+            # ================================================================
             # P1 优化: 并行预加载数据
             # 在等待主要处理的同时，预加载可能需要的数据
             # ================================================================
@@ -541,6 +574,203 @@ class InsightGeneratorService:
             logger.warning(f"Failed to preload market data for {symbol}: {e}")
 
         return {"symbol": symbol, "data_available": False}
+
+    # =========================================================================
+    # A2UI 2.0: 推理链交互处理方法
+    # =========================================================================
+
+    async def _generate_strategy_with_perspective(
+        self,
+        user_input: str,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+        perspective: str,
+    ) -> InsightData:
+        """
+        根据用户选择的策略角度生成策略
+
+        当用户在推理链中选择了不同的分支（策略角度）时调用此方法。
+        例如：用户选择了 "RSI 超卖信号" 而不是 "关键支撑位"
+
+        Args:
+            user_input: 用户原始输入
+            chat_history: 对话历史
+            context: 上下文，包含 collected_params
+            perspective: 选中的策略角度 ID (如 "rsi_oversold", "support_level")
+
+        Returns:
+            根据选定角度生成的策略 InsightData
+        """
+        logger.info(f"Generating strategy with perspective: {perspective}")
+
+        # 策略角度映射到具体的技术指标配置
+        perspective_configs = {
+            "rsi_oversold": {
+                "indicator": "RSI",
+                "condition": "RSI < 30",
+                "description": "RSI 超卖信号策略",
+                "entry_logic": "当 RSI(14) 低于 30 时买入",
+            },
+            "support_level": {
+                "indicator": "SUPPORT",
+                "condition": "价格接近支撑位",
+                "description": "关键支撑位策略",
+                "entry_logic": "当价格接近关键支撑位时买入",
+            },
+            "volume_surge": {
+                "indicator": "VOLUME",
+                "condition": "成交量放大",
+                "description": "成交量放大策略",
+                "entry_logic": "当成交量突然放大时入场",
+            },
+            "macd_golden": {
+                "indicator": "MACD",
+                "condition": "MACD 金叉",
+                "description": "MACD 金叉策略",
+                "entry_logic": "当 MACD 快线上穿慢线时买入",
+            },
+            "bb_lower_touch": {
+                "indicator": "BOLLINGER",
+                "condition": "触及布林带下轨",
+                "description": "布林带下轨触及策略",
+                "entry_logic": "当价格触及布林带下轨时买入",
+            },
+            "ma_crossover": {
+                "indicator": "EMA",
+                "condition": "均线金叉",
+                "description": "均线交叉策略",
+                "entry_logic": "当短期均线上穿长期均线时买入",
+            },
+        }
+
+        config = perspective_configs.get(perspective, {
+            "indicator": perspective,
+            "condition": f"使用 {perspective} 策略",
+            "description": f"{perspective} 策略",
+            "entry_logic": f"基于 {perspective} 的入场逻辑",
+        })
+
+        # 更新上下文中的策略类型信息
+        context["selected_perspective"] = perspective
+        context["perspective_config"] = config
+        context["collected_params"]["strategy_indicator"] = config["indicator"]
+
+        # 生成自定义的解释
+        explanation = (
+            f"好的，我将按照**{config['description']}**为您配置策略。\n\n"
+            f"**入场逻辑**: {config['entry_logic']}\n\n"
+            f"接下来让我为您配置具体的参数..."
+        )
+
+        # 调用正常的策略生成流程，但带上选定的角度
+        insight = await self._generate_strategy_insight(
+            user_input, chat_history, context
+        )
+
+        # 如果生成成功，更新解释文本以反映用户的选择
+        if insight:
+            insight.explanation = explanation + "\n\n" + insight.explanation
+
+        return insight
+
+    async def _handle_reasoning_challenge(
+        self,
+        user_input: str,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+        challenged_node_id: Optional[str],
+        reasoning_chain: Optional[Dict[str, Any]],
+    ) -> InsightData:
+        """
+        处理用户对推理节点的质疑
+
+        当用户点击推理链中某个节点的"质疑"按钮时调用此方法。
+        AI 会重新解释该推理步骤，提供更多证据或承认不确定性。
+
+        Args:
+            user_input: 用户的质疑内容
+            chat_history: 对话历史
+            context: 上下文信息
+            challenged_node_id: 被质疑的节点 ID
+            reasoning_chain: 原始推理链数据
+
+        Returns:
+            包含解释或修正的 InsightData
+        """
+        logger.info(f"Handling challenge for node: {challenged_node_id}")
+
+        # 找到被质疑的节点
+        challenged_node = None
+        if reasoning_chain and "nodes" in reasoning_chain:
+            for node in reasoning_chain["nodes"]:
+                if node.get("id") == challenged_node_id:
+                    challenged_node = node
+                    break
+
+        # 构建回应
+        if challenged_node:
+            node_type = challenged_node.get("type", "unknown")
+            node_title = challenged_node.get("title", "此步骤")
+            node_content = challenged_node.get("content", "")
+
+            # 根据节点类型生成不同的回应
+            if node_type == "understanding":
+                response = (
+                    f"您对**{node_title}**有疑问，让我重新解释一下。\n\n"
+                    f"我理解您的意图是：{node_content}\n\n"
+                    f"如果我理解有误，请告诉我您真正想要的是什么？"
+                )
+            elif node_type == "analysis":
+                response = (
+                    f"关于**市场分析**的质疑，我来补充说明：\n\n"
+                    f"当前的分析基于实时市场数据。"
+                    f"如果您认为分析有误，可能是因为：\n"
+                    f"1. 市场刚发生快速变化\n"
+                    f"2. 您有其他信息来源\n"
+                    f"3. 我的指标解读与您的理解不同\n\n"
+                    f"您能告诉我具体哪部分分析有问题吗？"
+                )
+            elif node_type == "decision":
+                response = (
+                    f"您对**策略推荐**有疑虑，这很正常。\n\n"
+                    f"我推荐的策略角度是基于您的交易意图和当前市场状况。"
+                    f"但最终决策权在您手中。\n\n"
+                    f"您是否想探索其他策略角度？或者告诉我您更倾向的方向？"
+                )
+            elif node_type == "warning":
+                response = (
+                    f"关于**风险提示**，我需要强调这些风险是真实存在的。\n\n"
+                    f"历史数据显示，类似策略存在以下风险：\n"
+                    f"{node_content}\n\n"
+                    f"如果您认为某些风险评估过高或过低，请告诉我您的看法。"
+                )
+            else:
+                response = (
+                    f"感谢您的质疑。让我重新审视这一步骤。\n\n"
+                    f"原始推理：{node_content}\n\n"
+                    f"您能具体说明哪部分有问题吗？"
+                )
+        else:
+            response = (
+                f"感谢您的反馈。\n\n"
+                f"您说：「{user_input}」\n\n"
+                f"请告诉我具体哪部分推理有问题，我会重新分析。"
+            )
+
+        # 创建一个简单的回应 InsightData
+        insight = InsightData(
+            id=create_insight_id(),
+            type=InsightType.GENERAL_CHAT,
+            target=None,
+            params=[],
+            evidence=None,
+            impact=None,
+            explanation=response,
+            created_at=datetime.now().isoformat(),
+            show_reasoning=False,  # 质疑回应不需要再显示推理链
+        )
+
+        return insight
 
     async def _generate_strategy_insight(
         self,

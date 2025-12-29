@@ -43,21 +43,32 @@ test.describe('推理链交互测试 (A2UI 2.0)', () => {
     await chatPage.expandReasoningNode()
     await page.waitForTimeout(500)
 
-    // Step 4: 检查质疑按钮是否存在
+    // Step 4: 等待回测完成（前端会自动运行回测，完成后发送AI消息）
+    // 检查是否有回测完成的消息出现
+    const backtestComplete = page.locator('text=回测完成')
+    try {
+      await backtestComplete.waitFor({ state: 'visible', timeout: 15000 })
+      // 回测完成消息出现，等待一下让UI稳定
+      await page.waitForTimeout(1000)
+    } catch {
+      // 回测可能未触发或已经完成，继续执行
+    }
+
+    // Step 5: 检查质疑按钮是否存在
     const hasChallengeBtn = await chatPage.hasChallengeButton()
 
     if (hasChallengeBtn) {
-      // Step 5: 设置质疑响应
+      // Step 6: 设置质疑响应（在回测完成后设置，确保不被其他请求消耗）
       mockInsightApi.setNextResponse(testScenarios.reasoningChallenge.response)
 
-      // Step 6: 点击质疑按钮
+      // Step 7: 点击质疑按钮
       await chatPage.challengeReasoningNode()
       await chatPage.waitForResponse()
 
-      // Step 7: 验证收到质疑响应
+      // Step 8: 验证收到质疑响应
       const lastMessage = await chatPage.getLastMessage()
       // 质疑响应应该包含解释性内容
-      expect(lastMessage).toMatch(/理解|解释|疑问|重新/)
+      expect(lastMessage).toMatch(/理解|解释|疑问|分析依据/)
     } else {
       // 如果质疑按钮不可见，说明推理链节点可能需要展开
       console.log('质疑按钮未找到，可能推理链节点未完全展开')
@@ -82,17 +93,27 @@ test.describe('推理链交互测试 (A2UI 2.0)', () => {
     await chatPage.expandReasoningNode()
     await page.waitForTimeout(500)
 
-    // Step 4: 检查是否有分支选项
+    // Step 4: 等待回测完成
+    const backtestComplete = page.locator('text=回测完成')
+    try {
+      await backtestComplete.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(1000)
+    } catch {
+      // 继续执行
+    }
+
+    // Step 5: 检查是否有分支选项
     const hasBranches = await chatPage.hasReasoningBranches()
 
     if (hasBranches) {
-      // Step 5: 设置分支选择响应
+      // Step 6: 设置分支选择响应
       mockInsightApi.setNextResponse(testScenarios.reasoningBranchSelect.response)
 
-      // Step 6: 选择分支选项
+      // Step 7: 选择分支选项
       await chatPage.selectReasoningBranch('让我帮您梳理')
+      await chatPage.waitForResponse()
 
-      // Step 7: 验证收到新的策略响应
+      // Step 8: 验证收到新的策略响应
       const lastMessage = await chatPage.getLastMessage()
       expect(lastMessage.length).toBeGreaterThan(0)
     } else {
@@ -118,15 +139,24 @@ test.describe('推理链交互测试 (A2UI 2.0)', () => {
     await chatPage.expandReasoningNode()
     await page.waitForTimeout(500)
 
-    // Step 4: 查找确认按钮
+    // Step 4: 等待回测完成
+    const backtestComplete = page.locator('text=回测完成')
+    try {
+      await backtestComplete.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(1000)
+    } catch {
+      // 继续执行
+    }
+
+    // Step 5: 查找确认按钮
     const confirmBtn = page.locator('button:text-is("确认"), button:has-text("✓ 确认")')
     const hasConfirmBtn = await confirmBtn.first().isVisible().catch(() => false)
 
     if (hasConfirmBtn) {
-      // Step 5: 点击确认按钮
+      // Step 6: 点击确认按钮
       await chatPage.confirmReasoningNode()
 
-      // Step 6: 验证确认后的状态变化 (按钮消失或状态变化)
+      // Step 7: 验证确认后的状态变化 (按钮消失或状态变化)
       await page.waitForTimeout(500)
       // 确认后应该显示成功提示或状态变化
     } else {
@@ -151,7 +181,16 @@ test.describe('推理链交互测试 (A2UI 2.0)', () => {
     expect(hasReasoning).toBe(true)
     expect(hasInsight).toBe(true)
 
-    // Step 3: 可以直接批准策略 (跳过推理链交互)
+    // Step 3: 等待回测完成
+    const backtestComplete = page.locator('text=回测完成')
+    try {
+      await backtestComplete.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(500)
+    } catch {
+      // 继续执行
+    }
+
+    // Step 4: 可以直接批准策略 (跳过推理链交互)
     const approveBtn = page.getByRole('button', { name: /批准/ })
     const hasApproveBtn = await approveBtn.isVisible().catch(() => false)
 

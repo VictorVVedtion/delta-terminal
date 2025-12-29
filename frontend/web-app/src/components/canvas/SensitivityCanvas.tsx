@@ -19,6 +19,7 @@ import React from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { safeNumber } from '@/lib/safe-number'
 import { cn } from '@/lib/utils'
 import type { KeyParameter,SensitivityInsightData } from '@/types/insight'
 
@@ -63,8 +64,9 @@ interface HeatmapCellProps {
 }
 
 function HeatmapCell({ value, isSelected, onClick }: HeatmapCellProps) {
-  // 根据值确定颜色 (-1 到 1 的范围)
-  const normalizedValue = Math.max(-1, Math.min(1, value))
+  // 根据值确定颜色 (-1 到 1 的范围)，使用安全数值处理
+  const safeValue = safeNumber(value, 0)
+  const normalizedValue = Math.max(-1, Math.min(1, safeValue))
   const getColor = () => {
     if (normalizedValue > 0.3) return 'bg-green-500'
     if (normalizedValue > 0.1) return 'bg-green-400'

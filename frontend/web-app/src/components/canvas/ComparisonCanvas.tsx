@@ -19,6 +19,7 @@ import React from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { safeNumber, formatSafePercent } from '@/lib/safe-number'
 import { cn } from '@/lib/utils'
 import type { ComparisonInsightData, ComparisonStrategy, MetricDifference } from '@/types/insight'
 
@@ -40,14 +41,14 @@ interface ComparisonCanvasProps {
 // =============================================================================
 
 const METRIC_LABELS: Record<string, { label: string; format: (v: number) => string; higherBetter: boolean }> = {
-  totalReturn: { label: '总收益', format: v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`, higherBetter: true },
-  annualizedReturn: { label: '年化收益', format: v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`, higherBetter: true },
-  winRate: { label: '胜率', format: v => `${v.toFixed(1)}%`, higherBetter: true },
-  maxDrawdown: { label: '最大回撤', format: v => `${v.toFixed(2)}%`, higherBetter: false },
-  sharpeRatio: { label: '夏普比率', format: v => v.toFixed(2), higherBetter: true },
-  sortinoRatio: { label: '索提诺比率', format: v => v.toFixed(2), higherBetter: true },
-  profitFactor: { label: '盈亏比', format: v => v.toFixed(2), higherBetter: true },
-  totalTrades: { label: '交易次数', format: v => v.toString(), higherBetter: true },
+  totalReturn: { label: '总收益', format: v => formatSafePercent(v, 2), higherBetter: true },
+  annualizedReturn: { label: '年化收益', format: v => formatSafePercent(v, 2), higherBetter: true },
+  winRate: { label: '胜率', format: v => `${safeNumber(v, 0).toFixed(1)}%`, higherBetter: true },
+  maxDrawdown: { label: '最大回撤', format: v => `${safeNumber(v, 0).toFixed(2)}%`, higherBetter: false },
+  sharpeRatio: { label: '夏普比率', format: v => safeNumber(v, 0).toFixed(2), higherBetter: true },
+  sortinoRatio: { label: '索提诺比率', format: v => safeNumber(v, 0).toFixed(2), higherBetter: true },
+  profitFactor: { label: '盈亏比', format: v => safeNumber(v, 0).toFixed(2), higherBetter: true },
+  totalTrades: { label: '交易次数', format: v => safeNumber(v, 0).toString(), higherBetter: true },
 }
 
 const SIGNIFICANCE_CONFIG = {

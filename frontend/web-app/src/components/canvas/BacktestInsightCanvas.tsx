@@ -30,8 +30,10 @@ import { BacktestEquityCurve } from '@/components/backtest/BacktestEquityCurve'
 import { BacktestKlineChart } from '@/components/backtest/BacktestKlineChart'
 import { BacktestParamPanel, CompactParamDisplay } from '@/components/backtest/BacktestParamPanel'
 import { BacktestStatsCard } from '@/components/backtest/BacktestStatsCard'
+import { InsightEmptyState } from '@/components/insight/InsightEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { safeNumber, safePercentChange, formatSafePercent } from '@/lib/safe-number'
 import { cn } from '@/lib/utils'
 import type { BacktestInsightData, BacktestParameter } from '@/types/insight'
 
@@ -54,16 +56,17 @@ type TabType = 'chart' | 'equity' | 'params'
 // Helper Functions
 // =============================================================================
 
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString('zh-CN', {
+function formatDate(timestamp: number | undefined): string {
+  const safeTimestamp = safeNumber(timestamp, Date.now())
+  return new Date(safeTimestamp).toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   })
 }
 
-function formatPercent(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+function formatPercent(value: number | undefined): string {
+  return formatSafePercent(value, 2, true)
 }
 
 // =============================================================================
@@ -83,6 +86,12 @@ export function BacktestInsightCanvas({
   const [showSummary, setShowSummary] = React.useState(true)
   const [parameters, setParameters] = React.useState(insight.strategy.parameters)
   const [isRunning, setIsRunning] = React.useState(false)
+
+  // ========== 数据完整性检查 ==========
+  // 检查是否有图表数据
+  const hasChartData = insight.chartData && insight.chartData.length > 0
+  const hasEquityCurve = insight.equityCurve && insight.equityCurve.length > 0
+  const hasStats = insight.stats && insight.stats.initialCapital !== undefined
 
   // Handle parameter change
   const handleParamChange = React.useCallback(
@@ -117,9 +126,11 @@ export function BacktestInsightCanvas({
     return `${formatDate(insight.period.start)} - ${formatDate(insight.period.end)}`
   }, [insight.period])
 
-  // Total return for header
+  // Total return for header (使用安全计算)
   const totalReturn = React.useMemo(() => {
-    return ((insight.stats.finalCapital - insight.stats.initialCapital) / insight.stats.initialCapital) * 100
+    const initial = safeNumber(insight.stats?.initialCapital, 0)
+    const final = safeNumber(insight.stats?.finalCapital, 0)
+    return safePercentChange(final, initial, false)
   }, [insight.stats])
 
   if (!isOpen) return null
@@ -233,25 +244,42 @@ export function BacktestInsightCanvas({
         <div className="p-4">
           {activeTab === 'chart' && (
             <div className="space-y-4">
-              <BacktestKlineChart
-                data={insight.chartData}
-                height={isExpanded ? 450 : 300}
-                showVolume
-              />
+              {hasChartData ? (
+                <BacktestKlineChart
+                  data={insight.chartData}
+                  height={isExpanded ? 450 : 300}
+                  showVolume
+                />
+              ) : (
+                <InsightEmptyState
+                  reason="no-chart-data"
+                  compact
+                  onRetry={handleRerun}
+                />
+              )}
             </div>
           )}
 
           {activeTab === 'equity' && (
             <div className="space-y-4">
-              <BacktestEquityCurve
-                data={insight.equityCurve}
-                benchmark={insight.benchmark?.equityCurve}
-                initialCapital={insight.stats.initialCapital}
-                height={isExpanded ? 450 : 300}
-                showDrawdown
-                showDailyPnL
-                showBenchmark={!!insight.benchmark}
-              />
+              {hasEquityCurve ? (
+                <BacktestEquityCurve
+                  data={insight.equityCurve}
+                  benchmark={insight.benchmark?.equityCurve}
+                  initialCapital={safeNumber(insight.stats?.initialCapital, 10000)}
+                  height={isExpanded ? 450 : 300}
+                  showDrawdown
+                  showDailyPnL
+                  showBenchmark={!!insight.benchmark}
+                />
+              ) : (
+                <InsightEmptyState
+                  reason="no-chart-data"
+                  compact
+                  onRetry={handleRerun}
+                  title="暂无权益曲线数据"
+                />
+              )}
             </div>
           )}
 

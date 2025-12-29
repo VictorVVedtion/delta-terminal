@@ -23,6 +23,7 @@ from ...models.schemas import (
 from ...services.insight_service import InsightGeneratorService, get_insight_service
 from ...services.intent_service import IntentService, get_intent_service
 from ...services.conversation_store import ConversationStore, get_conversation_store
+from ...services.prompt_guard import PromptGuard, get_prompt_guard, RiskLevel
 from .insight import store_insight
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ async def send_message(
     strategy_chain: StrategyChain = Depends(get_strategy_chain),
     insight_service: InsightGeneratorService = Depends(get_insight_service),
     conversation_store: ConversationStore = Depends(get_conversation_store),
+    prompt_guard: PromptGuard = Depends(get_prompt_guard),
 ) -> ChatResponse:
     """
     发送聊天消息
@@ -55,18 +57,51 @@ async def send_message(
     A2UI Enhancement: 对于策略相关的意图，返回结构化的 InsightData
     支持多步骤引导流程，处理澄清问题的回答
 
+    Security: 集成 Prompt Guard 防止注入攻击
+
     Args:
         request: 聊天请求
         intent_service: 意图服务
         strategy_chain: 策略链
         insight_service: InsightData 生成服务
         conversation_store: 对话存储服务
+        prompt_guard: Prompt 注入检测器
 
     Returns:
         聊天响应（包含 InsightData）
     """
     try:
         logger.info(f"Received message from user {request.user_id}")
+
+        # =======================================================================
+        # Security: Prompt Guard 检测
+        # =======================================================================
+        guard_result = prompt_guard.check(request.message)
+
+        if not guard_result.is_safe:
+            # 高风险输入 - 拒绝处理
+            if guard_result.risk_level in (RiskLevel.CRITICAL, RiskLevel.HIGH):
+                logger.warning(
+                    f"Blocked unsafe input from {request.user_id}: "
+                    f"risk={guard_result.risk_level}, "
+                    f"patterns={guard_result.matched_patterns}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "error": "输入包含不安全的内容",
+                        "risk_level": guard_result.risk_level,
+                        "reason": guard_result.reason,
+                        "message": "您的输入可能包含注入攻击模式，已被系统拒绝。请使用正常的语言描述您的需求。",
+                    },
+                )
+            # 中等风险 - 记录警告但允许处理
+            elif guard_result.risk_level == RiskLevel.MEDIUM:
+                logger.info(
+                    f"Medium risk input from {request.user_id}: "
+                    f"patterns={guard_result.matched_patterns}"
+                )
+                # 继续处理，但在后续监控
 
         # 获取或创建对话
         conversation_id = request.conversation_id or str(uuid.uuid4())
@@ -195,23 +230,107 @@ async def send_message(
             )
 
         # =====================================================================
+        # A2UI 2.0: 推理链交互快捷处理
+        # 分支选择和质疑不需要重新进行意图识别
+        # =====================================================================
+        context = request.context or {}
+        is_branch_selection = context.get("isBranchSelection", False)
+        is_challenge = context.get("isChallenge", False)
+
+        # A2UI 2.0: 记录推理链交互检测
+        logger.debug(
+            f"[A2UI] Checking reasoning chain interaction: "
+            f"context_keys={list(context.keys())}, "
+            f"is_branch_selection={is_branch_selection}, "
+            f"is_challenge={is_challenge}"
+        )
+
+        if is_branch_selection or is_challenge:
+            logger.info(
+                f"Reasoning chain interaction: branch={is_branch_selection}, "
+                f"challenge={is_challenge}"
+            )
+            # 直接调用 insight_service 处理交互
+            insight = await insight_service.generate_insight(
+                user_input=request.message,
+                intent=IntentType.CREATE_STRATEGY,  # 保持策略创建意图
+                chat_history=conversation.messages,
+                user_id=request.user_id,
+                context=context,
+            )
+
+            # 存储 InsightData
+            try:
+                await store_insight(insight)
+            except Exception as store_error:
+                logger.warning(f"Failed to store InsightData: {store_error}")
+
+            insight_data = insight.model_dump()
+            ai_response = insight.explanation
+
+            # 添加 AI 响应到历史并保存
+            conversation.add_message(MessageRole.ASSISTANT, ai_response)
+            await conversation_store.save_conversation(conversation)
+
+            return ChatResponse(
+                message=ai_response,
+                conversation_id=conversation_id,
+                intent=IntentType.CREATE_STRATEGY,
+                confidence=0.95,
+                extracted_params=context.get("collected_params", {}),
+                suggested_actions=["继续配置策略", "查看其他选项"],
+                timestamp=datetime.now(),
+                insight=insight_data,
+            )
+
+        # =====================================================================
         # 正常流程: 识别意图并生成响应
         # =====================================================================
+        # 构建意图识别上下文（包含对话历史和上一次意图）
+        intent_context = request.context.copy() if request.context else {}
+
+        # 从对话历史中提取上一次的意图（用于上下文感知）
+        if conversation.messages:
+            # 查找最近的意图
+            last_intent = conversation.context.get("last_intent")
+            if last_intent:
+                intent_context["previous_intent"] = last_intent
+
+            # 添加最近的对话历史（最多 4 条，截断长内容）
+            recent_messages = conversation.messages[-4:]
+            intent_context["chatHistory"] = [
+                {"role": m.role.value, "content": m.content[:200]}
+                for m in recent_messages
+            ]
+
         intent_request = IntentRecognitionRequest(
-            text=request.message, context=request.context
+            text=request.message, context=intent_context
         )
         intent_response = await intent_service.recognize_intent(
             intent_request, user_id=request.user_id
         )
 
+        # 保存当前意图到对话上下文（供下次使用）
+        conversation.context["last_intent"] = intent_response.intent.value
+
         logger.info(
             f"Intent recognized: {intent_response.intent} "
-            f"(confidence: {intent_response.confidence})"
+            f"(confidence: {intent_response.confidence}, "
+            f"previous: {intent_context.get('previous_intent', 'none')})"
         )
 
         # A2UI: 根据意图决定是否生成 InsightData
         insight_data = None
         if intent_response.intent in INSIGHT_INTENTS:
+            # 检查是否是确认性回复（用户已确认要执行）
+            is_confirmation = intent_response.entities.get("is_confirmation", False)
+            inherited_from = intent_response.entities.get("inherited_from")
+
+            if is_confirmation:
+                logger.info(
+                    f"User confirmed action (inherited from: {inherited_from})"
+                )
+
             # 生成结构化的 InsightData
             logger.info("Generating InsightData for A2UI")
             insight = await insight_service.generate_insight(
@@ -221,6 +340,9 @@ async def send_message(
                 user_id=request.user_id,
                 context={
                     "entities": intent_response.entities,
+                    "is_confirmation": is_confirmation,  # 告知 insight 服务这是确认
+                    "inherited_from": inherited_from,
+                    "previous_intent": intent_context.get("previous_intent"),
                     **(request.context or {}),
                 },
             )

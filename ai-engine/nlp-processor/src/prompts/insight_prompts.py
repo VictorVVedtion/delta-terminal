@@ -225,6 +225,12 @@ STRATEGY_INSIGHT_PROMPT = ChatPromptTemplate.from_messages([
 2. 根据描述推断合理的参数配置
 3. 包含完整的风险管理参数
 4. 提供简洁的解释说明
+
+**重要：确认状态处理**
+- 如果 context 中 is_confirmation=true，说明用户已确认要创建策略
+- 此时 explanation 应该是"已为您创建策略..."的肯定语气
+- **绝对不要**在 explanation 中说"如果你想创建策略..."或类似的询问语句
+- 用户说"那制定这个策略吧"、"做吧"、"好的" = 已确认，直接执行
 """),
 ])
 

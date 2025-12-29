@@ -26,7 +26,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { InsightEmptyState } from '@/components/insight/InsightEmptyState'
 import { getSmartDefaultValue } from '@/lib/param-defaults'
+import { safeNumber, formatSafePercent } from '@/lib/safe-number'
 import { cn } from '@/lib/utils'
 import type {
   ImpactMetric,
@@ -49,25 +51,120 @@ export function InsightCard({
   compact = false,
 }: InsightCardProps) {
   const [isHovered, setIsHovered] = React.useState(false)
+  // 防重复提交状态
+  const [isApproving, setIsApproving] = React.useState(false)
+  const [isRejecting, setIsRejecting] = React.useState(false)
+  const actionInProgressRef = React.useRef(false)
+
+  // ========== 数据完整性检查 ==========
+  // 检查 insight 是否为 null 或 undefined
+  if (!insight) {
+    return (
+      <InsightEmptyState
+        reason="null-insight"
+        compact={compact}
+        onRetry={onExpand}
+      />
+    )
+  }
+
+  // 检查是否缺少关键字段
+  if (!insight.type || !insight.explanation) {
+    return (
+      <InsightEmptyState
+        reason="null-insight"
+        compact={compact}
+        onRetry={onExpand}
+        title="数据不完整"
+        description="AI 返回的分析结果缺少关键信息"
+      />
+    )
+  }
+
+  // 检查 params 是否为空（某些 insight 类型需要参数）
+  const hasParams = insight.params && insight.params.length > 0
+  if (!hasParams && ['strategy_create', 'strategy_modify', 'batch_adjust'].includes(insight.type)) {
+    return (
+      <InsightEmptyState
+        reason="no-params"
+        compact={compact}
+        onRetry={onExpand}
+      />
+    )
+  }
 
   // Get display info based on insight type
   const typeInfo = getInsightTypeInfo(insight.type)
 
   // Get key params to display (level 1 only, max 3)
-  const keyParams = insight.params.filter((p) => p.level === 1).slice(0, 3)
+  const keyParams = hasParams ? insight.params.filter((p) => p.level === 1).slice(0, 3) : []
 
   // Get symbol for smart defaults
-  const symbolParam = insight.params.find((p) => p.key === 'symbol')
+  const symbolParam = hasParams ? insight.params.find((p) => p.key === 'symbol') : undefined
   const symbol = typeof symbolParam?.value === 'string' ? symbolParam.value : undefined
 
-  // Get key metrics from impact
-  const keyMetrics = insight.impact?.metrics.slice(0, 2) || []
+  // Get key metrics from impact (使用安全访问)
+  const keyMetrics = insight.impact?.metrics?.slice(0, 2) || []
 
   // Truncate explanation
   const shortExplanation =
     insight.explanation.length > 100
       ? insight.explanation.slice(0, 100) + '...'
       : insight.explanation
+
+  // 批准处理函数 (防重复提交)
+  const handleApprove = React.useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation()
+
+      // 检查是否已经在处理中
+      if (actionInProgressRef.current || isApproving || isRejecting) {
+        return
+      }
+
+      // 设置处理中标志
+      actionInProgressRef.current = true
+      setIsApproving(true)
+
+      try {
+        await onApprove?.(insight.params)
+      } finally {
+        // 延迟重置标志，避免快速双击
+        setTimeout(() => {
+          actionInProgressRef.current = false
+          setIsApproving(false)
+        }, 500)
+      }
+    },
+    [onApprove, insight.params, isApproving, isRejecting]
+  )
+
+  // 拒绝处理函数 (防重复提交)
+  const handleReject = React.useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation()
+
+      // 检查是否已经在处理中
+      if (actionInProgressRef.current || isApproving || isRejecting) {
+        return
+      }
+
+      // 设置处理中标志
+      actionInProgressRef.current = true
+      setIsRejecting(true)
+
+      try {
+        await onReject?.()
+      } finally {
+        // 延迟重置标志，避免快速双击
+        setTimeout(() => {
+          actionInProgressRef.current = false
+          setIsRejecting(false)
+        }, 500)
+      }
+    },
+    [onReject, isApproving, isRejecting]
+  )
 
   return (
     <Card
@@ -146,15 +243,12 @@ export function InsightCard({
                     <Button
                       size="sm"
                       variant="default"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // Quick approve with current/default params
-                        onApprove?.(insight.params)
-                      }}
-                      className="gap-1 border-0 bg-gradient-to-r from-emerald-500 to-green-500 shadow-sm hover:from-emerald-600 hover:to-green-600"
+                      onClick={handleApprove}
+                      disabled={isApproving || isRejecting}
+                      className="gap-1 border-0 bg-gradient-to-r from-emerald-500 to-green-500 shadow-sm hover:from-emerald-600 hover:to-green-600 disabled:opacity-50"
                     >
-                      <CheckCheck className="h-3.5 w-3.5" />
-                      快速批准
+                      <CheckCheck className={cn('h-3.5 w-3.5', isApproving && 'animate-pulse')} />
+                      {isApproving ? '处理中...' : '快速批准'}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs p-0">
@@ -166,14 +260,12 @@ export function InsightCard({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onReject?.()
-                }}
+                onClick={handleReject}
+                disabled={isApproving || isRejecting}
                 className="gap-1"
               >
-                <X className="h-3 w-3" />
-                拒绝
+                <X className={cn('h-3 w-3', isRejecting && 'animate-pulse')} />
+                {isRejecting ? '处理中...' : '拒绝'}
               </Button>
             </div>
 
@@ -228,10 +320,12 @@ function StatusBadge({ status }: { status: InsightCardStatus }) {
   )
 }
 
-function ConfidenceBadge({ confidence }: { confidence: number }) {
-  const percent = Math.round(confidence * 100)
+function ConfidenceBadge({ confidence }: { confidence: number | undefined }) {
+  // 使用安全数值处理
+  const safeConfidence = safeNumber(confidence, 0)
+  const percent = Math.round(safeConfidence * 100)
   const color =
-    confidence >= 0.8 ? 'text-green-500' : confidence >= 0.6 ? 'text-yellow-500' : 'text-red-500'
+    safeConfidence >= 0.8 ? 'text-green-500' : safeConfidence >= 0.6 ? 'text-yellow-500' : 'text-red-500'
 
   return (
     <div className={cn('flex items-center gap-1 text-xs', color)}>
@@ -416,16 +510,16 @@ function formatParamValue(param: InsightParam, symbol?: string): string {
   }
 
   if (typeof value === 'number') {
-    const formatted =
-      param.config.precision !== undefined
-        ? value.toFixed(param.config.precision)
-        : value.toString()
-    return param.config.unit ? `${formatted}${param.config.unit}` : formatted
+    // 使用安全数值处理防止 NaN/Infinity
+    const safeValue = safeNumber(value, 0)
+    const precision = param.config?.precision !== undefined ? param.config.precision : 2
+    const formatted = safeValue.toFixed(precision)
+    return param.config?.unit ? `${formatted}${param.config.unit}` : formatted
   }
 
   if (typeof value === 'string') {
     // Try to find label from options
-    const option = param.config.options?.find((o) => o.value === value)
+    const option = param.config?.options?.find((o) => o.value === value)
     return option?.label || value
   }
 
@@ -433,7 +527,7 @@ function formatParamValue(param: InsightParam, symbol?: string): string {
     return `${value.length} 条件`
   }
 
-  return String(value)
+  return String(value ?? '')
 }
 
 // =============================================================================

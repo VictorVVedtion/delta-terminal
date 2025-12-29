@@ -31,6 +31,7 @@ class InsightType(str, Enum):
     BACKTEST_SUGGEST = "backtest_suggest"  # Backtest suggestions and results
     RISK_ANALYSIS = "risk_analysis"  # Portfolio risk analysis
     CLARIFICATION = "clarification"  # Request clarification from user (A2UI core)
+    GENERAL_CHAT = "general_chat"  # General chat response (A2UI 2.0)
 
 
 # =============================================================================

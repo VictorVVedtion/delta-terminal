@@ -1058,15 +1058,22 @@ export const reasoningChainResponse: InsightApiResponse = {
           content: '您想了解 BTC 当前是否适合入场。我需要分析市场状况和风险。',
           confidence: 0.92,
           status: 'pending',
-          available_actions: ['confirm', 'challenge'],
+          evidence: [],
           branches: [
             {
               id: 'alt_clarify',
               label: '让我帮您梳理',
               description: '我可以引导您一步步明确交易需求',
               probability: 0.9,
+              trade_offs: ['需要回答几个简单问题'],
             },
           ],
+          interactions: [],
+          available_actions: ['confirm', 'challenge'],
+          children: [],
+          created_at: new Date().toISOString(),
+          expanded: true,
+          highlight: true,
         },
         {
           id: 'node_analysis',
@@ -1075,32 +1082,49 @@ export const reasoningChainResponse: InsightApiResponse = {
           content: 'BTC 当前 RSI=73，处于超买区域，24h涨幅2%。',
           confidence: 0.85,
           status: 'pending',
+          evidence: [
+            { type: 'indicator', label: 'RSI(14)', value: 73, significance: 'high' },
+          ],
+          branches: [],
+          interactions: [],
           available_actions: ['confirm', 'challenge'],
+          children: [],
+          created_at: new Date().toISOString(),
+          expanded: false,
+          highlight: false,
         },
       ],
       status: 'in_progress',
+      active_node_id: 'node_understanding',
       overall_confidence: 0.88,
+      confirmed_count: 0,
+      total_count: 2,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
   },
 }
 
 /**
  * 推理链质疑响应 - 用户质疑某个推理步骤后的回应
+ * 注意：质疑响应不应该包含 insight，只返回纯文本解释
  */
 export const reasoningChallengeResponse: InsightApiResponse = {
   success: true,
-  message: '您对**理解您的需求**有疑问，让我重新解释一下。我理解您的意图是：您想了解 BTC 当前是否适合入场。如果我理解有误，请告诉我您真正想要的是什么？',
+  message: `您对**理解您的需求**有疑问，让我重新解释一下。
+
+我理解您的意图是：您想了解 BTC 当前是否适合入场，以便决定是否进行交易。
+
+**我的分析依据**：
+1. 您使用了"是否值得入场"这样的措辞，表明您在寻求交易建议
+2. BTC 是您关注的标的，说明您对加密货币市场感兴趣
+3. "现在"表示您关心的是短期时机
+
+如果我理解有误，请告诉我您真正想要的是什么？`,
   conversationId: 'conv_challenge_001',
-  intent: 'general_chat',
+  intent: 'exploratory', // 探索性响应，不触发 InsightCard
   confidence: 0.95,
-  insight: {
-    id: 'insight_challenge_001',
-    type: 'general_chat',
-    explanation:
-      '您对**理解您的需求**有疑问，让我重新解释一下。\n\n我理解您的意图是：您想了解 BTC 当前是否适合入场。\n\n如果我理解有误，请告诉我您真正想要的是什么？',
-    created_at: new Date().toISOString(),
-    show_reasoning: false,
-  },
+  suggestedActions: ['继续分析', '重新开始', '查看更多'],
 }
 
 /**

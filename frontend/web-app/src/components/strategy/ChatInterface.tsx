@@ -50,7 +50,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MagneticButton } from '@/components/ui/magnetic-button'
 import { notify, notifyWarning } from '@/components/ui/use-toast'
-import { useA2UIInsight } from '@/hooks/useA2UIInsight'
+import { MAX_MESSAGE_LENGTH, useA2UIInsight } from '@/hooks/useA2UIInsight'
 import { useBacktest } from '@/hooks/useBacktest'
 import { useDeployment } from '@/hooks/useDeployment'
 import { useMonitor } from '@/hooks/useMonitor'
@@ -78,6 +78,7 @@ import type {
   InsightParam,
   SensitivityInsightData,
 } from '@/types/insight'
+import type { NodeAction } from '@/types/reasoning'
 import { isClarificationInsight } from '@/types/insight'
 import type { EmergencyAction } from '@/types/intervention'
 import type { ResearchReport } from '@/types/research'
@@ -1033,6 +1034,117 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
   )
 
   // ==========================================================================
+  // A2UI 2.0: Reasoning Chain Interaction Handlers
+  // ==========================================================================
+
+  /**
+   * Handle user interaction with reasoning chain nodes
+   * Actions: confirm, challenge, modify, expand, collapse, skip
+   */
+  const handleReasoningNodeAction = React.useCallback(
+    async (insight: InsightData, nodeId: string, action: NodeAction, input?: string) => {
+      console.log('[ChatInterface] Reasoning node action:', { nodeId, action, input })
+
+      // Visual feedback based on action
+      if (action === 'confirm') {
+        notify('success', '已确认', { description: '已确认推理步骤' })
+      } else if (action === 'challenge') {
+        // User is challenging this reasoning step
+        // Add a follow-up message asking for clarification
+        const challengeMessage: Message = {
+          id: `challenge_${Date.now()}`,
+          role: 'user',
+          content: input || '我对这个判断有疑问',
+          timestamp: Date.now(),
+        }
+        setMessages((prev) => [...prev, challengeMessage])
+
+        // Send challenge to backend for re-evaluation
+        try {
+          setIsLoading(true)
+          const result = await sendToNLP(input || '请解释这个推理步骤', {
+            isChallenge: true,
+            challengedNodeId: nodeId,
+            insightId: insight.id,
+            reasoningChain: insight.reasoning_chain,
+          })
+
+          if (result) {
+            const responseMessage: Message = {
+              id: `challenge_response_${Date.now()}`,
+              role: 'assistant',
+              content: result.explanation || '让我重新解释这个推理...',
+              timestamp: Date.now(),
+              insight: result,
+              insightStatus: 'pending',
+            }
+            setMessages((prev) => [...prev, responseMessage])
+          }
+        } catch (error) {
+          console.error('[ChatInterface] Challenge error:', error)
+          notifyWarning('处理失败', { description: '无法处理您的质疑，请重试' })
+        } finally {
+          setIsLoading(false)
+        }
+      } else if (action === 'skip') {
+        notify('info', '已跳过', { description: '跳过此推理步骤' })
+      }
+
+      // Update local reasoning chain state if needed
+      // This could be used to track confirmed/challenged nodes
+    },
+    [sendToNLP]
+  )
+
+  /**
+   * Handle user selecting an alternative reasoning branch
+   * When user wants to explore a different strategy perspective
+   */
+  const handleReasoningBranchSelect = React.useCallback(
+    async (insight: InsightData, nodeId: string, branchId: string) => {
+      console.log('[ChatInterface] Reasoning branch selected:', { nodeId, branchId })
+
+      // Find the branch label for display
+      const node = insight.reasoning_chain?.nodes.find((n) => n.id === nodeId)
+      const branch = node?.branches?.find((b) => b.id === branchId)
+      const branchLabel = branch?.label || branchId
+
+      notify('info', '探索新分支', { description: `正在探索「${branchLabel}」策略角度...` })
+
+      // Send branch selection to backend to regenerate with this perspective
+      try {
+        setIsLoading(true)
+
+        const result = await sendToNLP(`我想使用「${branchLabel}」策略角度`, {
+          isBranchSelection: true,
+          selectedBranchId: branchId,
+          selectedNodeId: nodeId,
+          insightId: insight.id,
+          strategyPerspective: branchId,
+        })
+
+        if (result) {
+          const branchMessage: Message = {
+            id: `branch_${Date.now()}`,
+            role: 'assistant',
+            content: result.explanation || `好的，让我按照「${branchLabel}」角度重新分析...`,
+            timestamp: Date.now(),
+            insight: result,
+            insightStatus: 'pending',
+          }
+          setMessages((prev) => [...prev, branchMessage])
+        }
+      } catch (error) {
+        console.error('[ChatInterface] Branch selection error:', error)
+        notifyWarning('分支选择失败', { description: '无法切换到该策略角度，请重试' })
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [sendToNLP]
+  )
+
+  // ==========================================================================
   // EPIC-010 S10.2: Clarification Answer Handler
   // ==========================================================================
   const handleClarificationAnswer = React.useCallback(
@@ -1700,6 +1812,8 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 onApprove={handleInsightApprove}
                 onReject={handleInsightReject}
                 onClarificationAnswer={handleClarificationAnswer}
+                onReasoningNodeAction={handleReasoningNodeAction}
+                onReasoningBranchSelect={handleReasoningBranchSelect}
               />
             ) : (
               <ChatMessage key={message.id} message={message} />
@@ -1784,6 +1898,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                 }}
                 placeholder="描述你想要的交易策略..."
                 disabled={isLoading || isThinking}
+                maxLength={MAX_MESSAGE_LENGTH}
                 className={cn(
                   'h-12 w-full rounded-xl px-4 pr-12',
                   'border border-border bg-card',
@@ -1791,14 +1906,33 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                   'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50',
                   'disabled:opacity-50',
                   'transition-all duration-200',
-                  'shadow-sm focus:shadow-lg' // Add shadow on focus
+                  'shadow-sm focus:shadow-lg', // Add shadow on focus
+                  input.length > MAX_MESSAGE_LENGTH * 0.9 && 'border-yellow-500 focus:ring-yellow-500/50'
                 )}
               />
+              {/* 字符计数显示 */}
+              {input.length > 0 && (
+                <div
+                  className={cn(
+                    'absolute bottom-full right-2 mb-1 rounded-md px-2 py-0.5 text-xs transition-colors',
+                    input.length > MAX_MESSAGE_LENGTH * 0.9
+                      ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500'
+                      : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {input.length} / {MAX_MESSAGE_LENGTH}
+                </div>
+              )}
               <div className="absolute right-2 top-1/2 -translate-y-1/2">
                 <MagneticButton
                   type="submit"
                   size="icon"
-                  disabled={isLoading || isThinking || !input.trim()}
+                  disabled={
+                    isLoading ||
+                    isThinking ||
+                    !input.trim() ||
+                    input.length > MAX_MESSAGE_LENGTH
+                  }
                   className="h-8 w-8 rounded-lg"
                   springConfig={{ stiffness: 200, damping: 10, mass: 0.5 }}
                 >

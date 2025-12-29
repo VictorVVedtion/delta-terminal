@@ -226,7 +226,7 @@ class MockApiControllerImpl implements MockApiController {
       })
     })
 
-    // Mock backtest API
+    // Mock backtest API - 返回完整的回测统计数据
     await this.page.route('**/api/backtest/**', async (route) => {
       if (!this.mockEnabled) {
         await route.continue()
@@ -234,10 +234,49 @@ class MockApiControllerImpl implements MockApiController {
       }
 
       await new Promise((resolve) => setTimeout(resolve, this.delayMs))
+
+      // 返回完整的回测结果，包含前端期望的所有字段
+      const backtestResult = {
+        success: true,
+        stats: {
+          totalReturn: 15.5,
+          annualizedReturn: 62.0,
+          winRate: 65.2,
+          profitFactor: 1.75,
+          maxDrawdown: 8.5,
+          maxDrawdownDays: 5,
+          sharpeRatio: 1.35,
+          sortinoRatio: 1.85,
+          totalTrades: 32,
+          winningTrades: 21,
+          losingTrades: 11,
+          avgWin: 350,
+          avgLoss: 180,
+          maxWin: 850,
+          maxLoss: 280,
+          avgHoldingTime: 24,
+          initialCapital: 10000,
+          finalCapital: 11550,
+          peakCapital: 12000,
+          totalFees: 85.5,
+        },
+        trades: [],
+        equityCurve: [
+          { timestamp: Date.now() - 86400000 * 30, equity: 10000, dailyPnl: 0, cumulativePnl: 0, drawdown: 0 },
+          { timestamp: Date.now() - 86400000 * 15, equity: 11200, dailyPnl: 80, cumulativePnl: 1200, drawdown: 0 },
+          { timestamp: Date.now(), equity: 11550, dailyPnl: 50, cumulativePnl: 1550, drawdown: 0 },
+        ],
+        period: {
+          start: Date.now() - 86400000 * 30,
+          end: Date.now(),
+        },
+        aiSummary: '回测表现良好，策略通过基础指标检验。',
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true }),
+        body: JSON.stringify(backtestResult),
       })
     })
 

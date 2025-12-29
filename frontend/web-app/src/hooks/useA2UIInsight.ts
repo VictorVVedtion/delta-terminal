@@ -98,6 +98,9 @@ const RETRY_DELAY_BASE = 1000
 /** 最大重试延迟 (毫秒) */
 const MAX_RETRY_DELAY = 10000
 
+/** 消息最大长度 (字符) */
+const MAX_MESSAGE_LENGTH = 4000
+
 // =============================================================================
 // Initial State
 // =============================================================================
@@ -115,6 +118,99 @@ const initialState: UseA2UIInsightState = {
   collectedParams: {},
   currentStep: 0,
   remainingQuestions: 0,
+}
+
+// =============================================================================
+// Security Functions
+// =============================================================================
+
+/**
+ * 输入消毒函数 - 移除潜在的恶意内容
+ *
+ * 检测并移除:
+ * - HTML/Script 标签
+ * - SQL 注入模式
+ * - 命令注入模式
+ */
+function sanitizeInput(input: string): string {
+  if (!input || typeof input !== 'string') {
+    return ''
+  }
+
+  let sanitized = input
+
+  // 移除 HTML/Script 标签
+  sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  sanitized = sanitized.replace(/<[^>]*>/g, '')
+
+  // 移除常见的 SQL 注入模式
+  const sqlPatterns = [
+    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b)/gi,
+    /(--|\/\*|\*\/|;)/g,
+    /(\bOR\b\s+\d+\s*=\s*\d+)/gi,
+    /(\bUNION\b.*\bSELECT\b)/gi,
+  ]
+  sqlPatterns.forEach((pattern) => {
+    sanitized = sanitized.replace(pattern, '')
+  })
+
+  // 移除命令注入模式
+  const commandPatterns = [
+    /[;&|`$()]/g, // Shell 特殊字符
+  ]
+  commandPatterns.forEach((pattern) => {
+    sanitized = sanitized.replace(pattern, '')
+  })
+
+  // 移除多余空白字符
+  sanitized = sanitized.trim()
+
+  return sanitized
+}
+
+/**
+ * 验证并清理消息输入
+ *
+ * @param message 用户输入的消息
+ * @returns 验证结果 {valid: boolean, cleaned: string, error?: string}
+ */
+function validateAndCleanMessage(message: string): {
+  valid: boolean
+  cleaned: string
+  error?: string
+} {
+  // 检查空消息
+  if (!message || typeof message !== 'string') {
+    return { valid: false, cleaned: '', error: '消息不能为空' }
+  }
+
+  // 检查长度限制
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return {
+      valid: false,
+      cleaned: '',
+      error: `消息长度超过限制 (最多 ${MAX_MESSAGE_LENGTH} 字符)`,
+    }
+  }
+
+  // 消毒输入
+  const cleaned = sanitizeInput(message)
+
+  // 检查消毒后是否为空
+  if (!cleaned) {
+    return { valid: false, cleaned: '', error: '消息内容无效' }
+  }
+
+  // 检查消毒后长度是否显著缩短 (可能包含大量恶意内容)
+  if (cleaned.length < message.length * 0.5 && message.length > 100) {
+    return {
+      valid: false,
+      cleaned: '',
+      error: '消息包含不安全的内容，请重新输入',
+    }
+  }
+
+  return { valid: true, cleaned }
 }
 
 // =============================================================================
@@ -351,11 +447,19 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
    */
   const sendMessage = useCallback(
     async (message: string, context?: Record<string, unknown>): Promise<InsightData | null> => {
+      // 验证并清理输入
+      const validation = validateAndCleanMessage(message)
+      if (!validation.valid) {
+        setState((prev) => ({ ...prev, error: validation.error || '输入验证失败' }))
+        return null
+      }
+
       setState((prev) => ({ ...prev, isLoading: true, error: null }))
       setStoreLoading(true)
 
       try {
-        const response = await fetchInsight(message, context)
+        // 使用清理后的消息
+        const response = await fetchInsight(validation.cleaned, context)
 
         if (!response) {
           throw new Error('无法获取 AI 响应')
@@ -420,10 +524,16 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
           answerText = answerText ? `${answerText}; ${answer.customText}` : answer.customText
         }
 
+        // 验证并清理回答文本
+        const validation = validateAndCleanMessage(answerText)
+        if (!validation.valid) {
+          throw new Error(validation.error || '回答内容无效')
+        }
+
         // 更新已收集的参数
         const newCollectedParams = {
           ...state.collectedParams,
-          [state.clarification.category]: answerText,
+          [state.clarification.category]: validation.cleaned,
         }
 
         setState((prev) => ({
@@ -434,7 +544,7 @@ export function useA2UIInsight(): UseA2UIInsightReturn {
         // 发送回答给后端继续对话
         // 注意：必须显式传递 collectedParams，因为 setState 是异步的
         // fetchInsight 使用 state.collectedParams 可能还是旧值
-        const response = await fetchInsight(answerText, {
+        const response = await fetchInsight(validation.cleaned, {
           isFollowUp: true,
           previousQuestion: state.clarification.question,
           category: state.clarification.category,
@@ -542,4 +652,5 @@ export function needsApproval(insight: InsightData | null): boolean {
 // Export
 // =============================================================================
 
+export { MAX_MESSAGE_LENGTH }
 export default useA2UIInsight

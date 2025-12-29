@@ -10,9 +10,28 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
 
 你的任务是分析用户输入，识别其真实意图，并提取关键信息。
 
-可能的意图类型（注意：返回的 intent 字段必须使用下面的小写格式）：
+## 重要：对话上下文感知
+
+你必须考虑对话历史（在 context 中的 chatHistory 或 previous_intent）。以下情况需要特别处理：
+
+### 1. 确认性回复 → 继承上一个意图
+当用户的回复是对之前提议的确认时，应识别为相关的执行意图：
+- 用户说"好的"、"可以"、"做吧"、"那就这样"、"那制定这个策略吧" → 如果之前是 analyze_market，则现在是 create_strategy
+- 用户说"开始回测"、"测试一下" → backtest
+- 用户说"启动"、"运行" → 这是策略执行确认
+
+### 2. 追问性回复 → 保持当前意图
+- 用户说"你觉得呢？"、"有什么建议？" → 如果之前是 analyze_market，继续 analyze_market（但需要给出建议）
+- 用户说"继续"、"然后呢？" → 保持之前的意图
+
+### 3. 转换性回复 → 识别新意图
+- 用户明确提出新的需求时才切换意图
+
+## 意图类型（返回的 intent 字段必须使用小写格式）：
+
 1. create_strategy - 用户想要创建新的交易策略
-   关键词：创建、制定、设计、新策略、帮我写个策略、RSI策略、MACD策略、网格策略等
+   关键词：创建、制定、设计、新策略、帮我写个策略、RSI策略、那制定这个策略吧等
+   **特殊情况**：在 analyze_market 后用户确认"做吧"、"制定吧" = create_strategy
 
 2. modify_strategy - 用户想要修改现有策略
    关键词：修改、调整、更新、改变等
@@ -25,6 +44,7 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
 
 5. analyze_market - 用户想要分析市场或查询价格
    关键词：分析市场、趋势分析、行情分析、价格分析、多少钱、什么价格、现在价格、当前价格、行情、涨跌、走势等
+   **追问情况**：用户说"你觉得呢？" 且之前是 analyze_market，继续分析并给出观点
 
 6. backtest - 用户想要进行回测
    关键词：回测、测试、历史数据、效果如何等
@@ -38,45 +58,46 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
 9. risk_analysis - 用户想要风险分析
    关键词：风险分析、风险评估、风险检查、投资组合风险、仓位风险、VaR、最大回撤等
 
-10. general_chat - 一般对话
-    关键词：问候、感谢、闲聊等
+10. general_chat - 一般对话（问候、感谢、闲聊）
+    **注意**：如果有明确的上一个意图，"你觉得呢"不应该是 general_chat
 
 11. unknown - 无法识别的意图
 
-分析时请考虑：
-- 用户的明确表述
-- 上下文信息
-- 隐含的需求
-- 区分"优化"（改进现有策略）和"修改"（改变策略配置）
+## 分析步骤：
+1. 先查看 context 中的 previous_intent 或 chatHistory
+2. 判断当前输入是"确认"、"追问"还是"新需求"
+3. 根据上述规则确定意图
+4. 从对话中提取实体信息
 
-输出格式要求：
-返回 JSON 格式，包含：
+## 输出格式：
 {{
-  "intent": "意图类型（必须是上面列出的小写格式之一，如 create_strategy）",
+  "intent": "意图类型",
   "confidence": 0.0-1.0,
   "entities": {{
-    "symbol": "交易对（如果提到）",
-    "timeframe": "时间周期（如果提到）",
-    "strategy_type": "策略类型（如果提到）",
-    "strategy_id": "策略 ID（如果提到）",
+    "symbol": "交易对",
+    "timeframe": "时间周期",
+    "strategy_type": "策略类型",
+    "strategy_id": "策略 ID",
     "other_params": {{}}
   }},
-  "reasoning": "简要说明识别理由"
+  "reasoning": "识别理由，包括如何考虑上下文",
+  "is_confirmation": true/false,  // 是否是对之前提议的确认
+  "inherited_from": "继承自哪个意图（如果是确认性回复）"
 }}
 
-示例响应（用户说"帮我创建RSI策略"）：
-{{
-  "intent": "create_strategy",
-  "confidence": 0.95,
-  "entities": {{
-    "symbol": null,
-    "timeframe": null,
-    "strategy_type": "rsi",
-    "strategy_id": null,
-    "other_params": {{"indicator": "RSI"}}
-  }},
-  "reasoning": "用户使用了'创建'关键词，并明确提到了RSI策略类型"
-}}"""
+## 示例
+
+示例1 - 确认创建策略：
+用户之前说"BTC现在什么行情？"（analyze_market）
+AI 给出了分析和策略建议
+用户现在说"那制定这个策略吧"
+→ 应识别为 create_strategy，is_confirmation=true，inherited_from="analyze_market"
+
+示例2 - 追问分析：
+用户之前说"BTC现在什么行情？"
+AI 给出了数据
+用户现在说"你觉得呢？"
+→ 应识别为 analyze_market（继续分析，给出观点），不是 general_chat"""
 
 INTENT_RECOGNITION_PROMPT = ChatPromptTemplate.from_messages([
     ("system", INTENT_RECOGNITION_SYSTEM_PROMPT),
