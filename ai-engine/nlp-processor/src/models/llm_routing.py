@@ -311,7 +311,16 @@ class ModelRoutingConfig(BaseModel):
     )
 
     def get_model_for_task(self, task: LLMTaskType) -> str:
-        """获取任务对应的模型 ID"""
+        """
+        获取任务对应的模型 ID (P0 优化: 支持用户偏好)
+
+        优先级:
+        1. 用户任务级覆盖
+        2. 用户全局默认
+        3. 用户偏好自动选择 (prefer_speed/prefer_cost)
+        4. 系统默认
+        5. 降级模型
+        """
         # 1. 检查用户覆盖
         if self.user_overrides:
             if task in self.user_overrides.task_routing:
@@ -325,13 +334,24 @@ class ModelRoutingConfig(BaseModel):
                 if model_id in AVAILABLE_MODELS and AVAILABLE_MODELS[model_id].enabled:
                     return model_id
 
-        # 3. 使用系统默认
+            # 3. P0 优化: 根据用户偏好自动选择模型
+            if self.user_overrides.prefer_speed:
+                fastest = get_fastest_model_for_task(task)
+                if fastest and fastest.id in AVAILABLE_MODELS:
+                    return fastest.id
+
+            if self.user_overrides.prefer_cost:
+                cheapest = get_cheapest_model_for_task(task)
+                if cheapest and cheapest.id in AVAILABLE_MODELS:
+                    return cheapest.id
+
+        # 4. 使用系统默认
         if task in self.system_defaults:
             model_id = self.system_defaults[task]
             if model_id in AVAILABLE_MODELS and AVAILABLE_MODELS[model_id].enabled:
                 return model_id
 
-        # 4. 降级
+        # 5. 降级
         return self.fallback_model
 
 

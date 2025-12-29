@@ -70,3 +70,4 @@ Delta Terminal 的前端完成度超出预期，尤其是 **AI Thinking Process*
 2.  增加 **策略回测 (Backtest)** 结果的可视化图表交互测试。
 3.  优化首次用户的 **Onboarding** 体验。
 
+

@@ -1,0 +1,79 @@
+##
+# Docker Compose for E2E Testing
+#
+# 用于 CI/CD 环境中运行完整的 E2E 测试
+# 包含 NLP Processor 服务和前端应用
+#
+# 使用方法:
+#   docker-compose -f docker-compose.test.yml up -d
+#   pnpm test:e2e:ci
+#   docker-compose -f docker-compose.test.yml down
+##
+
+services:
+  # NLP Processor 服务
+  nlp-processor:
+    build:
+      context: ../../ai-engine/nlp-processor
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+      - DEFAULT_MODEL=anthropic/claude-3.5-sonnet
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - test-network
+
+  # 前端应用
+  web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=test
+      - NEXT_PUBLIC_NLP_PROCESSOR_URL=http://nlp-processor:8001
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    depends_on:
+      nlp-processor:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - test-network
+
+  # Playwright 测试运行器
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.57.0-focal
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ./e2e/test-results:/app/e2e/test-results
+      - ./playwright-report:/app/playwright-report
+    environment:
+      - CI=true
+      - PLAYWRIGHT_BASE_URL=http://web-app:3000
+    depends_on:
+      web-app:
+        condition: service_healthy
+    command: npx playwright test --project=chromium
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

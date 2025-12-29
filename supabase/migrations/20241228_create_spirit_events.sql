@@ -55,3 +55,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE spirit_events;
 
 COMMENT ON TABLE spirit_events IS 'Spirit Daemon 事件流 - 用于实时推送系统状态到前端';
 
+

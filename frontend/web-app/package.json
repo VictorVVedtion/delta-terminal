@@ -17,7 +17,14 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:chat": "playwright test --project=ai-chat",
+    "test:e2e:backtest": "playwright test --project=ai-backtest",
+    "test:e2e:monitor": "playwright test --project=ai-monitor",
+    "test:e2e:error": "playwright test --project=ai-error",
+    "test:e2e:advanced": "playwright test --project=ai-advanced",
+    "test:e2e:ai": "playwright test ai-chat-flow ai-backtest-deploy ai-monitor ai-error-handling ai-advanced-features",
+    "test:e2e:ci": "CI=true playwright test --project=chromium"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

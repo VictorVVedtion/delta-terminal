@@ -39,3 +39,4 @@ export function SpiritProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+

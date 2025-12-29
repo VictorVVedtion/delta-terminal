@@ -1,7 +1,11 @@
-"""意图识别服务"""
+"""意图识别服务
+
+P0 优化: 集成 Redis 缓存，减少重复 LLM 调用
+"""
 
 import json
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..models.schemas import IntentRecognitionRequest, IntentRecognitionResponse, IntentType
@@ -14,6 +18,7 @@ from ..models.llm_routing import LLMTaskType
 from ..prompts.strategy_prompts import INTENT_RECOGNITION_PROMPT
 from .llm_service import LLMService, get_llm_service
 from .llm_router import LLMRouter, get_llm_router
+from .intent_cache import IntentCache, get_intent_cache
 from ..utils.input_sanitizer import (
     sanitize_user_input,
     sanitize_for_llm,
@@ -38,13 +43,14 @@ TECHNICAL_INDICATOR_KEYWORDS: List[str] = [
 
 
 class IntentService:
-    """意图识别服务"""
+    """意图识别服务 (P0 优化: 集成 Redis 缓存)"""
 
     def __init__(
         self,
         llm_service: LLMService,
         llm_router: Optional[LLMRouter] = None,
         user_id: Optional[str] = None,
+        intent_cache: Optional[IntentCache] = None,
     ):
         """
         初始化意图服务
@@ -53,15 +59,20 @@ class IntentService:
             llm_service: LLM 服务实例 (deprecated, use llm_router)
             llm_router: LLM 路由服务实例 (推荐)
             user_id: 用户 ID (用于加载用户特定配置)
+            intent_cache: 意图缓存实例 (P0 优化)
         """
         self.llm_service = llm_service
         self.llm_router = llm_router
         self.user_id = user_id
+        self.intent_cache = intent_cache
 
         if self.llm_router:
             logger.info("IntentService: Using LLMRouter for task-based model selection")
         else:
             logger.info("IntentService: Using legacy LLMService (single model)")
+
+        if self.intent_cache:
+            logger.info("IntentService: Intent caching enabled (P0 optimization)")
 
     async def recognize_intent(
         self,
@@ -69,7 +80,7 @@ class IntentService:
         user_id: Optional[str] = None,
     ) -> IntentRecognitionResponse:
         """
-        识别用户意图
+        识别用户意图 (P0 优化: 支持缓存)
 
         Args:
             request: 意图识别请求
@@ -80,6 +91,7 @@ class IntentService:
         """
         # 使用传入的 user_id，或回退到实例级别的 user_id
         effective_user_id = user_id or self.user_id
+        start_time = time.time()
 
         try:
             # ====================================================================
@@ -113,6 +125,21 @@ class IntentService:
 
             # 为 LLM 准备安全输入
             safe_input = sanitize_for_llm(cleaned_text, context="intent_recognition")
+
+            # ====================================================================
+            # P0 优化: 检查缓存
+            # ====================================================================
+            if self.intent_cache:
+                cached_response = await self.intent_cache.get(
+                    safe_input, request.context
+                )
+                if cached_response:
+                    elapsed = (time.time() - start_time) * 1000
+                    logger.info(
+                        f"Intent cache HIT: {cached_response.intent} "
+                        f"(latency: {elapsed:.0f}ms, saved ~800-1500ms)"
+                    )
+                    return cached_response
 
             logger.info(f"Recognizing intent for text: {safe_input[:100]}...")
 
@@ -157,14 +184,26 @@ class IntentService:
             entities = response.get("entities", {})
             reasoning = response.get("reasoning", "")
 
-            logger.info(f"Recognized intent: {intent} (confidence: {confidence})")
+            elapsed = (time.time() - start_time) * 1000
+            logger.info(
+                f"Recognized intent: {intent} "
+                f"(confidence: {confidence}, latency: {elapsed:.0f}ms)"
+            )
 
-            return IntentRecognitionResponse(
+            result = IntentRecognitionResponse(
                 intent=intent,
                 confidence=confidence,
                 entities=entities,
                 reasoning=reasoning,
             )
+
+            # ====================================================================
+            # P0 优化: 缓存结果
+            # ====================================================================
+            if self.intent_cache:
+                await self.intent_cache.set(safe_input, result, request.context)
+
+            return result
 
         except Exception as e:
             logger.error(f"Error recognizing intent: {e}")
@@ -377,7 +416,7 @@ class IntentService:
 
 async def get_intent_service(user_id: Optional[str] = None) -> IntentService:
     """
-    获取意图服务实例
+    获取意图服务实例 (P0 优化: 自动初始化缓存)
 
     Args:
         user_id: 用户 ID (可选，用于加载用户模型配置)
@@ -387,8 +426,13 @@ async def get_intent_service(user_id: Optional[str] = None) -> IntentService:
     """
     llm_service = get_llm_service()
     llm_router = get_llm_router()
+
+    # P0 优化: 获取意图缓存实例
+    intent_cache = await get_intent_cache()
+
     return IntentService(
         llm_service=llm_service,
         llm_router=llm_router,
         user_id=user_id,
+        intent_cache=intent_cache,
     )

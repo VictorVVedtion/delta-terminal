@@ -3,10 +3,14 @@ InsightData Generation Service
 
 A2UI (Agent-to-UI) core service that generates structured InsightData
 instead of plain text responses.
+
+P1 优化: 并行化 LLM 调用和市场数据预加载
 """
 
+import asyncio
 import json
 import logging
+import time
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -323,6 +327,8 @@ class InsightGeneratorService:
         """
         Generate InsightData from user input
 
+        P1 优化: 并行化推理链生成和市场数据预加载
+
         Args:
             user_input: User's natural language input
             intent: Detected intent type
@@ -335,24 +341,64 @@ class InsightGeneratorService:
         Returns:
             Structured InsightData with optional reasoning chain
         """
+        start_time = time.time()
         try:
             logger.info(f"Generating insight for user {user_id}, intent: {intent}")
 
             # Extract entities from context
             entities = (context or {}).get("entities", {})
+            context = context or {}
 
-            # A2UI 2.0: Generate reasoning chain if service is available
-            reasoning_chain = None
+            # ================================================================
+            # P1 优化: 并行预加载数据
+            # 在等待主要处理的同时，预加载可能需要的数据
+            # ================================================================
+            parallel_tasks = []
+
+            # 1. 推理链生成 (可选)
+            reasoning_task = None
             if include_reasoning and self.reasoning_service:
-                try:
-                    reasoning_chain = await self.reasoning_service.generate_reasoning_chain(
-                        user_input=user_input,
-                        intent=intent,
-                        context=context,
-                    )
-                    logger.info(f"Generated reasoning chain with {len(reasoning_chain.nodes)} nodes")
-                except Exception as e:
-                    logger.warning(f"Failed to generate reasoning chain: {e}")
+                reasoning_task = asyncio.create_task(
+                    self._safe_generate_reasoning(user_input, intent, context)
+                )
+                parallel_tasks.append(reasoning_task)
+
+            # 2. 市场数据预加载 (如果是策略/分析相关意图)
+            market_task = None
+            if intent in [
+                IntentType.CREATE_STRATEGY,
+                IntentType.ANALYZE_MARKET,
+                IntentType.OPTIMIZE_STRATEGY,
+                IntentType.RISK_ANALYSIS,
+            ] and self.market_data_service:
+                symbol = self._extract_symbol_from_input(user_input) or "BTC/USDT"
+                market_task = asyncio.create_task(
+                    self._safe_get_market_data(symbol, context)
+                )
+                parallel_tasks.append(market_task)
+
+            # 等待并行任务完成 (不阻塞主流程)
+            reasoning_chain = None
+            if parallel_tasks:
+                # 使用 wait 而不是 gather，允许部分失败
+                done, _ = await asyncio.wait(
+                    parallel_tasks,
+                    timeout=5.0,  # 最多等待 5 秒
+                    return_when=asyncio.ALL_COMPLETED,
+                )
+
+                # 收集结果
+                if reasoning_task and reasoning_task in done:
+                    reasoning_chain = reasoning_task.result()
+                    if reasoning_chain:
+                        logger.info(f"Reasoning chain ready ({len(reasoning_chain.nodes)} nodes)")
+
+                if market_task and market_task in done:
+                    market_data = market_task.result()
+                    if market_data and market_data.get("data_available"):
+                        context["real_market_data"] = market_data
+                        context["market_context"] = self._format_market_context(market_data)
+                        logger.info(f"Market data preloaded for {market_data.get('symbol')}")
 
             # 获取多步骤引导中已收集的参数
             collected_params = (context or {}).get("collected_params", {})
@@ -442,11 +488,59 @@ class InsightGeneratorService:
                 )
 
             # A2UI 2.0: Attach reasoning chain to insight before returning
-            return self._attach_reasoning_chain(insight, reasoning_chain)
+            insight = self._attach_reasoning_chain(insight, reasoning_chain)
+
+            elapsed = (time.time() - start_time) * 1000
+            logger.info(f"Insight generated in {elapsed:.0f}ms (type={insight.type})")
+            return insight
 
         except Exception as e:
-            logger.error(f"Error generating insight: {e}", exc_info=True)
+            elapsed = (time.time() - start_time) * 1000
+            logger.error(f"Error generating insight after {elapsed:.0f}ms: {e}", exc_info=True)
             return self._create_error_insight(str(e))
+
+    async def _safe_generate_reasoning(
+        self,
+        user_input: str,
+        intent: IntentType,
+        context: Optional[Dict[str, Any]],
+    ):
+        """
+        安全的推理链生成 (用于并行任务)
+
+        不抛出异常，失败时返回 None
+        """
+        try:
+            return await self.reasoning_service.generate_reasoning_chain(
+                user_input=user_input,
+                intent=intent,
+                context=context,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to generate reasoning chain: {e}")
+            return None
+
+    async def _safe_get_market_data(
+        self,
+        symbol: str,
+        context: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        安全的市场数据获取 (用于并行任务)
+
+        不抛出异常，失败时返回空数据
+        """
+        try:
+            # 如果 context 中已有市场数据，直接返回
+            if context and "real_market_data" in context:
+                return context["real_market_data"]
+
+            if self.market_data_service:
+                return await self.market_data_service.get_market_summary(symbol)
+        except Exception as e:
+            logger.warning(f"Failed to preload market data for {symbol}: {e}")
+
+        return {"symbol": symbol, "data_available": False}
 
     async def _generate_strategy_insight(
         self,
