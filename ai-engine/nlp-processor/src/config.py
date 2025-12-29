@@ -39,9 +39,11 @@ class Settings(BaseSettings):
         default="https://openrouter.ai/api/v1",
         description="OpenRouter API URL",
     )
+    # 默认模型: DeepSeek V3.2 - 高性价比 ($0.224/$0.32)
+    # 意图识别等轻量任务通过 LLMRouter 自动路由到 GPT-4o mini
     llm_model: str = Field(
-        default="anthropic/claude-sonnet-4.5",
-        description="LLM 模型名称 (OpenRouter 格式)",
+        default="deepseek/deepseek-chat-v3-0324",
+        description="LLM 默认模型 (OpenRouter 格式)",
     )
     llm_max_tokens: int = Field(default=4096, description="最大 token 数")
     llm_temperature: float = Field(default=0.7, description="温度参数")

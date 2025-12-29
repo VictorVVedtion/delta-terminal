@@ -85,7 +85,7 @@ class ModelInfo(BaseModel):
 # =============================================================================
 
 AVAILABLE_MODELS: Dict[str, ModelInfo] = {
-    # ==================== 高性能模型 ====================
+    # ==================== 高性能模型 (PREMIUM) ====================
     "anthropic/claude-sonnet-4.5": ModelInfo(
         id="anthropic/claude-sonnet-4.5",
         name="Claude Sonnet 4.5",
@@ -100,10 +100,9 @@ AVAILABLE_MODELS: Dict[str, ModelInfo] = {
             ModelCapability.LONG_CONTEXT,
         ],
         context_length=200000,
-        avg_tps=80,
+        avg_tps=50,
         recommended_for=[
             LLMTaskType.STRATEGY_GENERATION,
-            LLMTaskType.INSIGHT_GENERATION,
             LLMTaskType.COMPLEX_REASONING,
         ],
     ),
@@ -121,14 +120,13 @@ AVAILABLE_MODELS: Dict[str, ModelInfo] = {
             ModelCapability.STRUCTURED_OUTPUT,
         ],
         context_length=200000,
-        avg_tps=75,
+        avg_tps=50,
         recommended_for=[
             LLMTaskType.STRATEGY_GENERATION,
-            LLMTaskType.INSIGHT_GENERATION,
         ],
     ),
 
-    # ==================== 平衡型模型 ====================
+    # ==================== 平衡型模型 (BALANCED) ====================
     "google/gemini-2.0-flash-001": ModelInfo(
         id="google/gemini-2.0-flash-001",
         name="Gemini 2.0 Flash",
@@ -147,7 +145,7 @@ AVAILABLE_MODELS: Dict[str, ModelInfo] = {
         recommended_for=[
             LLMTaskType.MARKET_ANALYSIS,
             LLMTaskType.CLARIFICATION,
-            LLMTaskType.PERSPECTIVE_RECOMMEND,
+            LLMTaskType.SIMPLE_CHAT,
         ],
     ),
 
@@ -163,17 +161,81 @@ AVAILABLE_MODELS: Dict[str, ModelInfo] = {
             ModelCapability.CODING,
             ModelCapability.CHEAP,
             ModelCapability.STRUCTURED_OUTPUT,
+            ModelCapability.MULTILINGUAL,
         ],
         context_length=64000,
         avg_tps=60,
         recommended_for=[
             LLMTaskType.INSIGHT_GENERATION,
             LLMTaskType.MARKET_ANALYSIS,
-            LLMTaskType.STRATEGY_GENERATION,
+            LLMTaskType.PERSPECTIVE_RECOMMEND,
         ],
     ),
 
-    # ==================== 经济型模型 ====================
+    "deepseek/deepseek-chat-v3-0324": ModelInfo(
+        id="deepseek/deepseek-chat-v3-0324",
+        name="DeepSeek V3.2",
+        provider="DeepSeek",
+        tier=ModelTier.BALANCED,
+        input_price=0.224,
+        output_price=0.32,
+        capabilities=[
+            ModelCapability.REASONING,
+            ModelCapability.CODING,
+            ModelCapability.CHEAP,
+            ModelCapability.STRUCTURED_OUTPUT,
+            ModelCapability.MULTILINGUAL,
+        ],
+        context_length=164000,
+        avg_tps=60,
+        recommended_for=[
+            LLMTaskType.INSIGHT_GENERATION,
+            LLMTaskType.STRATEGY_GENERATION,
+            LLMTaskType.COMPLEX_REASONING,
+        ],
+    ),
+
+    "anthropic/claude-3.5-haiku": ModelInfo(
+        id="anthropic/claude-3.5-haiku",
+        name="Claude 3.5 Haiku",
+        provider="Anthropic",
+        tier=ModelTier.BALANCED,
+        input_price=0.80,
+        output_price=4.0,
+        capabilities=[
+            ModelCapability.FAST,
+            ModelCapability.STRUCTURED_OUTPUT,
+        ],
+        context_length=200000,
+        avg_tps=80,
+        recommended_for=[
+            LLMTaskType.ENTITY_EXTRACTION,
+            LLMTaskType.CLARIFICATION,
+        ],
+    ),
+
+    # ==================== 经济型模型 (ECONOMY) - 意图识别首选 ====================
+    "openai/gpt-4o-mini": ModelInfo(
+        id="openai/gpt-4o-mini",
+        name="GPT-4o Mini",
+        provider="OpenAI",
+        tier=ModelTier.ECONOMY,
+        input_price=0.15,
+        output_price=0.60,
+        capabilities=[
+            ModelCapability.FAST,
+            ModelCapability.CHEAP,
+            ModelCapability.STRUCTURED_OUTPUT,
+        ],
+        context_length=128000,
+        avg_tps=100,
+        recommended_for=[
+            LLMTaskType.INTENT_RECOGNITION,
+            LLMTaskType.ENTITY_EXTRACTION,
+            LLMTaskType.SIMPLE_CHAT,
+        ],
+    ),
+
     "qwen/qwen-2.5-72b-instruct": ModelInfo(
         id="qwen/qwen-2.5-72b-instruct",
         name="Qwen 2.5 72B",
@@ -191,28 +253,27 @@ AVAILABLE_MODELS: Dict[str, ModelInfo] = {
         avg_tps=120,
         recommended_for=[
             LLMTaskType.INTENT_RECOGNITION,
-            LLMTaskType.ENTITY_EXTRACTION,
             LLMTaskType.SIMPLE_CHAT,
         ],
     ),
 
-    "anthropic/claude-3.5-haiku": ModelInfo(
-        id="anthropic/claude-3.5-haiku",
-        name="Claude 3.5 Haiku",
-        provider="Anthropic",
+    "qwen/qwq-32b": ModelInfo(
+        id="qwen/qwq-32b",
+        name="QwQ 32B (推理增强)",
+        provider="Alibaba",
         tier=ModelTier.ECONOMY,
-        input_price=0.80,
-        output_price=4.0,
+        input_price=0.15,
+        output_price=0.40,
         capabilities=[
-            ModelCapability.FAST,
-            ModelCapability.STRUCTURED_OUTPUT,
+            ModelCapability.REASONING,
+            ModelCapability.CHEAP,
+            ModelCapability.MULTILINGUAL,
         ],
-        context_length=200000,
-        avg_tps=100,
+        context_length=33000,
+        avg_tps=50,
         recommended_for=[
-            LLMTaskType.INTENT_RECOGNITION,
-            LLMTaskType.ENTITY_EXTRACTION,
-            LLMTaskType.CLARIFICATION,
+            LLMTaskType.COMPLEX_REASONING,
+            LLMTaskType.MARKET_ANALYSIS,
         ],
     ),
 
@@ -235,28 +296,54 @@ AVAILABLE_MODELS: Dict[str, ModelInfo] = {
             LLMTaskType.SIMPLE_CHAT,
         ],
     ),
+
+    # ==================== 超经济型模型 (极致低价) ====================
+    "deepseek/deepseek-r1-distill-qwen-7b": ModelInfo(
+        id="deepseek/deepseek-r1-distill-qwen-7b",
+        name="DeepSeek R1 蒸馏 7B",
+        provider="DeepSeek",
+        tier=ModelTier.ECONOMY,
+        input_price=0.12,
+        output_price=0.12,
+        capabilities=[
+            ModelCapability.FAST,
+            ModelCapability.CHEAP,
+            ModelCapability.REASONING,
+        ],
+        context_length=33000,
+        avg_tps=80,
+        recommended_for=[
+            LLMTaskType.INTENT_RECOGNITION,
+            LLMTaskType.ENTITY_EXTRACTION,
+        ],
+    ),
 }
 
 
 # =============================================================================
-# 默认路由配置
+# 默认路由配置 (2025.12 优化版 - 成本优先)
 # =============================================================================
 
 DEFAULT_MODEL_ROUTING: Dict[LLMTaskType, str] = {
-    # 轻量级任务 → 经济型模型
-    LLMTaskType.INTENT_RECOGNITION: "qwen/qwen-2.5-72b-instruct",
-    LLMTaskType.ENTITY_EXTRACTION: "anthropic/claude-3.5-haiku",
-    LLMTaskType.SIMPLE_CHAT: "google/gemini-2.0-flash-lite-001",
+    # 轻量级任务 → 超经济型模型 (意图识别、实体提取)
+    # GPT-4o mini: $0.15/$0.60 - 快速、稳定、成本极低
+    LLMTaskType.INTENT_RECOGNITION: "openai/gpt-4o-mini",
+    LLMTaskType.ENTITY_EXTRACTION: "openai/gpt-4o-mini",
+    # Gemini Flash Lite: $0.075/$0.30 - 最快响应
+    LLMTaskType.SIMPLE_CHAT: "google/gemini-2.0-flash-001",
 
     # 中等任务 → 平衡型模型
-    LLMTaskType.MARKET_ANALYSIS: "google/gemini-2.0-flash-001",
+    # DeepSeek V3: $0.27/$1.10 - 中文优秀、推理强
+    LLMTaskType.MARKET_ANALYSIS: "deepseek/deepseek-chat",
     LLMTaskType.CLARIFICATION: "google/gemini-2.0-flash-001",
     LLMTaskType.PERSPECTIVE_RECOMMEND: "deepseek/deepseek-chat",
 
-    # 复杂任务 → 高性能模型
-    LLMTaskType.STRATEGY_GENERATION: "anthropic/claude-sonnet-4.5",
-    LLMTaskType.INSIGHT_GENERATION: "anthropic/claude-sonnet-4.5",
-    LLMTaskType.COMPLEX_REASONING: "anthropic/claude-sonnet-4.5",
+    # 复杂任务 → 高性价比模型 (DeepSeek V3.2 替代 Sonnet)
+    # DeepSeek V3.2: $0.224/$0.32 - 性能接近 Sonnet，成本仅 3%
+    LLMTaskType.STRATEGY_GENERATION: "deepseek/deepseek-chat-v3-0324",
+    LLMTaskType.INSIGHT_GENERATION: "deepseek/deepseek-chat-v3-0324",
+    # 复杂推理保留 Sonnet 选项，但默认用 DeepSeek
+    LLMTaskType.COMPLEX_REASONING: "deepseek/deepseek-chat-v3-0324",
 }
 
 

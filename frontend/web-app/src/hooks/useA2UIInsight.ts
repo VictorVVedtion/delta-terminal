@@ -86,8 +86,8 @@ interface UseA2UIInsightReturn extends UseA2UIInsightState {
 // Constants
 // =============================================================================
 
-/** API 请求超时时间 (毫秒) - 降低以提供更快反馈 */
-const REQUEST_TIMEOUT = 20000
+/** API 请求超时时间 (毫秒) - 与后端 BACKEND_TIMEOUT 保持一致 */
+const REQUEST_TIMEOUT = 60000
 
 /** 最大重试次数 */
 const MAX_RETRIES = 2
