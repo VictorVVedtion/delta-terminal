@@ -142,44 +142,88 @@ type UserIntent = 'exploratory' | 'action'
  *
  * 探索性请求：用户想了解市场情况、获取分析、寻求建议
  * 行动性请求：用户想创建策略、执行交易、设置规则
+ *
+ * 优先级顺序（从高到低）:
+ * 1. 否定句检测 → exploratory
+ * 2. 高优先级探索性模式（想了解、想知道）→ exploratory
+ * 3. 问号结尾（除非包含显式动作词）→ exploratory
+ * 4. 行动性模式匹配 → action
+ * 5. 探索性模式匹配 → exploratory
+ * 6. 默认规则
  */
 function classifyIntent(message: string): UserIntent {
   const normalizedMessage = message.toLowerCase().trim()
 
-  // 快速路径：问号结尾的疑问句大概率是探索性
-  // 但需要排除一些明显的行动请求（如 "帮我做一个网格策略好吗？"）
-  if (/[?？]$/.test(normalizedMessage)) {
-    // 如果是明确的行动请求+问号，仍然判定为行动
-    const actionWithQuestion = /(帮我|给我|替我|想要).{0,20}(做|创建|设置|买|卖)/
-    if (!actionWithQuestion.test(normalizedMessage)) {
+  // ===== 第一优先级：否定句检测 =====
+  // "不要买"、"别做"、"取消" 等否定表达不应触发动作
+  const negationPattern = /^(不要|别|不|取消|停止|暂停)/
+  if (negationPattern.test(normalizedMessage)) {
+    // 否定句通常是在表达不想做某事，应该询问用户真正意图
+    return 'exploratory'
+  }
+
+  // ===== 第二优先级：高优先级探索性模式 =====
+  // 这些模式即使包含其他动作关键词，也应该判定为探索性
+  const highPriorityExploratory = [
+    /(想|要|希望)?(了解|知道|学习|理解|明白)/, // "我想了解网格策略"
+    /^(什么是|为什么|如何理解)/, // "什么是RSI"
+    /(是什么|什么意思|怎么理解)/, // "RSI是什么"
+    /(多少|几|几个|几点|什么时候)/, // "RSI多少" "价格多少"
+    /(超买|超卖).{0,5}(了吗|吗|没|是不是)/, // "超买了吗"
+  ]
+
+  for (const pattern of highPriorityExploratory) {
+    if (pattern.test(normalizedMessage)) {
       return 'exploratory'
     }
   }
 
-  // 行动性关键词 - 明确想要创建/执行的意图
+  // ===== 第三优先级：问号快速路径 =====
+  // 问号结尾的疑问句大概率是探索性，除非包含显式动作词
+  if (/[?？]$/.test(normalizedMessage)) {
+    // 只有非常明确的行动请求才覆盖问号判定
+    const explicitActionWithQuestion = /(帮我|给我|替我).{0,15}(做|创建|设置|买|卖|开|平)/
+    if (!explicitActionWithQuestion.test(normalizedMessage)) {
+      return 'exploratory'
+    }
+  }
+
+  // ===== 第四优先级：行动性模式 =====
   const actionPatterns = [
-    // 创建/执行动词
+    // 中文创建/执行动词（句首）
     /^(创建|做|买入?|卖出?|开|平仓?|设置|配置|执行|部署|启动|运行)/,
-    /帮我(做|创建|设置|配置|生成|建立|验证)/,
+    // 中文祈使句
+    /帮我(做|创建|设置|配置|生成|建立|验证|买|卖|开|平)/,
     /给我(一个|做|生成|创建)(策略|规则)/,
-    // 条件式表达 (在...时/当...时) - 更宽松的匹配
+    /(帮我|给我|替我).{0,10}(买|卖|做|创建|设置)/,
+    // 条件式表达
     /(在|当).{2,30}(时|的时候|就|后).*(买|卖|开|平)/,
     /(在|当).{2,30}(买|卖|开多|开空|做多|做空)/,
     /如果.{2,20}(就|则|时).*(买|卖|开|平)/,
-    // 直接的交易动作描述
-    /.{0,20}(跌|涨|突破|回调|反弹).{0,15}(买|卖|开|平)/,
-    /.{0,20}(买入|卖出|做多|做空|开仓|平仓)/,
-    // 具体交易动作
-    /(止损|止盈|加仓|减仓|做空|做多|开多|开空)/,
-    /(网格|定投|马丁|套利).*策略?/,
-    // 明确的策略意图
-    /想(做|创建|设置|配置|执行|要)/,
+    // 直接交易动作（非问句）
+    /.{0,20}(跌|涨|突破|回调|反弹).{0,15}(买入|卖出|开仓|平仓)/,
+    // 具体交易指令
+    /^(止损|止盈|加仓|减仓|做空|做多|开多|开空)/,
+    // 策略类型 + 明确动作意图
+    /(做|创建|设置|配置|启动).{0,5}(网格|定投|马丁|套利)/,
+    // 明确的策略创建意图
+    /想(做|创建|设置|配置|执行)(?!.*(了解|知道|学))/,
     /不知道(参数|怎么设)/,
-    // 祈使句/命令式
-    /(帮我|给我|替我).{0,10}(买|卖|做|创建|设置)/,
+
+    // ===== 英文支持 =====
+    /^(buy|sell|long|short|open|close)\s/i,
+    /^(create|make|set|setup|execute|run|deploy)\s/i,
+    /(help me|please)\s.*(buy|sell|create|set)/i,
+    /\b(buy|sell|long|short)\s+(btc|eth|sol|bnb)/i,
   ]
 
-  // 探索性关键词 - 想了解/分析的意图
+  for (const pattern of actionPatterns) {
+    if (pattern.test(normalizedMessage)) {
+      return 'action'
+    }
+  }
+
+  // ===== 第五优先级：探索性模式 =====
   const exploratoryPatterns = [
     // 疑问式
     /\?$|？$/,
@@ -190,28 +234,28 @@ function classifyIntent(message: string): UserIntent {
     /^(分析|了解|查看|看看|告诉我|解释|说明|介绍)/,
     /(分析一下|看一下|了解一下)/,
     // 市场状态查询
-    /(现在|目前|当前).{0,10}(怎么样|情况|状态|走势|趋势)/,
+    /(现在|目前|当前).{0,10}(怎么样|情况|状态|走势|趋势|价格)/,
     /(行情|市场|价格).{0,10}(怎么样|如何|怎样)/,
     // 观点/预测请求
     /(你觉得|你认为|你怎么看)/,
+    // 指标查询
+    /(rsi|macd|kdj|ema|sma|ma|布林|均线).{0,10}(多少|是|怎么|如何)/i,
+
+    // ===== 英文探索性 =====
+    /^(what|why|how|when|which|where)\s/i,
+    /\b(analysis|analyze|trend|outlook|forecast)\b/i,
+    /\b(what is|how to|how does)\b/i,
   ]
 
-  // 先检查是否匹配行动性模式
-  for (const pattern of actionPatterns) {
-    if (pattern.test(normalizedMessage)) {
-      return 'action'
-    }
-  }
-
-  // 再检查是否匹配探索性模式
   for (const pattern of exploratoryPatterns) {
     if (pattern.test(normalizedMessage)) {
       return 'exploratory'
     }
   }
 
-  // 默认：短消息倾向于探索性，长消息倾向于行动性
-  // 短问题通常是在询问，长描述通常是在说明需求
+  // ===== 默认规则 =====
+  // 短消息倾向于探索性（用户可能在询问）
+  // 长消息倾向于行动性（用户在描述需求）
   if (normalizedMessage.length < 15) {
     return 'exploratory'
   }
@@ -1431,8 +1475,15 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
         // 用户只是想了解情况，不需要审批/执行操作
         // =======================================================================
         if (userIntent === 'exploratory') {
+          console.log(
+            '[ChatInterface] 🔥🔥🔥 EXPLORATORY BRANCH ENTERED v2 - will return text, NOT InsightCard 🔥🔥🔥'
+          )
           // 从 InsightData 提取分析内容，格式化为 Markdown
           const analysisContent = formatExploratoryResponse(nlpResult, nlpMessage)
+          console.log(
+            '[ChatInterface] 📝 Formatted analysis content:',
+            analysisContent.substring(0, 100) + '...'
+          )
 
           const analysisMessage: Message = {
             id: `analysis_${Date.now()}`,
