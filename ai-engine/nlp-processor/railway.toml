@@ -6,7 +6,8 @@ builder = "dockerfile"
 dockerfilePath = "./Dockerfile"
 
 [deploy]
-startCommand = "uvicorn src.main:app --host 0.0.0.0 --port $PORT"
+# 使用 Dockerfile CMD 启动 (支持 shell 变量展开)
+# startCommand 已移除，因为 $PORT 在 railway.toml 中无法正确展开
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

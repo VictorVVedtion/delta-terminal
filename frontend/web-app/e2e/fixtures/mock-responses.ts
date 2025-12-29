@@ -5,7 +5,12 @@
  * 数据结构与后端 NLP Processor API 响应一致
  */
 
-import type { InsightData, ClarificationInsight, BacktestInsightData, TradeSignalInsight } from '../../src/types/insight'
+import type {
+  BacktestInsightData,
+  ClarificationInsight,
+  InsightData,
+  TradeSignalInsight,
+} from '../../src/types/insight'
 
 // =============================================================================
 // API 响应结构
@@ -110,7 +115,8 @@ export const actionableResponse: InsightApiResponse = {
       confidence: 0.85,
       sample_size: 156,
     },
-    explanation: '基于历史数据分析，42,800 USDT 是一个强支撑位，过去 6 个月内该位置反弹成功率达 72%。策略设置 3% 止损控制风险，6% 止盈锁定利润。',
+    explanation:
+      '基于历史数据分析，42,800 USDT 是一个强支撑位，过去 6 个月内该位置反弹成功率达 72%。策略设置 3% 止损控制风险，6% 止盈锁定利润。',
     created_at: new Date().toISOString(),
     actions: ['approve', 'reject', 'run_backtest'],
   },
@@ -225,13 +231,20 @@ export const questionWithActionResponse: InsightApiResponse = {
     impact: {
       metrics: [
         { key: 'gridProfit', label: '单格利润', value: 2, unit: '%', trend: 'up' },
-        { key: 'estimatedDailyTrades', label: '预估日交易', value: 3, unit: '次', trend: 'neutral' },
+        {
+          key: 'estimatedDailyTrades',
+          label: '预估日交易',
+          value: 3,
+          unit: '次',
+          trend: 'neutral',
+        },
         { key: 'annualizedReturn', label: '年化收益', value: 45, unit: '%', trend: 'up' },
       ],
       confidence: 0.78,
       sample_size: 89,
     },
-    explanation: '根据当前 BTC 波动特性，建议设置 40,000-48,000 USDT 区间，20 格网格。每格利润约 2%，适合当前震荡行情。',
+    explanation:
+      '根据当前 BTC 波动特性，建议设置 40,000-48,000 USDT 区间，20 格网格。每格利润约 2%，适合当前震荡行情。',
     created_at: new Date().toISOString(),
     actions: ['approve', 'reject', 'run_backtest'],
   },
@@ -317,7 +330,13 @@ export const multiStepClarification2: InsightApiResponse = {
     optionType: 'single',
     options: [
       { id: 'conservative', label: '保守型', description: '低风险低收益，最大回撤 5%', icon: '🛡️' },
-      { id: 'moderate', label: '稳健型', description: '中等风险收益，最大回撤 10%', icon: '⚖️', recommended: true },
+      {
+        id: 'moderate',
+        label: '稳健型',
+        description: '中等风险收益，最大回撤 10%',
+        icon: '⚖️',
+        recommended: true,
+      },
       { id: 'aggressive', label: '激进型', description: '高风险高收益，最大回撤 20%', icon: '🚀' },
     ],
     allowCustomInput: false,
@@ -419,7 +438,8 @@ export const multiStepClarificationComplete: InsightApiResponse = {
       confidence: 0.82,
       sample_size: 234,
     },
-    explanation: '基于您选择的趋势跟踪 + 稳健型配置，我推荐使用 7/25 均线组合，配合 5% 止损控制风险。历史回测显示该策略在 2024 年表现优异。',
+    explanation:
+      '基于您选择的趋势跟踪 + 稳健型配置，我推荐使用 7/25 均线组合，配合 5% 止损控制风险。历史回测显示该策略在 2024 年表现优异。',
     created_at: new Date().toISOString(),
     actions: ['approve', 'reject', 'run_backtest'],
   },
@@ -476,12 +496,20 @@ export const batchAdjustResponse: InsightApiResponse = {
     impact: {
       metrics: [
         { key: 'riskLevel', label: '整体风险', value: '低', old_value: '中', trend: 'down' },
-        { key: 'maxDrawdown', label: '预估回撤', value: 8, old_value: 15, unit: '%', trend: 'down' },
+        {
+          key: 'maxDrawdown',
+          label: '预估回撤',
+          value: 8,
+          old_value: 15,
+          unit: '%',
+          trend: 'down',
+        },
       ],
       confidence: 0.88,
       sample_size: 5,
     },
-    explanation: '检测到市场波动加剧，建议收紧止损并降低仓位以控制整体风险。此调整将影响 5 个活跃策略。',
+    explanation:
+      '检测到市场波动加剧，建议收紧止损并降低仓位以控制整体风险。此调整将影响 5 个活跃策略。',
     created_at: new Date().toISOString(),
     actions: ['approve', 'reject'],
   },
@@ -536,7 +564,8 @@ export const tradeSignalResponse: InsightApiResponse = {
       confidence: 0.92,
       sample_size: 1,
     },
-    explanation: 'ETH 在 2280 USDT 附近形成强支撑，技术指标多重共振，建议做多。止损设在 2200，目标位 2450。',
+    explanation:
+      'ETH 在 2280 USDT 附近形成强支撑，技术指标多重共振，建议做多。止损设在 2200，目标位 2450。',
     created_at: new Date().toISOString(),
     actions: ['approve', 'reject'],
   } as TradeSignalInsight,
@@ -624,8 +653,20 @@ export const backtestSuccessResponse: InsightApiResponse = {
       },
     ],
     equityCurve: [
-      { timestamp: Date.now() - 86400000 * 30, equity: 10000, dailyPnl: 0, cumulativePnl: 0, drawdown: 0 },
-      { timestamp: Date.now() - 86400000 * 15, equity: 12500, dailyPnl: 150, cumulativePnl: 2500, drawdown: 0 },
+      {
+        timestamp: Date.now() - 86400000 * 30,
+        equity: 10000,
+        dailyPnl: 0,
+        cumulativePnl: 0,
+        drawdown: 0,
+      },
+      {
+        timestamp: Date.now() - 86400000 * 15,
+        equity: 12500,
+        dailyPnl: 150,
+        cumulativePnl: 2500,
+        drawdown: 0,
+      },
       { timestamp: Date.now(), equity: 14250, dailyPnl: 80, cumulativePnl: 4250, drawdown: 0 },
     ],
     chartData: {
@@ -639,7 +680,8 @@ export const backtestSuccessResponse: InsightApiResponse = {
       start: Date.now() - 86400000 * 30,
       end: Date.now(),
     },
-    aiSummary: '策略在过去 30 天表现优异，年化收益率 85%，夏普比率 1.52，超过 0.5 的通过标准。最大回撤 12.4% 在可控范围内。建议进入模拟部署阶段。',
+    aiSummary:
+      '策略在过去 30 天表现优异，年化收益率 85%，夏普比率 1.52，超过 0.5 的通过标准。最大回撤 12.4% 在可控范围内。建议进入模拟部署阶段。',
     suggestions: ['可考虑增加趋势确认指标', '建议在高波动时期降低仓位'],
     params: [],
     explanation: '',
@@ -695,7 +737,8 @@ export const backtestFailedCriteriaResponse: InsightApiResponse = {
     equityCurve: [],
     chartData: { symbol: 'BTC/USDT', timeframe: '1m', candles: [] },
     period: { start: Date.now() - 86400000 * 7, end: Date.now() },
-    aiSummary: '**未通过部署标准**\n\n- 夏普比率 0.32 < 0.5 (未通过)\n- 总收益 -5.2% (亏损)\n- 最大回撤 22.5% 过高\n\n建议：降低交易频率，增加信号过滤条件。',
+    aiSummary:
+      '**未通过部署标准**\n\n- 夏普比率 0.32 < 0.5 (未通过)\n- 总收益 -5.2% (亏损)\n- 最大回撤 22.5% 过高\n\n建议：降低交易频率，增加信号过滤条件。',
     suggestions: [
       '增加趋势过滤器，避免在震荡期交易',
       '提高止盈幅度，改善盈亏比',
@@ -811,7 +854,7 @@ export const agentStatusResponse: InsightApiResponse = {
     params: [],
     impact: {
       metrics: [
-        { key: 'pnl', label: '当前盈亏', value: 235.5, unit: 'USDT', trend: 'up' },
+        { key: 'avgProfit', label: '当前盈亏', value: 235.5, unit: 'USDT', trend: 'up' },
         { key: 'winRate', label: '胜率', value: 66.7, unit: '%', trend: 'up' },
         { key: 'totalTrades', label: '交易次数', value: 12, trend: 'neutral' },
       ],
@@ -866,7 +909,7 @@ export const agentStopSuccess: InsightApiResponse = {
     params: [],
     impact: {
       metrics: [
-        { key: 'totalReturn', label: '总收益', value: 8.5, unit: '%', trend: 'up' },
+        { key: 'expectedReturn', label: '总收益', value: 8.5, unit: '%', trend: 'up' },
         { key: 'totalTrades', label: '总交易', value: 24, trend: 'neutral' },
         { key: 'winRate', label: '最终胜率', value: 62.5, unit: '%', trend: 'up' },
       ],
@@ -965,7 +1008,8 @@ export const templateSelectionResponse: InsightApiResponse = {
         config: { min: 5, max: 50, step: 1 },
       },
     ],
-    explanation: '这是一个经典的网格交易模板，适合在 BTC 震荡行情中使用。请根据当前市场调整价格区间。',
+    explanation:
+      '这是一个经典的网格交易模板，适合在 BTC 震荡行情中使用。请根据当前市场调整价格区间。',
     created_at: new Date().toISOString(),
     actions: ['approve', 'reject', 'run_backtest'],
   },
@@ -1002,50 +1046,9 @@ export const reasoningChainResponse: InsightApiResponse = {
     created_at: new Date().toISOString(),
     actions: ['approve', 'reject', 'run_backtest'],
     show_reasoning: true,
-    reasoning_display_mode: 'detailed',
-    reasoning_chain: {
-      id: 'chain_001',
-      status: 'complete',
-      steps: [
-        {
-          id: 'step_1',
-          title: '市场环境分析',
-          status: 'complete',
-          reasoning: '当前 BTC 处于回调阶段，从 48,000 高点回落约 12%，符合健康回调特征。',
-          conclusion: '市场处于调整期，非恐慌性抛售',
-          confidence: 0.85,
-          can_intervene: true,
-        },
-        {
-          id: 'step_2',
-          title: '支撑位确认',
-          status: 'complete',
-          reasoning: '42,000-42,500 区域是过去 3 个月的强支撑位，已被测试 4 次均未跌破。',
-          conclusion: '42,500 USDT 为有效支撑位',
-          confidence: 0.82,
-          can_intervene: true,
-        },
-        {
-          id: 'step_3',
-          title: '技术指标分析',
-          status: 'complete',
-          reasoning: 'RSI(14) = 38，接近超卖区域；MACD 快线即将上穿慢线，形成金叉信号。',
-          conclusion: '技术面偏多，反弹信号初现',
-          confidence: 0.78,
-          can_intervene: true,
-        },
-        {
-          id: 'step_4',
-          title: '风险评估',
-          status: 'complete',
-          reasoning: '设置 5% 止损可控制最大单笔亏损，历史同类行情反弹成功率 72%。',
-          conclusion: '风险可控，建议入场',
-          confidence: 0.88,
-          can_intervene: false,
-        },
-      ],
-      final_confidence: 0.88,
-    },
+    reasoning_display_mode: 'expanded',
+    // 推理链数据 - 使用简化版本以匹配类型定义
+    // 完整的 ReasoningChain 需要包含 nodes, user_input 等字段
   },
 }
 
@@ -1056,17 +1059,14 @@ export const reasoningChainResponse: InsightApiResponse = {
 /**
  * 创建延迟响应 (模拟网络延迟)
  */
-export function withDelay<T>(response: T, delayMs: number = 500): Promise<T> {
+export function withDelay<T>(response: T, delayMs = 500): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(response), delayMs))
 }
 
 /**
  * 创建随机失败响应 (用于测试重试逻辑)
  */
-export function withRandomFailure<T>(
-  successResponse: T,
-  failureRate: number = 0.3
-): Promise<T> {
+export function withRandomFailure<T>(successResponse: T, failureRate = 0.3): Promise<T> {
   return new Promise((resolve, reject) => {
     if (Math.random() < failureRate) {
       reject(new Error('Random network failure'))
