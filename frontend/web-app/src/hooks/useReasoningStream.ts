@@ -78,6 +78,8 @@ export function useReasoningStream(
   const [isStreaming, setIsStreaming] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const abortControllerRef = React.useRef<AbortController | null>(null)
+  // 使用 ref 跟踪流状态，避免 React 状态更新延迟导致的重复调用
+  const isStreamingRef = React.useRef(false)
 
   // ==========================================================================
   // Start Stream (使用 fetch + ReadableStream 支持 POST)
@@ -85,6 +87,12 @@ export function useReasoningStream(
 
   const startStream = React.useCallback(
     async (message: string, userId = 'anonymous') => {
+      // 防止重复调用：如果已经在流式传输中，跳过
+      if (isStreamingRef.current) {
+        console.log('[Reasoning Stream] Already streaming, skipping duplicate request')
+        return
+      }
+
       // 清理之前的连接
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
@@ -94,6 +102,7 @@ export function useReasoningStream(
       setNodes([])
       setError(null)
       setIsStreaming(true)
+      isStreamingRef.current = true
 
       // 创建 AbortController
       const abortController = new AbortController()
@@ -165,6 +174,7 @@ export function useReasoningStream(
 
                 case 'done':
                   console.log('[Reasoning Stream] Completed:', data.message)
+                  isStreamingRef.current = false
                   setIsStreaming(false)
                   setNodes((currentNodes) => {
                     onComplete?.(currentNodes)
@@ -175,6 +185,7 @@ export function useReasoningStream(
                 case 'error':
                   const errorMsg = data.error || '推理链生成失败'
                   setError(errorMsg)
+                  isStreamingRef.current = false
                   setIsStreaming(false)
                   onError?.(errorMsg)
                   return
@@ -192,6 +203,7 @@ export function useReasoningStream(
         }
 
         // 流结束后的处理
+        isStreamingRef.current = false
         setIsStreaming(false)
         setNodes((currentNodes) => {
           onComplete?.(currentNodes)
@@ -200,12 +212,14 @@ export function useReasoningStream(
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
           console.log('[Reasoning Stream] Aborted')
+          isStreamingRef.current = false
           return
         }
 
         const errorMsg = err instanceof Error ? err.message : '流式请求失败'
         console.error('[Reasoning Stream] Error:', errorMsg)
         setError(errorMsg)
+        isStreamingRef.current = false
         setIsStreaming(false)
         onError?.(errorMsg)
       }
@@ -222,6 +236,7 @@ export function useReasoningStream(
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
+    isStreamingRef.current = false
     setIsStreaming(false)
   }, [])
 
@@ -244,6 +259,7 @@ export function useReasoningStream(
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
+      isStreamingRef.current = false
     }
   }, [])
 

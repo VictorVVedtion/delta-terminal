@@ -4,7 +4,7 @@ import React from 'react'
 
 import { Button } from '@/components/ui/button'
 import { useReasoningStream } from '@/hooks/useReasoningStream'
-import type { ReasoningChain, ReasoningNode } from '@/types/reasoning'
+import type { NodeAction, ReasoningChain, ReasoningNode } from '@/types/reasoning'
 
 import { ReasoningChainView } from './ReasoningChainView'
 
@@ -33,8 +33,8 @@ export function StreamingReasoningDemo() {
   // 构建 ReasoningChain 对象
   const buildReasoningChain = (allNodes: ReasoningNode[]) => {
     const confirmedCount = allNodes.filter((n) => n.status === 'confirmed').length
-    const overallConfidence =
-      allNodes.reduce((sum, n) => sum + n.confidence, 0) / allNodes.length
+    const overallConfidence = allNodes.reduce((sum, n) => sum + n.confidence, 0) / allNodes.length
+    const now = new Date().toISOString()
 
     setChain({
       id: `chain_${Date.now()}`,
@@ -44,8 +44,9 @@ export function StreamingReasoningDemo() {
       total_count: allNodes.length,
       confirmed_count: confirmedCount,
       overall_confidence: overallConfidence,
-      active_node_id: null,
-      created_at: Date.now(),
+      active_node_id: undefined,
+      created_at: now,
+      updated_at: now,
     })
   }
 
@@ -54,6 +55,7 @@ export function StreamingReasoningDemo() {
     if (nodes.length > 0) {
       const confirmedCount = nodes.filter((n) => n.status === 'confirmed').length
       const overallConfidence = nodes.reduce((sum, n) => sum + n.confidence, 0) / nodes.length
+      const now = new Date().toISOString()
 
       setChain({
         id: `chain_${Date.now()}`,
@@ -63,22 +65,19 @@ export function StreamingReasoningDemo() {
         total_count: nodes.length,
         confirmed_count: confirmedCount,
         overall_confidence: overallConfidence,
-        active_node_id: isStreaming ? nodes[nodes.length - 1]?.id : null,
-        created_at: Date.now(),
+        active_node_id: isStreaming ? nodes[nodes.length - 1]?.id : undefined,
+        created_at: now,
+        updated_at: now,
       })
     }
   }, [nodes, isStreaming])
 
   const handleStart = () => {
     reset()
-    startStream('帮我分析 BTC 是否值得现在入场', 'demo_user')
+    void startStream('帮我分析 BTC 是否值得现在入场', 'demo_user')
   }
 
-  const handleNodeAction = (
-    nodeId: string,
-    action: 'confirm' | 'challenge' | 'modify' | 'skip',
-    input?: string
-  ) => {
+  const handleNodeAction = (nodeId: string, action: NodeAction, input?: string) => {
     console.log(`节点 ${nodeId} 执行操作: ${action}`, input)
   }
 
@@ -108,7 +107,7 @@ export function StreamingReasoningDemo() {
       </div>
 
       {error && (
-        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
           错误: {error}
         </div>
       )}
@@ -124,8 +123,8 @@ export function StreamingReasoningDemo() {
       )}
 
       {!chain && !isStreaming && (
-        <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-          点击"开始推理"查看流式推理链效果
+        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+          点击&quot;开始推理&quot;查看流式推理链效果
         </div>
       )}
     </div>

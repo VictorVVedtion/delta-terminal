@@ -1,17 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * InsightCard 使用示例
  *
  * 展示如何正确处理各种边缘情况和空状态
+ *
+ * NOTE: 此文件包含旧版类型结构，仅作为参考示例
+ * TODO: 更新示例以匹配最新 InsightData 类型定义
  */
 
+import type { InsightData } from '@/types/insight'
+
 import { InsightCard } from './InsightCard'
-import type { Insight } from '@/types/insight'
 
 // ============================================================================
 // 示例 1: 正常的 Insight
 // ============================================================================
 
-const normalInsight: Insight = {
+const normalInsight: InsightData = {
   id: 'insight-1',
   type: 'strategy_create',
   explanation: '基于当前市场趋势，建议创建一个网格交易策略',
@@ -85,11 +90,7 @@ const noParamsInsight: Insight = {
 
 export function NoParamsInsightExample() {
   return (
-    <InsightCard
-      insight={noParamsInsight}
-      status="pending"
-      onExpand={() => console.log('展开')}
-    />
+    <InsightCard insight={noParamsInsight} status="pending" onExpand={() => console.log('展开')} />
   )
 }
 
@@ -115,11 +116,7 @@ const noImpactInsight: Insight = {
 
 export function NoImpactInsightExample() {
   return (
-    <InsightCard
-      insight={noImpactInsight}
-      status="pending"
-      onExpand={() => console.log('展开')}
-    />
+    <InsightCard insight={noImpactInsight} status="pending" onExpand={() => console.log('展开')} />
   )
 }
 
@@ -157,9 +154,7 @@ const unsafeNumbersInsight: Insight = {
 export function UnsafeNumbersInsightExample() {
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium">
-        数值安全处理示例 (NaN/Infinity 会被安全处理为 0)
-      </h3>
+      <h3 className="text-sm font-medium">数值安全处理示例 (NaN/Infinity 会被安全处理为 0)</h3>
       <InsightCard
         insight={unsafeNumbersInsight}
         status="pending"

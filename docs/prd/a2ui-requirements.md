@@ -1,6 +1,6 @@
 # A2UI 功能需求规格书
 
-> **版本**: 2.0.0 **更新日期**: 2025-12-29 **负责人**: 产品团队
+> **版本**: 2.0.1 | **更新日期**: 2025-12-29 | **负责人**: 产品团队
 
 ---
 
@@ -36,12 +36,12 @@
 
 **设计原则**:
 
-| 原则 | 描述 |
-|------|------|
-| **故事优先** | 用人话讲策略，技术参数作为补充 |
-| **意图确认** | AI 先确认理解了用户想法，再生成策略 |
-| **风险直觉化** | 用"最多亏多少钱"代替"止损百分比" |
-| **历史叙事** | 用真实事件（如312暴跌）讲述策略表现 |
+| 原则           | 描述                                |
+| -------------- | ----------------------------------- |
+| **故事优先**   | 用人话讲策略，技术参数作为补充      |
+| **意图确认**   | AI 先确认理解了用户想法，再生成策略 |
+| **风险直觉化** | 用"最多亏多少钱"代替"止损百分比"    |
+| **历史叙事**   | 用真实事件（如312暴跌）讲述策略表现 |
 
 #### 1.3.2 AI 提议，人类批准 (AI Proposer, Human Approver)
 
@@ -80,21 +80,22 @@ interface InsightData {
 
   // 新增：叙事层
   narrative: {
-    summary: string          // 一句话：当市场恐慌时抄底
-    story: string            // 完整故事：这个策略会在大家都在恐慌...
-    buyTrigger: string       // 什么时候买：当 RSI 跌到很低（像2020年312那样）
-    sellTrigger: string      // 什么时候卖：赚到 8% 就跑，或者亏 3% 认赔
-    riskInWords: string      // 风险描述：最坏情况亏 30 块，最好能赚 80 块
+    summary: string // 一句话：当市场恐慌时抄底
+    story: string // 完整故事：这个策略会在大家都在恐慌...
+    buyTrigger: string // 什么时候买：当 RSI 跌到很低（像2020年312那样）
+    sellTrigger: string // 什么时候卖：赚到 8% 就跑，或者亏 3% 认赔
+    riskInWords: string // 风险描述：最坏情况亏 30 块，最好能赚 80 块
   }
 
   // 新增：意图映射（AI 理解 → 技术参数）
   intentMapping?: {
-    userSaid: string         // 用户原话："跌得差不多了，想抄底"
-    aiUnderstood: string     // AI 理解：逆势交易 + 超卖信号
-    technicalMapping: {      // 技术映射
-      signal: string         // RSI < 30
-      action: string         // 买入做多
-      risk: string           // 中等仓位
+    userSaid: string // 用户原话："跌得差不多了，想抄底"
+    aiUnderstood: string // AI 理解：逆势交易 + 超卖信号
+    technicalMapping: {
+      // 技术映射
+      signal: string // RSI < 30
+      action: string // 买入做多
+      risk: string // 中等仓位
     }
   }
 }
@@ -199,12 +200,12 @@ AI 返回意图确认卡:
 
 **场景库**:
 
-| 场景ID | 名称 | 日期 | 特征 |
-|--------|------|------|------|
-| scene_312 | 312暴跌 | 2020-03-12 | 极端恐慌，BTC 日跌50% |
-| scene_519 | 519崩盘 | 2021-05-19 | 政策利空，全面暴跌 |
-| scene_bull_top | 牛市顶部 | 2021-11-10 | BTC 69000 历史高点 |
-| scene_bear_bottom | 熊市底部 | 2022-11-21 | FTX 暴雷后底部 |
+| 场景ID            | 名称     | 日期       | 特征                  |
+| ----------------- | -------- | ---------- | --------------------- |
+| scene_312         | 312暴跌  | 2020-03-12 | 极端恐慌，BTC 日跌50% |
+| scene_519         | 519崩盘  | 2021-05-19 | 政策利空，全面暴跌    |
+| scene_bull_top    | 牛市顶部 | 2021-11-10 | BTC 69000 历史高点    |
+| scene_bear_bottom | 熊市底部 | 2022-11-21 | FTX 暴雷后底部        |
 
 **交互设计**:
 
@@ -282,7 +283,7 @@ interface InsightData {
   evidence?: {
     chart?: ChartData
     comparison?: Comparison
-    historicalScenario?: HistoricalScenario  // 新增
+    historicalScenario?: HistoricalScenario // 新增
   }
 
   // 影响预估层
@@ -290,7 +291,7 @@ interface InsightData {
     metrics: ImpactMetric[]
     confidence: number
     sampleSize: number
-    riskVisualization: RiskVisualization  // 新增：人话版风险展示
+    riskVisualization: RiskVisualization // 新增：人话版风险展示
   }
 
   // AI 解释 (保留兼容，但叙事层优先)
@@ -299,14 +300,14 @@ interface InsightData {
 
 // 新增：人话版风险可视化
 interface RiskVisualization {
-  investAmount: number        // 投入金额
-  investPercentage: number    // 仓位百分比
-  maxLoss: number            // 最大亏损金额
-  maxLossPercentage: number  // 最大亏损百分比
-  potentialGain: number      // 潜在盈利金额
+  investAmount: number // 投入金额
+  investPercentage: number // 仓位百分比
+  maxLoss: number // 最大亏损金额
+  maxLossPercentage: number // 最大亏损百分比
+  potentialGain: number // 潜在盈利金额
   potentialGainPercentage: number
-  riskRewardRatio: number    // 盈亏比
-  summaryText: string        // "赌对了赚80块，赌错了亏30块"
+  riskRewardRatio: number // 盈亏比
+  summaryText: string // "赌对了赚80块，赌错了亏30块"
 }
 
 // 新增：历史场景
@@ -339,14 +340,14 @@ interface HistoricalScenario {
 
 **控件类型映射**:
 
-| 参数类型 | 控件类型 | 技术标签 | 人话标签 |
-|---------|---------|---------|---------|
-| 数值范围 | slider | RSI 周期 7-21 | 灵敏度（越小越敏感） |
-| 百分比 | slider + number | 止损 0.5%-5% | 最多亏多少 |
-| 枚举 | button_group | 做多/做空/双向 | 看涨/看跌/都行 |
-| 开关 | toggle | 启用追踪止损 | 自动跟着涨 |
-| 复杂逻辑 | logic_builder | 多条件组合 | 同时满足/任一满足 |
-| 风险级别 | heatmap_slider | 保守/中性/激进 | 稳一点/正常/冲一把 |
+| 参数类型 | 控件类型        | 技术标签       | 人话标签             |
+| -------- | --------------- | -------------- | -------------------- |
+| 数值范围 | slider          | RSI 周期 7-21  | 灵敏度（越小越敏感） |
+| 百分比   | slider + number | 止损 0.5%-5%   | 最多亏多少           |
+| 枚举     | button_group    | 做多/做空/双向 | 看涨/看跌/都行       |
+| 开关     | toggle          | 启用追踪止损   | 自动跟着涨           |
+| 复杂逻辑 | logic_builder   | 多条件组合     | 同时满足/任一满足    |
+| 风险级别 | heatmap_slider  | 保守/中性/激进 | 稳一点/正常/冲一把   |
 
 ---
 
@@ -367,12 +368,12 @@ interface HistoricalScenario {
 interface ImpactMetric {
   key: string
   label: string
-  humanLabel: string    // 新增：人话标签
+  humanLabel: string // 新增：人话标签
   value: number
   oldValue?: number
   unit: string
   trend: 'up' | 'down' | 'neutral'
-  level: 'basic' | 'advanced'  // 新增：basic 默认展示，advanced 折叠
+  level: 'basic' | 'advanced' // 新增：basic 默认展示，advanced 折叠
 }
 ```
 
@@ -813,13 +814,16 @@ interface ImpactMetric {
 
 ### 3.1 性能
 
-| 指标 | 目标 |
-|------|------|
-| Canvas 打开延迟 | < 300ms |
-| 实时回测响应 | < 2s |
-| 参数更新响应 | < 100ms |
-| K 线渲染帧率 | ≥ 30fps |
-| 叙事生成延迟 | < 1s |
+> **注意**：AI 响应时间定义以 `requirements.md` 为准，此处为 A2UI 层面补充
+
+| 指标            | 目标                        | 说明                           |
+| --------------- | --------------------------- | ------------------------------ |
+| Canvas 打开延迟 | < 300ms                     | 用户点击到 Canvas 渲染完成     |
+| 实时回测响应    | < 2s                        | 参数修改后触发回测返回结果     |
+| 参数更新响应    | < 100ms                     | 滑块/输入框值变更响应          |
+| K 线渲染帧率    | ≥ 30fps                     | 图表动画流畅度                 |
+| **AI 响应时间** | 首 token < 500ms, 完整 < 3s | 🔄 与 requirements.md 保持一致 |
+| 叙事生成 (流式) | 首 token < 500ms            | 叙事内容流式输出开始时间       |
 
 ### 3.2 可用性
 
@@ -929,28 +933,29 @@ graph TD
 
 ## 7. 文档版本
 
-| 版本 | 日期 | 变更说明 | 作者 |
-|------|------|----------|------|
-| 1.0.0 | 2025-12-25 | 初始版本 | Product Team |
-| 1.1.0 | 2025-12-28 | 新增 FR-A2UI-072/073 | Claude |
-| 2.0.0 | 2025-12-29 | **重大更新**: 新增叙事驱动设计原则，新增 FR-A2UI-080/081/082/083，全面增强人话描述 | Claude |
+| 版本  | 日期       | 变更说明                                                                           | 作者         |
+| ----- | ---------- | ---------------------------------------------------------------------------------- | ------------ |
+| 1.0.0 | 2025-12-25 | 初始版本                                                                           | Product Team |
+| 1.1.0 | 2025-12-28 | 新增 FR-A2UI-072/073                                                               | Claude       |
+| 2.0.0 | 2025-12-29 | **重大更新**: 新增叙事驱动设计原则，新增 FR-A2UI-080/081/082/083，全面增强人话描述 | Claude       |
+| 2.0.1 | 2025-12-29 | 统一 AI 响应时间定义，与 requirements.md 保持一致                                  | PM John      |
 
 ---
 
 ## 附录 A: 术语对照表（技术术语 → 人话）
 
-| 技术术语 | 人话表达 |
-|---------|---------|
-| RSI 超卖 | 市场恐慌 / 跌得很惨 |
-| MACD 金叉 | 趋势开始反转 |
-| 止损 -3% | 最多亏 3% / 亏30块就认赔 |
-| 止盈 +8% | 赚到 8% 就跑 / 赚80块落袋为安 |
-| 仓位 10% | 用十分之一的钱 |
-| 杠杆 3x | 借钱放大3倍（风险也3倍） |
-| 回撤 | 从最高点跌下来多少 |
-| 夏普比率 | 收益和风险的性价比 |
-| 做多 | 看涨 / 买入等涨 |
-| 做空 | 看跌 / 借来卖等跌 |
+| 技术术语  | 人话表达                      |
+| --------- | ----------------------------- |
+| RSI 超卖  | 市场恐慌 / 跌得很惨           |
+| MACD 金叉 | 趋势开始反转                  |
+| 止损 -3%  | 最多亏 3% / 亏30块就认赔      |
+| 止盈 +8%  | 赚到 8% 就跑 / 赚80块落袋为安 |
+| 仓位 10%  | 用十分之一的钱                |
+| 杠杆 3x   | 借钱放大3倍（风险也3倍）      |
+| 回撤      | 从最高点跌下来多少            |
+| 夏普比率  | 收益和风险的性价比            |
+| 做多      | 看涨 / 买入等涨               |
+| 做空      | 看跌 / 借来卖等跌             |
 
 ---
 

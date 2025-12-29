@@ -33,7 +33,7 @@ import { BacktestStatsCard } from '@/components/backtest/BacktestStatsCard'
 import { InsightEmptyState } from '@/components/insight/InsightEmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { safeNumber, safePercentChange, formatSafePercent } from '@/lib/safe-number'
+import { formatSafePercent, safeNumber, safePercentChange } from '@/lib/safe-number'
 import { cn } from '@/lib/utils'
 import type { BacktestInsightData, BacktestParameter } from '@/types/insight'
 
@@ -89,16 +89,14 @@ export function BacktestInsightCanvas({
 
   // ========== 数据完整性检查 ==========
   // 检查是否有图表数据
-  const hasChartData = insight.chartData && insight.chartData.length > 0
+  const hasChartData = insight.chartData && insight.chartData.candles.length > 0
   const hasEquityCurve = insight.equityCurve && insight.equityCurve.length > 0
-  const hasStats = insight.stats && insight.stats.initialCapital !== undefined
+  const _hasStats = insight.stats.initialCapital !== undefined
 
   // Handle parameter change
   const handleParamChange = React.useCallback(
     (key: string, value: number | string | boolean) => {
-      setParameters((prev) =>
-        prev.map((p) => (p.key === key ? { ...p, value } : p))
-      )
+      setParameters((prev) => prev.map((p) => (p.key === key ? { ...p, value } : p)))
       onParameterChange?.(key, value)
     },
     [onParameterChange]
@@ -106,9 +104,7 @@ export function BacktestInsightCanvas({
 
   // Handle reset parameters
   const handleReset = React.useCallback(() => {
-    setParameters((prev) =>
-      prev.map((p) => ({ ...p, value: p.defaultValue }))
-    )
+    setParameters((prev) => prev.map((p) => ({ ...p, value: p.defaultValue })))
   }, [])
 
   // Handle rerun backtest
@@ -128,8 +124,8 @@ export function BacktestInsightCanvas({
 
   // Total return for header (使用安全计算)
   const totalReturn = React.useMemo(() => {
-    const initial = safeNumber(insight.stats?.initialCapital, 0)
-    const final = safeNumber(insight.stats?.finalCapital, 0)
+    const initial = safeNumber(insight.stats.initialCapital, 0)
+    const final = safeNumber(insight.stats.finalCapital, 0)
     return safePercentChange(final, initial, false)
   }, [insight.stats])
 
@@ -138,20 +134,20 @@ export function BacktestInsightCanvas({
   return (
     <div
       className={cn(
-        'fixed top-0 right-0 h-full bg-zinc-950 border-l border-zinc-800 shadow-2xl',
-        'flex flex-col transition-all duration-300 ease-out z-50',
+        'fixed right-0 top-0 h-full border-l border-zinc-800 bg-zinc-950 shadow-2xl',
+        'z-50 flex flex-col transition-all duration-300 ease-out',
         isExpanded ? 'w-full lg:w-[80%]' : 'w-full max-w-[520px] lg:w-[520px]',
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm">
+      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/80 px-4 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-cyan-500/10">
+          <div className="rounded-lg bg-cyan-500/10 p-2">
             <LineChart className="h-5 w-5 text-cyan-500" />
           </div>
           <div>
-            <h2 className="font-semibold text-zinc-100 truncate max-w-[200px]">
+            <h2 className="max-w-[200px] truncate font-semibold text-zinc-100">
               {insight.strategy.name} 回测结果
             </h2>
             <p className="text-xs text-zinc-400">{periodDisplay}</p>
@@ -160,10 +156,7 @@ export function BacktestInsightCanvas({
 
         <div className="flex items-center gap-1">
           {/* Return Badge */}
-          <Badge
-            variant={totalReturn >= 0 ? 'success' : 'destructive'}
-            className="mr-2"
-          >
+          <Badge variant={totalReturn >= 0 ? 'success' : 'destructive'} className="mr-2">
             {formatPercent(totalReturn)}
           </Badge>
 
@@ -171,42 +164,30 @@ export function BacktestInsightCanvas({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => { setIsExpanded(!isExpanded); }}
+            onClick={() => {
+              setIsExpanded(!isExpanded)
+            }}
             className="h-8 w-8"
           >
-            {isExpanded ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
+            {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
 
           {/* Close */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Strategy Info */}
-      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-zinc-200">
-            {insight.strategy.name}
-          </span>
+      <div className="border-b border-zinc-800 bg-zinc-900/50 px-4 py-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium text-zinc-200">{insight.strategy.name}</span>
           <Badge variant="outline" className="text-xs">
             {insight.strategy.symbol}
           </Badge>
         </div>
-        <CompactParamDisplay
-          parameters={parameters.slice(0, 4)}
-          className="mb-2"
-        />
+        <CompactParamDisplay parameters={parameters.slice(0, 4)} className="mb-2" />
       </div>
 
       {/* Tabs */}
@@ -218,13 +199,15 @@ export function BacktestInsightCanvas({
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id); }}
+            onClick={() => {
+              setActiveTab(tab.id)
+            }}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 px-4 py-3',
+              'flex flex-1 items-center justify-center gap-2 px-4 py-3',
               'text-sm font-medium transition-colors',
               activeTab === tab.id
-                ? 'text-cyan-400 border-b-2 border-cyan-400 bg-cyan-500/5'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                ? 'border-b-2 border-cyan-400 bg-cyan-500/5 text-cyan-400'
+                : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
             )}
           >
             <tab.icon className="h-4 w-4" />
@@ -236,7 +219,7 @@ export function BacktestInsightCanvas({
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Statistics (always visible) */}
-        <div className="p-4 border-b border-zinc-800">
+        <div className="border-b border-zinc-800 p-4">
           <BacktestStatsCard stats={insight.stats} mode="compact" />
         </div>
 
@@ -251,11 +234,7 @@ export function BacktestInsightCanvas({
                   showVolume
                 />
               ) : (
-                <InsightEmptyState
-                  reason="no-chart-data"
-                  compact
-                  onRetry={handleRerun}
-                />
+                <InsightEmptyState reason="no-chart-data" compact onRetry={handleRerun} />
               )}
             </div>
           )}
@@ -266,7 +245,7 @@ export function BacktestInsightCanvas({
                 <BacktestEquityCurve
                   data={insight.equityCurve}
                   benchmark={insight.benchmark?.equityCurve}
-                  initialCapital={safeNumber(insight.stats?.initialCapital, 10000)}
+                  initialCapital={safeNumber(insight.stats.initialCapital, 10000)}
                   height={isExpanded ? 450 : 300}
                   showDrawdown
                   showDailyPnL
@@ -297,16 +276,18 @@ export function BacktestInsightCanvas({
 
         {/* Full Stats (when expanded) */}
         {isExpanded && activeTab !== 'params' && (
-          <div className="p-4 border-t border-zinc-800">
+          <div className="border-t border-zinc-800 p-4">
             <BacktestStatsCard stats={insight.stats} mode="full" />
           </div>
         )}
 
         {/* AI Summary */}
-        <div className="p-4 border-t border-zinc-800">
+        <div className="border-t border-zinc-800 p-4">
           <button
-            onClick={() => { setShowSummary(!showSummary); }}
-            className="w-full flex items-center justify-between mb-2"
+            onClick={() => {
+              setShowSummary(!showSummary)
+            }}
+            className="mb-2 flex w-full items-center justify-between"
           >
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-cyan-400" />
@@ -321,22 +302,17 @@ export function BacktestInsightCanvas({
 
           {showSummary && (
             <div className="space-y-3">
-              <p className="text-sm text-zinc-300 leading-relaxed">
-                {insight.aiSummary}
-              </p>
+              <p className="text-sm leading-relaxed text-zinc-300">{insight.aiSummary}</p>
 
               {insight.suggestions && insight.suggestions.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">
                     优化建议
                   </span>
                   <ul className="space-y-1">
                     {insight.suggestions.map((suggestion, index) => (
-                      <li
-                        key={index}
-                        className="flex items-start gap-2 text-sm text-zinc-400"
-                      >
-                        <span className="text-cyan-400 mt-0.5">•</span>
+                      <li key={index} className="flex items-start gap-2 text-sm text-zinc-400">
+                        <span className="mt-0.5 text-cyan-400">•</span>
                         <span>{suggestion}</span>
                       </li>
                     ))}
@@ -349,14 +325,14 @@ export function BacktestInsightCanvas({
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-900/80">
+      <div className="flex items-center justify-between border-t border-zinc-800 bg-zinc-900/80 px-4 py-3">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
-            <Share2 className="h-4 w-4 mr-1" />
+            <Share2 className="mr-1 h-4 w-4" />
             分享
           </Button>
           <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-1" />
+            <Download className="mr-1 h-4 w-4" />
             导出
           </Button>
         </div>

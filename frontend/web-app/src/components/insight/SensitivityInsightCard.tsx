@@ -7,19 +7,14 @@
  * 展示参数对策略性能的影响程度，包括热力图和关键参数排序
  */
 
-import {
-  Activity,
-  AlertTriangle,
-  ChevronRight,
-  Target,
-  TrendingUp,
-} from 'lucide-react'
+import { Activity, AlertTriangle, ChevronRight, Target, TrendingUp } from 'lucide-react'
 import React from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { safeNumber, formatSafePercent } from '@/lib/safe-number'
+import { Progress } from '@/components/ui/progress'
+import { safeNumber } from '@/lib/safe-number'
 import { cn } from '@/lib/utils'
 import type { SensitivityInsightData } from '@/types/insight'
 
@@ -79,7 +74,12 @@ function KeyParamBar({
   param,
   rank,
 }: {
-  param: { paramKey: string; paramLabel: string; impactScore: number; sensitivity: 'high' | 'medium' | 'low' }
+  param: {
+    paramKey: string
+    paramLabel: string
+    impactScore: number
+    sensitivity: 'high' | 'medium' | 'low'
+  }
   rank: number
 }) {
   const config = SENSITIVITY_CONFIG[param.sensitivity]
@@ -124,8 +124,7 @@ function MiniHeatmap({
       return safeNumber(value, 0)
     })
     const baselineValue = safeNumber(baseline[metric as keyof typeof baseline], 0)
-    const avgChange =
-      values.reduce((sum, v) => sum + (v - baselineValue), 0) / values.length
+    const avgChange = values.reduce((sum, v) => sum + (v - baselineValue), 0) / values.length
 
     return avgChange
   }
@@ -165,9 +164,7 @@ function MiniHeatmap({
           {/* Rows */}
           {metrics.map((metric) => (
             <div key={metric} className="flex items-center gap-1">
-              <div className="w-16 text-xs text-muted-foreground">
-                {METRIC_LABELS[metric]}
-              </div>
+              <div className="w-16 text-xs text-muted-foreground">{METRIC_LABELS[metric]}</div>
               {matrix.slice(0, 4).map((item) => {
                 const impact = getAverageImpact(item.paramKey, metric)
                 return (
@@ -249,10 +246,7 @@ function BaselineMetrics({ baseline }: { baseline: SensitivityInsightData['basel
         const color = isPositive ? 'text-green-500' : 'text-red-500'
 
         return (
-          <div
-            key={metric.key}
-            className="rounded-lg border border-border bg-muted/30 p-2"
-          >
+          <div key={metric.key} className="rounded-lg border border-border bg-muted/30 p-2">
             <p className="text-xs text-muted-foreground">{metric.label}</p>
             <p className={cn('font-mono text-sm font-medium', color)}>
               {metric.isPercentChange && safeValue >= 0 ? '+' : ''}
@@ -320,9 +314,7 @@ export function SensitivityInsightCard({
         <div className="flex items-start gap-2 rounded-lg bg-primary/5 p-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
           <p className="text-sm text-muted-foreground">
-            {compact
-              ? data.aiInsight.slice(0, 80) + '...'
-              : data.aiInsight.slice(0, 150) + '...'}
+            {compact ? data.aiInsight.slice(0, 80) + '...' : data.aiInsight.slice(0, 150) + '...'}
           </p>
         </div>
 
