@@ -195,11 +195,11 @@ export interface AIInsightPayload {
   }
   explanation: string
   confidence: number
-  params: Array<{
+  params: {
     key: string
     label: string
     value: unknown
-  }>
+  }[]
   expiresAt?: number
 }
 
@@ -241,7 +241,7 @@ export interface BacktestResultPayload {
     profitFactor: number
     totalTrades: number
   }
-  equity: Array<{ date: string; value: number }>
+  equity: { date: string; value: number }[]
 }
 
 /** Spirit 事件负载 */
@@ -338,7 +338,9 @@ export function createEvent<T>(
   type: EventType,
   source: ServiceName,
   payload: T,
-  options?: Partial<Omit<EventEnvelope<T>, 'id' | 'type' | 'source' | 'payload' | 'timestamp' | 'version'>>
+  options?: Partial<
+    Omit<EventEnvelope<T>, 'id' | 'type' | 'source' | 'payload' | 'timestamp' | 'version'>
+  >
 ): EventEnvelope<T> {
   return {
     id: randomUUID(),
@@ -434,19 +436,4 @@ export function validateEvent(event: unknown): event is EventEnvelope {
 export function isEventExpired(event: EventEnvelope): boolean {
   if (!event.ttl) return false
   return Date.now() > event.timestamp + event.ttl
-}
-
-// =============================================================================
-// 导出
-// =============================================================================
-
-export type {
-  EventEnvelope,
-  OrderEventPayload,
-  RiskAlertPayload,
-  AIInsightPayload,
-  StrategyEventPayload,
-  BacktestProgressPayload,
-  BacktestResultPayload,
-  SpiritEventPayload,
 }
