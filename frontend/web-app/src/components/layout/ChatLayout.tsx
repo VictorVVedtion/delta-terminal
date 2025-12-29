@@ -2,6 +2,7 @@
 
 import React from 'react'
 
+import { useBreakpointDown } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -33,6 +34,9 @@ export function ChatLayout({
   onCanvasClose,
   className,
 }: ChatLayoutProps) {
+  // 响应式检测: lg 断点以下为移动端/平板
+  const isMobileOrTablet = useBreakpointDown('lg')
+
   // Close canvas on escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -44,19 +48,15 @@ export function ChatLayout({
     return () => { window.removeEventListener('keydown', handleEscape); }
   }, [canvasOpen, onCanvasClose])
 
-  // Prevent body scroll when canvas is open on mobile
+  // Prevent body scroll when canvas is open on mobile/tablet
   React.useEffect(() => {
-    if (canvasOpen) {
-      // Only prevent scroll on mobile
-      const isMobile = window.innerWidth < 1024
-      if (isMobile) {
-        document.body.style.overflow = 'hidden'
-      }
+    if (canvasOpen && isMobileOrTablet) {
+      document.body.style.overflow = 'hidden'
     }
     return () => {
       document.body.style.overflow = ''
     }
-  }, [canvasOpen])
+  }, [canvasOpen, isMobileOrTablet])
 
   return (
     <div className="chat-layout">

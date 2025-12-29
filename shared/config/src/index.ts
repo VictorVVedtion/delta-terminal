@@ -254,3 +254,8 @@ export function getServiceUrl(serviceName: keyof typeof serviceUrls): string {
 export function isProductionUrl(url: string): boolean {
   return !url.includes('localhost') && !url.includes('127.0.0.1')
 }
+
+/**
+ * 事件系统
+ */
+export * from './events'
