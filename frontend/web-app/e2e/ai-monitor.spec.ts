@@ -26,11 +26,7 @@ test.describe('监控代理测试', () => {
   /**
    * 辅助函数: 部署一个策略以便后续监控测试
    */
-  async function deployStrategyForMonitoring(
-    chatPage: any,
-    canvasPage: any,
-    mockInsightApi: any
-  ) {
+  async function deployStrategyForMonitoring(chatPage: any, canvasPage: any, mockInsightApi: any) {
     // 设置回测成功响应
     mockInsightApi.setNextResponse(testScenarios.backtestSuccess.response)
     await chatPage.sendMessage('创建并部署策略')
@@ -191,7 +187,12 @@ test.describe('监控代理测试', () => {
 
       if (stillOpen) {
         // 如果仍然打开，应该显示最终统计
-        const stats = await page.locator(':text("总收益"), :text("总交易")').isVisible()
+        const stats = await page
+          .getByText('总收益')
+          .or(page.getByText('总交易'))
+          .first()
+          .isVisible()
+          .catch(() => false)
         expect(stats).toBe(true)
       }
     } else {
@@ -211,11 +212,7 @@ test.describe('监控代理测试', () => {
 // =============================================================================
 
 test.describe('监控边界情况', () => {
-  test('无运行中代理时应显示提示', async ({
-    page,
-    chatPage,
-    mockInsightApi,
-  }) => {
+  test('无运行中代理时应显示提示', async ({ page, chatPage, mockInsightApi }) => {
     // 设置空代理列表响应
     mockInsightApi.setNextResponse({
       success: true,
@@ -234,12 +231,7 @@ test.describe('监控边界情况', () => {
     expect(lastMessage).toMatch(/没有|无|空|暂无/)
   })
 
-  test('代理异常时应显示警告', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('代理异常时应显示警告', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 设置代理异常响应
     mockInsightApi.setNextResponse({
       success: true,
@@ -258,11 +250,7 @@ test.describe('监控边界情况', () => {
     expect(lastMessage).toMatch(/异常|警告|错误|检查/)
   })
 
-  test('同时监控多个代理应正确显示', async ({
-    page,
-    chatPage,
-    mockInsightApi,
-  }) => {
+  test('同时监控多个代理应正确显示', async ({ page, chatPage, mockInsightApi }) => {
     // 设置多代理状态响应
     mockInsightApi.setNextResponse({
       success: true,

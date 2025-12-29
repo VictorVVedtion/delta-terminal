@@ -173,12 +173,7 @@ test.describe('部署流程测试', () => {
     }
   })
 
-  test('SC20: Live 部署 - 需要额外确认', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('SC20: Live 部署 - 需要额外确认', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 先完成回测
     mockInsightApi.setNextResponse(testScenarios.backtestSuccess.response)
     await chatPage.sendMessage('回测已验证策略')
@@ -216,12 +211,7 @@ test.describe('部署流程测试', () => {
     await canvasPage.waitForDeployComplete()
   })
 
-  test('SC21: 部署失败 - 显示错误消息', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('SC21: 部署失败 - 显示错误消息', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 先创建策略
     mockInsightApi.setNextResponse(testScenarios.actionable.response)
     await chatPage.sendMessage('创建策略')
@@ -288,12 +278,7 @@ test.describe('部署流程测试', () => {
 // =============================================================================
 
 test.describe('回测部署边界情况', () => {
-  test('回测中断后应可重新开始', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('回测中断后应可重新开始', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 创建策略
     mockInsightApi.setNextResponse(testScenarios.actionable.response)
     await chatPage.sendMessage('创建策略')
@@ -324,12 +309,7 @@ test.describe('回测部署边界情况', () => {
     await expect(backtestButton).toBeVisible()
   })
 
-  test('多次点击部署不应重复提交', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('多次点击部署不应重复提交', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 设置回测成功
     mockInsightApi.setNextResponse(testScenarios.backtestSuccess.response)
     await chatPage.sendMessage('回测策略')
@@ -357,12 +337,7 @@ test.describe('回测部署边界情况', () => {
     // 检查页面没有显示多个重复的状态消息
   })
 
-  test('网络断开时回测应显示错误', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('网络断开时回测应显示错误', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 创建策略
     mockInsightApi.setNextResponse(testScenarios.actionable.response)
     await chatPage.sendMessage('创建策略')
@@ -383,7 +358,10 @@ test.describe('回测部署边界情况', () => {
 
     // 验证: 应显示网络错误相关提示
     const hasError = await page
-      .locator(':text("网络"), :text("连接"), :text("失败")')
+      .getByText('网络')
+      .or(page.getByText('连接'))
+      .or(page.getByText('失败'))
+      .first()
       .isVisible()
       .catch(() => false)
 

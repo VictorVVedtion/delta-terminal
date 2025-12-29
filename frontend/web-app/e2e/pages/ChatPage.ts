@@ -4,7 +4,7 @@
  * 封装 /strategies 页面的所有交互操作
  */
 
-import { type Locator, type Page, expect } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 export class ChatPage {
   readonly page: Page
@@ -29,6 +29,13 @@ export class ChatPage {
   readonly clarificationSkip: Locator
   readonly clarificationInput: Locator
 
+  // ReasoningChain 相关 (A2UI 2.0)
+  readonly reasoningChainView: Locator
+  readonly reasoningNode: Locator
+  readonly reasoningConfirmButton: Locator
+  readonly reasoningChallengeButton: Locator
+  readonly reasoningBranchOption: Locator
+
   // Canvas 相关
   readonly canvas: Locator
   readonly canvasPanel: Locator
@@ -39,9 +46,14 @@ export class ChatPage {
   constructor(page: Page) {
     this.page = page
 
-    // 聊天输入区域
-    this.chatInput = page.locator('textarea[placeholder*="输入"], textarea[placeholder*="想法"]')
-    this.sendButton = page.getByRole('button', { name: /发送|提交/ })
+    // 聊天输入区域 (可以是 input 或 textarea)
+    this.chatInput = page.locator(
+      'input[placeholder*="策略"], textarea[placeholder*="策略"], input[placeholder*="输入"], textarea[placeholder*="输入"]'
+    )
+    // 发送按钮 (可能是图标按钮)
+    this.sendButton = page
+      .locator('button[type="submit"], button:has(svg.lucide-send), form button')
+      .first()
     this.messageList = page.locator('[class*="message"], [data-testid="message-list"]')
     this.quickPrompts = page.locator('[data-testid="quick-prompts"], button:has-text("从模板")')
     this.templateButton = page.getByRole('button', { name: /从模板开始/ })
@@ -65,6 +77,19 @@ export class ChatPage {
       '[data-testid="clarification-input"], input[type="text"], textarea'
     )
 
+    // ReasoningChain (A2UI 2.0)
+    this.reasoningChainView = page.locator(
+      '[data-testid="reasoning-chain"], [class*="ReasoningChain"], [class*="AI 推理过程"], :text("AI 推理过程")'
+    )
+    this.reasoningNode = page.locator(
+      '[data-testid="reasoning-node"], [class*="reasoning-node"], [class*="ReasoningNode"]'
+    )
+    this.reasoningConfirmButton = page.getByRole('button', { name: /确认/ }).first()
+    this.reasoningChallengeButton = page.getByRole('button', { name: /质疑/ })
+    this.reasoningBranchOption = page.locator(
+      '[data-testid="reasoning-branch"], [class*="branch-option"], [class*="其他可能"]'
+    )
+
     // Canvas
     this.canvas = page.locator('[data-testid="canvas"], [class*="Canvas"], [aria-label*="Canvas"]')
     this.canvasPanel = page.locator('[data-testid="canvas-panel"], [class*="CanvasPanel"]')
@@ -80,18 +105,46 @@ export class ChatPage {
   // ==========================================================================
 
   /**
-   * 导航到策略页面
+   * 导航到聊天页面
    */
   async goto() {
-    await this.page.goto('/strategies')
-    await this.page.waitForLoadState('networkidle')
+    await this.page.goto('/chat')
+    await this.page.waitForLoadState('domcontentloaded')
+    // 等待 React 完全 hydrate
+    await this.page.waitForTimeout(2000)
+  }
+
+  /**
+   * 关闭欢迎引导弹窗（如果存在）
+   */
+  async dismissWelcomeModal() {
+    try {
+      // 查找"跳过"按钮（欢迎弹窗中的）
+      const skipButton = this.page.locator('button:has-text("跳过")')
+      const isVisible = await skipButton.isVisible({ timeout: 2000 }).catch(() => false)
+      if (isVisible) {
+        await skipButton.click()
+        // 等待弹窗消失
+        await this.page.waitForTimeout(500)
+      }
+    } catch {
+      // 没有欢迎弹窗，继续
+    }
   }
 
   /**
    * 等待页面完全加载
    */
   async waitForReady() {
+    // 先关闭可能出现的欢迎引导弹窗
+    await this.dismissWelcomeModal()
+
+    // 等待输入框可见
     await expect(this.chatInput).toBeVisible({ timeout: 10000 })
+
+    // 等待发送按钮启用（表示可以发送消息）
+    // 注意：即使后端离线，输入框也可以使用，只是会显示错误消息
+    await this.page.waitForTimeout(500)
   }
 
   // ==========================================================================
@@ -102,8 +155,24 @@ export class ChatPage {
    * 发送消息
    */
   async sendMessage(message: string) {
-    await this.chatInput.fill(message)
-    await this.sendButton.click()
+    // 聚焦输入框 - 使用 force: true 避免覆盖层问题
+    await this.chatInput.click({ force: true })
+
+    // 清空输入框 - 使用 triple click 选中所有文本然后删除
+    await this.chatInput.click({ clickCount: 3, force: true })
+    await this.page.keyboard.press('Backspace')
+
+    // 使用键盘真实输入触发 React onChange
+    await this.page.keyboard.type(message, { delay: 5 })
+
+    // 等待 React 状态更新
+    await this.page.waitForTimeout(200)
+
+    // 发送 - 直接按 Enter 键提交表单
+    await this.page.keyboard.press('Enter')
+
+    // 等待表单提交处理
+    await this.page.waitForTimeout(100)
   }
 
   /**
@@ -122,20 +191,29 @@ export class ChatPage {
   }
 
   /**
-   * 获取最后一条消息内容
+   * 获取最后一条 AI 消息内容
+   * 只匹配 AI 响应（bg-card），排除用户消息（bg-primary）
    */
   async getLastMessage(): Promise<string> {
-    const messages = await this.page.locator('.rounded-2xl, [class*="message"]').all()
+    // AI 消息有 bg-card 类，用户消息有 bg-primary 类
+    const aiMessages = await this.page.locator('.rounded-2xl.bg-card').all()
+    if (aiMessages.length > 0) {
+      const lastAiMessage = aiMessages[aiMessages.length - 1]
+      return (await lastAiMessage.textContent()) || ''
+    }
+
+    // 回退：尝试获取最后一条消息
+    const messages = await this.page.locator('.rounded-2xl').all()
     if (messages.length === 0) return ''
     const lastMessage = messages[messages.length - 1]
     return (await lastMessage.textContent()) || ''
   }
 
   /**
-   * 获取所有消息数量
+   * 获取所有消息数量 (包括用户和 AI 消息)
    */
   async getMessageCount(): Promise<number> {
-    return await this.page.locator('.rounded-2xl, [class*="message"]').count()
+    return await this.page.locator('.rounded-2xl').count()
   }
 
   // ==========================================================================
@@ -331,5 +409,121 @@ export class ChatPage {
   async expectErrorMessage() {
     const lastMessage = await this.getLastMessage()
     expect(lastMessage).toMatch(/错误|失败|超时|异常|无法/)
+  }
+
+  // ==========================================================================
+  // ReasoningChain 交互方法 (A2UI 2.0)
+  // ==========================================================================
+
+  /**
+   * 检查是否显示推理链视图
+   */
+  async hasReasoningChain(): Promise<boolean> {
+    try {
+      // 查找包含 "AI 推理过程" 文本的元素
+      const reasoningText = this.page.locator(':text("AI 推理过程")')
+      await expect(reasoningText).toBeVisible({ timeout: 5000 })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 等待推理链显示
+   */
+  async waitForReasoningChain(timeout = 20000) {
+    const reasoningText = this.page.locator(':text("AI 推理过程")')
+    await expect(reasoningText).toBeVisible({ timeout })
+  }
+
+  /**
+   * 展开推理链节点
+   */
+  async expandReasoningNode(nodeIndex = 0) {
+    const nodes = await this.page.locator('[class*="reasoning"], [class*="Reasoning"]').all()
+    if (nodes.length > nodeIndex) {
+      await nodes[nodeIndex].click()
+      await this.page.waitForTimeout(300)
+    }
+  }
+
+  /**
+   * 点击推理链确认按钮
+   */
+  async confirmReasoningNode() {
+    // 查找包含 "确认" 文本的按钮，但排除 "快速批准" 和 "调参后批准"
+    const confirmBtn = this.page.locator('button:text-is("确认"), button:has-text("✓ 确认")')
+    await confirmBtn.first().click()
+    await this.page.waitForTimeout(500)
+  }
+
+  /**
+   * 点击推理链质疑按钮
+   */
+  async challengeReasoningNode() {
+    const challengeBtn = this.page.locator(
+      'button:text-is("质疑"), button:has-text("⚠ 质疑"), button:has-text("质疑")'
+    )
+    await challengeBtn.first().click()
+    await this.page.waitForTimeout(500)
+  }
+
+  /**
+   * 检查是否有质疑按钮
+   */
+  async hasChallengeButton(): Promise<boolean> {
+    try {
+      const challengeBtn = this.page.locator('button:text-is("质疑"), button:has-text("质疑")')
+      await expect(challengeBtn.first()).toBeVisible({ timeout: 3000 })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 选择推理链分支选项
+   */
+  async selectReasoningBranch(branchText: string) {
+    const branchOption = this.page.locator(
+      `[class*="branch"]:has-text("${branchText}"), button:has-text("${branchText}")`
+    )
+    await branchOption.first().click()
+    await this.waitForResponse()
+  }
+
+  /**
+   * 检查是否有分支选项
+   */
+  async hasReasoningBranches(): Promise<boolean> {
+    try {
+      // 查找 "其他可能" 或分支选项区域
+      const branchSection = this.page.locator(':text("其他可能"), [class*="branch"]')
+      await expect(branchSection.first()).toBeVisible({ timeout: 3000 })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 获取推理链节点数量
+   */
+  async getReasoningNodeCount(): Promise<number> {
+    // 查找所有推理节点
+    const nodes = await this.page
+      .locator('[class*="理解"], [class*="分析"], [class*="推荐"], [class*="风险"]')
+      .all()
+    return nodes.length
+  }
+
+  /**
+   * 验证推理链质疑后收到响应
+   */
+  async expectChallengeResponse() {
+    // 质疑后应该收到解释性响应
+    const response = await this.getLastMessage()
+    expect(response).toMatch(/质疑|解释|理解|重新|补充/)
   }
 }

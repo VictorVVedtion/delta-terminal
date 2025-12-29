@@ -7,40 +7,49 @@
  * - Page Object 集成
  */
 
-import { test as base, type Page, type Route } from '@playwright/test'
+/* eslint-disable react-hooks/rules-of-hooks -- Playwright fixture use function is not a React hook */
+import { type Page, type Route, test as base } from '@playwright/test'
 
-import { ChatPage } from '../pages/ChatPage'
 import { CanvasPage } from '../pages/CanvasPage'
+import { ChatPage } from '../pages/ChatPage'
 import {
-  type InsightApiResponse,
-  exploratoryResponse,
   actionableResponse,
-  negationResponse,
-  questionResponse,
-  questionWithActionResponse,
-  singleClarificationResponse,
+  agentPauseSuccess,
+  agentResumeSuccess,
+  agentStatusResponse,
+  agentStopSuccess,
+  backendNotConfiguredResponse,
+  backtestErrorResponse,
+  backtestFailedCriteriaResponse,
+  backtestSuccessResponse,
+  batchAdjustResponse,
+  deployFailedResponse,
+  deployLiveSuccess,
+  deployPaperSuccess,
+  exploratoryResponse,
+  getMockResponseForMessage,
+  type InsightApiResponse,
   multiStepClarification1,
   multiStepClarification2,
   multiStepClarification3,
   multiStepClarificationComplete,
-  backtestSuccessResponse,
-  backtestFailedCriteriaResponse,
-  backtestErrorResponse,
-  deployPaperSuccess,
-  deployLiveSuccess,
-  deployFailedResponse,
-  agentStatusResponse,
-  agentPauseSuccess,
-  agentResumeSuccess,
-  agentStopSuccess,
-  backendNotConfiguredResponse,
-  requestTimeoutResponse,
+  negationResponse,
   networkErrorResponse,
-  batchAdjustResponse,
-  tradeSignalResponse,
-  templateSelectionResponse,
+  orchestrationBadDuplicateQuestion,
+  orchestrationConfirmCreateStrategy,
+  orchestrationFollowUpOpinion,
+  orchestrationGoodContextAware,
+  // 编排流程测试响应
+  orchestrationMarketAnalysis,
+  questionResponse,
+  questionWithActionResponse,
+  reasoningBranchSelectResponse,
   reasoningChainResponse,
-  getMockResponseForMessage,
+  reasoningChallengeResponse,
+  requestTimeoutResponse,
+  singleClarificationResponse,
+  templateSelectionResponse,
+  tradeSignalResponse,
 } from './mock-responses'
 
 // =============================================================================
@@ -144,6 +153,18 @@ class MockApiControllerImpl implements MockApiController {
   async setupRoutes(): Promise<void> {
     // Mock /api/ai/insight endpoint
     await this.page.route('**/api/ai/insight', async (route) => {
+      const request = route.request()
+
+      // GET 请求用于健康检查 - 直接返回 200
+      if (request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'ok', available: true }),
+        })
+        return
+      }
+
       if (!this.mockEnabled) {
         await route.continue()
         return
@@ -168,6 +189,23 @@ class MockApiControllerImpl implements MockApiController {
         status: response.success ? 200 : 500,
         contentType: 'application/json',
         body: JSON.stringify(response),
+      })
+    })
+
+    // Mock /api/ai/status endpoint (后端状态检查)
+    await this.page.route('**/api/ai/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'ok',
+          model: 'deepseek-chat-v3-0324',
+          provider: 'openrouter',
+          available: true,
+          backend_status: {
+            nlp_processor: { status: 'healthy', latency: 100 },
+          },
+        }),
       })
     })
 
@@ -294,7 +332,7 @@ class MockApiControllerImpl implements MockApiController {
       try {
         const request = route.request()
         const postData = request.postDataJSON() as { message?: string }
-        if (postData?.message) {
+        if (postData.message) {
           return getMockResponseForMessage(postData.message)
         }
       } catch {
@@ -469,6 +507,43 @@ export const testScenarios = {
   reasoningChain: {
     name: 'SC33: 推理链展示',
     response: reasoningChainResponse,
+  },
+  reasoningChallenge: {
+    name: 'SC33-A: 推理链质疑',
+    response: reasoningChallengeResponse,
+    inputExample: '我对这个判断有疑问',
+  },
+  reasoningBranchSelect: {
+    name: 'SC33-B: 推理链分支选择',
+    response: reasoningBranchSelectResponse,
+    inputExample: '我想使用 RSI 超卖策略角度',
+  },
+
+  // === 编排流程场景 ===
+  orchestrationMarketAnalysis: {
+    name: 'ORC01: 市场分析',
+    response: orchestrationMarketAnalysis,
+    inputExample: 'BTC 现在的行情怎么样？',
+  },
+  orchestrationFollowUp: {
+    name: 'ORC02: 追问观点',
+    response: orchestrationFollowUpOpinion,
+    inputExample: '你觉得呢？',
+  },
+  orchestrationConfirm: {
+    name: 'ORC03: 确认创建策略',
+    response: orchestrationConfirmCreateStrategy,
+    inputExample: '那制定这个策略吧',
+  },
+  orchestrationBadDuplicate: {
+    name: 'ORC04: 重复追问（错误行为）',
+    response: orchestrationBadDuplicateQuestion,
+    inputExample: '创建 BTC 网格策略',
+  },
+  orchestrationContextAware: {
+    name: 'ORC05: 上下文保持（正确行为）',
+    response: orchestrationGoodContextAware,
+    inputExample: '帮我创建一个网格策略',
   },
 }
 

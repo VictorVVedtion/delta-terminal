@@ -1047,8 +1047,373 @@ export const reasoningChainResponse: InsightApiResponse = {
     actions: ['approve', 'reject', 'run_backtest'],
     show_reasoning: true,
     reasoning_display_mode: 'expanded',
-    // 推理链数据 - 使用简化版本以匹配类型定义
-    // 完整的 ReasoningChain 需要包含 nodes, user_input 等字段
+    reasoning_chain: {
+      id: 'chain_test_001',
+      user_input: '帮我分析 BTC 是否值得现在入场',
+      nodes: [
+        {
+          id: 'node_understanding',
+          type: 'understanding',
+          title: '理解您的需求',
+          content: '您想了解 BTC 当前是否适合入场。我需要分析市场状况和风险。',
+          confidence: 0.92,
+          status: 'pending',
+          available_actions: ['confirm', 'challenge'],
+          branches: [
+            {
+              id: 'alt_clarify',
+              label: '让我帮您梳理',
+              description: '我可以引导您一步步明确交易需求',
+              probability: 0.9,
+            },
+          ],
+        },
+        {
+          id: 'node_analysis',
+          type: 'analysis',
+          title: '市场分析',
+          content: 'BTC 当前 RSI=73，处于超买区域，24h涨幅2%。',
+          confidence: 0.85,
+          status: 'pending',
+          available_actions: ['confirm', 'challenge'],
+        },
+      ],
+      status: 'in_progress',
+      overall_confidence: 0.88,
+    },
+  },
+}
+
+/**
+ * 推理链质疑响应 - 用户质疑某个推理步骤后的回应
+ */
+export const reasoningChallengeResponse: InsightApiResponse = {
+  success: true,
+  message: '您对**理解您的需求**有疑问，让我重新解释一下。我理解您的意图是：您想了解 BTC 当前是否适合入场。如果我理解有误，请告诉我您真正想要的是什么？',
+  conversationId: 'conv_challenge_001',
+  intent: 'general_chat',
+  confidence: 0.95,
+  insight: {
+    id: 'insight_challenge_001',
+    type: 'general_chat',
+    explanation:
+      '您对**理解您的需求**有疑问，让我重新解释一下。\n\n我理解您的意图是：您想了解 BTC 当前是否适合入场。\n\n如果我理解有误，请告诉我您真正想要的是什么？',
+    created_at: new Date().toISOString(),
+    show_reasoning: false,
+  },
+}
+
+/**
+ * 推理链分支选择响应 - 用户选择不同策略角度后的回应
+ */
+export const reasoningBranchSelectResponse: InsightApiResponse = {
+  success: true,
+  message: '好的，我将按照**RSI 超卖信号策略**为您配置策略。',
+  conversationId: 'conv_branch_001',
+  intent: 'create_strategy',
+  confidence: 0.92,
+  insight: {
+    id: 'insight_branch_001',
+    type: 'strategy_create',
+    target: {
+      strategy_id: 'strat_rsi_001',
+      name: 'RSI 超卖反转策略',
+      symbol: 'BTC/USDT',
+    },
+    params: [
+      {
+        key: 'rsi_period',
+        label: 'RSI 周期',
+        type: 'slider',
+        value: 14,
+        level: 1,
+        config: { min: 7, max: 21, step: 1 },
+      },
+      {
+        key: 'rsi_oversold',
+        label: 'RSI 超卖阈值',
+        type: 'slider',
+        value: 30,
+        level: 1,
+        config: { min: 20, max: 40, step: 1 },
+      },
+    ],
+    explanation:
+      '好的，我将按照**RSI 超卖信号策略**为您配置策略。\n\n**入场逻辑**: 当 RSI(14) 低于 30 时买入\n\n接下来让我为您配置具体的参数...',
+    created_at: new Date().toISOString(),
+    show_reasoning: true,
+  },
+}
+
+// =============================================================================
+// 编排流程测试响应 (上下文持久化、确认流程)
+// =============================================================================
+
+/**
+ * ORC01: 市场分析初始响应 - 询问 BTC 行情
+ */
+export const orchestrationMarketAnalysis: InsightApiResponse = {
+  success: true,
+  message: `**BTC 当前行情分析**（实时数据）：
+
+📊 **价格**: $89,606（24h +1.99%）
+📈 **趋势**: 多头，但 RSI 超买（71.98）需警惕短期回调
+🎯 **关键位**: 支撑 $87,442 | 阻力 $90,389
+
+**交易建议**：
+✅ 当前价格接近阻力位，**不建议追高**
+✅ 等待回调至支撑位 $87,442 附近（-2.4%）再买入
+⚠️ 若跌破支撑位，下一支撑在 $85,000 附近
+
+**适合策略**: 支撑位买入策略或网格策略（区间 $85,000-$92,000）`,
+  conversationId: 'conv_orc_001',
+  intent: 'analyze_market',
+  confidence: 0.95,
+  suggestedActions: ['创建策略', '设置价格提醒', '查看更多指标'],
+}
+
+/**
+ * ORC02: 追问响应 - "你觉得呢？"
+ * 应该继续分析，给出观点，而不是重复数据
+ */
+export const orchestrationFollowUpOpinion: InsightApiResponse = {
+  success: true,
+  message: `**我的观点**：
+
+基于当前技术面分析，我建议**等待回调再进场**，原因如下：
+
+1. **RSI 超买警告**（71.98 > 70）：短期回调概率较高
+2. **价格接近阻力位**：$90,389 是强阻力，突破需要放量确认
+3. **风险收益比不佳**：现价买入止损空间大，收益空间有限
+
+**具体建议**：
+- 🎯 **激进型**：等价格回落到 $88,000 左右（约 -2%）小仓位试多
+- 🎯 **稳健型**：等价格回调到支撑位 $87,442（约 -2.4%）再进场
+- 🛡️ **止损设置**：无论哪种，止损放在 $85,000 下方（约 -5%）
+
+**如果你决定做这个策略，我可以帮你配置具体参数。**`,
+  conversationId: 'conv_orc_001',
+  intent: 'analyze_market',
+  confidence: 0.92,
+  suggestedActions: ['制定策略', '查看历史回测', '设置价格提醒'],
+}
+
+/**
+ * ORC03: 确认创建策略 - "那制定这个策略吧"
+ * 直接创建策略，不应该再询问确认
+ */
+export const orchestrationConfirmCreateStrategy: InsightApiResponse = {
+  success: true,
+  message: '已为您创建 BTC 支撑位买入策略，请确认以下参数：',
+  conversationId: 'conv_orc_001',
+  intent: 'create_strategy',
+  confidence: 0.95,
+  insight: {
+    id: 'insight_orc_strategy_001',
+    type: 'strategy_create',
+    target: {
+      strategy_id: 'strat_btc_support_001',
+      name: 'BTC 支撑位买入策略',
+      symbol: 'BTC/USDT',
+    },
+    params: [
+      {
+        key: 'symbol',
+        label: '交易对',
+        type: 'select',
+        value: 'BTC/USDT',
+        level: 1,
+        config: {
+          options: [
+            { value: 'BTC/USDT', label: 'BTC/USDT' },
+            { value: 'ETH/USDT', label: 'ETH/USDT' },
+          ],
+        },
+      },
+      {
+        key: 'support_price',
+        label: '支撑位价格',
+        type: 'number',
+        value: 87442,
+        level: 1,
+        config: { min: 80000, max: 95000, step: 100, unit: 'USDT' },
+        description: '基于之前分析的支撑位',
+      },
+      {
+        key: 'price_buffer',
+        label: '价格缓冲区',
+        type: 'slider',
+        value: 1.5,
+        level: 1,
+        config: { min: 0.5, max: 5, step: 0.5, unit: '%' },
+      },
+      {
+        key: 'confirm_candles',
+        label: '确认K线数',
+        type: 'slider',
+        value: 2,
+        level: 1,
+        config: { min: 1, max: 5, step: 1 },
+      },
+      {
+        key: 'position_size',
+        label: '仓位大小',
+        type: 'slider',
+        value: 30,
+        level: 1,
+        config: { min: 10, max: 50, step: 5, unit: '%' },
+      },
+      {
+        key: 'stop_loss',
+        label: '止损幅度',
+        type: 'slider',
+        value: 5,
+        level: 1,
+        config: { min: 2, max: 10, step: 0.5, unit: '%' },
+      },
+      {
+        key: 'take_profit',
+        label: '止盈幅度',
+        type: 'slider',
+        value: 8,
+        level: 1,
+        config: { min: 3, max: 20, step: 1, unit: '%' },
+      },
+    ],
+    impact: {
+      metrics: [
+        { key: 'expectedReturn', label: '预期收益', value: 8, unit: '%', trend: 'up' },
+        { key: 'maxDrawdown', label: '最大回撤', value: -5, unit: '%', trend: 'down' },
+        { key: 'winRate', label: '胜率', value: 68, unit: '%', trend: 'up' },
+      ],
+      confidence: 0.78,
+      sample_size: 90,
+    },
+    explanation: `基于当前行情分析，BTC 在 $87,442 形成了强支撑位（已测试 4 次，胜率 68%）。当前价格 $89,606 处于超买状态（RSI 71.98），短期有回调可能。
+
+**策略优势**：
+• 支撑位经过多次验证，可靠性较高
+• 2 根 K 线确认机制避免假突破
+• 风险收益比 1.6:1，符合稳健交易原则
+
+**风险提示**：若支撑位被有效跌破，下一支撑在 $85,000，建议严格执行 5% 止损。`,
+    created_at: new Date().toISOString(),
+    actions: ['approve', 'reject', 'modify_params'],
+  },
+}
+
+/**
+ * ORC04: 重复追问测试 - 用户已说 BTC，不应再问交易对
+ * 这个响应模拟错误行为，用于验证修复
+ */
+export const orchestrationBadDuplicateQuestion: InsightApiResponse = {
+  success: true,
+  message: '请问您想交易哪个交易对？',
+  conversationId: 'conv_orc_bad_001',
+  intent: 'clarification',
+  confidence: 0.7,
+  insight: {
+    id: 'insight_bad_clarify_001',
+    type: 'clarification',
+    params: [
+      {
+        key: 'symbol',
+        label: '交易对',
+        type: 'select',
+        value: '',
+        level: 1,
+        config: {
+          options: [
+            { value: 'BTC/USDT', label: 'BTC/USDT' },
+            { value: 'ETH/USDT', label: 'ETH/USDT' },
+          ],
+        },
+      },
+    ],
+    explanation: '请选择您想交易的交易对。',
+    created_at: new Date().toISOString(),
+    actions: ['approve'],
+  },
+}
+
+/**
+ * ORC05: 正确的上下文保持 - 记住用户已说 BTC
+ * 直接进入策略配置，不重复询问交易对
+ */
+export const orchestrationGoodContextAware: InsightApiResponse = {
+  success: true,
+  message: '好的，我来帮您创建 BTC 网格策略。请确认以下参数：',
+  conversationId: 'conv_orc_good_001',
+  intent: 'create_strategy',
+  confidence: 0.92,
+  insight: {
+    id: 'insight_good_context_001',
+    type: 'strategy_create',
+    target: {
+      strategy_id: 'strat_btc_grid_001',
+      name: 'BTC 网格策略',
+      symbol: 'BTC/USDT', // 自动填充，因为用户之前提到了 BTC
+    },
+    params: [
+      {
+        key: 'symbol',
+        label: '交易对',
+        type: 'select',
+        value: 'BTC/USDT', // 预填充
+        level: 1,
+        config: {
+          options: [
+            { value: 'BTC/USDT', label: 'BTC/USDT' },
+            { value: 'ETH/USDT', label: 'ETH/USDT' },
+          ],
+        },
+        description: '已根据您之前的消息自动选择',
+      },
+      {
+        key: 'upper_bound',
+        label: '价格上界',
+        type: 'number',
+        value: 95000,
+        level: 1,
+        config: { min: 85000, max: 120000, step: 500, unit: 'USDT' },
+      },
+      {
+        key: 'lower_bound',
+        label: '价格下界',
+        type: 'number',
+        value: 80000,
+        level: 1,
+        config: { min: 60000, max: 90000, step: 500, unit: 'USDT' },
+      },
+      {
+        key: 'grid_count',
+        label: '网格数量',
+        type: 'slider',
+        value: 10,
+        level: 1,
+        config: { min: 5, max: 50, step: 1 },
+      },
+      {
+        key: 'investment',
+        label: '投入金额',
+        type: 'number',
+        value: 1000,
+        level: 1,
+        config: { min: 100, max: 100000, step: 100, unit: 'USDT' },
+      },
+    ],
+    impact: {
+      metrics: [
+        { key: 'expectedReturn', label: '预期收益', value: 15, unit: '%', trend: 'up' },
+        { key: 'gridProfit', label: '每格收益', value: 1.5, unit: '%', trend: 'up' },
+      ],
+      confidence: 0.85,
+      sample_size: 120,
+    },
+    explanation:
+      '已为您配置 BTC 网格策略，价格区间 $80,000 - $95,000，共 10 格。每格预期收益约 1.5%。',
+    created_at: new Date().toISOString(),
+    actions: ['approve', 'reject', 'modify_params'],
   },
 }
 

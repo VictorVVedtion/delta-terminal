@@ -44,7 +44,9 @@ test.describe('高级功能测试', () => {
       await page.waitForTimeout(500)
 
       // 查找并点击一个模板
-      const templateItem = page.locator('[data-testid="template-item"], [class*="template"]').first()
+      const templateItem = page
+        .locator('[data-testid="template-item"], [class*="template"]')
+        .first()
       const hasItem = await templateItem.isVisible().catch(() => false)
 
       if (hasItem) {
@@ -75,11 +77,7 @@ test.describe('高级功能测试', () => {
     }
   })
 
-  test('SC33: 推理链展示 - ReasoningChainView 显示', async ({
-    page,
-    chatPage,
-    mockInsightApi,
-  }) => {
+  test('SC33: 推理链展示 - ReasoningChainView 显示', async ({ page, chatPage, mockInsightApi }) => {
     // 设置推理链响应
     mockInsightApi.setNextResponse(testScenarios.reasoningChain.response)
 
@@ -112,7 +110,8 @@ test.describe('高级功能测试', () => {
       // 验证: 步骤详情显示
       const stepDetail = page.locator('[class*="reasoning-detail"], [class*="step-content"]')
       const hasDetail = await stepDetail.isVisible().catch(() => false)
-      // 点击后应该显示详情
+      // 点击后应该显示详情（如果实现了展开功能）
+      expect(hasDetail || stepCount > 0).toBe(true)
     }
   })
 
@@ -183,8 +182,13 @@ test.describe('高级功能测试', () => {
       await canvasPage.waitForOpen()
 
       // 验证: 敏感度相关内容显示
-      const sensitivityContent = page.locator(':text("敏感度"), :text("参数影响")')
-      const hasContent = await sensitivityContent.isVisible().catch(() => false)
+      const sensitivityContent = page.getByText('敏感度').or(page.getByText('参数影响'))
+      const hasContent = await sensitivityContent
+        .first()
+        .isVisible()
+        .catch(() => false)
+      // 敏感度内容应显示
+      expect(hasContent).toBe(true)
     }
 
     // 验证响应包含敏感度信息
@@ -280,8 +284,16 @@ test.describe('高级功能测试', () => {
       await canvasPage.waitForOpen()
 
       // 验证: 对比内容显示
-      const comparisonContent = page.locator(':text("对比"), :text("均线"), :text("网格")')
-      const hasContent = await comparisonContent.isVisible().catch(() => false)
+      const comparisonContent = page
+        .getByText('对比')
+        .or(page.getByText('均线'))
+        .or(page.getByText('网格'))
+      const hasContent = await comparisonContent
+        .first()
+        .isVisible()
+        .catch(() => false)
+      // 对比内容应显示
+      expect(hasContent).toBe(true)
     }
 
     // 验证响应包含对比信息
@@ -295,12 +307,7 @@ test.describe('高级功能测试', () => {
 // =============================================================================
 
 test.describe('高级交互', () => {
-  test('Canvas 中参数联动应正确工作', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('Canvas 中参数联动应正确工作', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 创建策略
     mockInsightApi.setNextResponse(testScenarios.actionable.response)
     await chatPage.sendMessage('创建策略')
@@ -326,12 +333,7 @@ test.describe('高级交互', () => {
     }
   })
 
-  test('快捷键应正常工作', async ({
-    page,
-    chatPage,
-    canvasPage,
-    mockInsightApi,
-  }) => {
+  test('快捷键应正常工作', async ({ page, chatPage, canvasPage, mockInsightApi }) => {
     // 测试 ESC 关闭 Canvas
     mockInsightApi.setNextResponse(testScenarios.actionable.response)
     await chatPage.sendMessage('创建策略')
@@ -350,11 +352,7 @@ test.describe('高级交互', () => {
     expect(isOpen).toBe(false)
   })
 
-  test('输入框快捷发送 (Ctrl+Enter) 应工作', async ({
-    page,
-    chatPage,
-    mockInsightApi,
-  }) => {
+  test('输入框快捷发送 (Ctrl+Enter) 应工作', async ({ page, chatPage, mockInsightApi }) => {
     mockInsightApi.setNextResponse(testScenarios.exploratory.response)
 
     // 输入消息
@@ -371,11 +369,7 @@ test.describe('高级交互', () => {
     expect(messageCount).toBeGreaterThan(0)
   })
 
-  test('复制粘贴长文本应正常处理', async ({
-    page,
-    chatPage,
-    mockInsightApi,
-  }) => {
+  test('复制粘贴长文本应正常处理', async ({ page, chatPage, mockInsightApi }) => {
     mockInsightApi.setNextResponse(testScenarios.exploratory.response)
 
     // 准备长文本
@@ -405,11 +399,7 @@ test.describe('高级交互', () => {
 // =============================================================================
 
 test.describe('移动端适配', () => {
-  test('小屏幕下 UI 应正确响应', async ({
-    page,
-    chatPage,
-    mockInsightApi,
-  }) => {
+  test('小屏幕下 UI 应正确响应', async ({ page, chatPage, mockInsightApi }) => {
     // 设置移动端视口
     await page.setViewportSize({ width: 375, height: 667 })
 
@@ -430,11 +420,7 @@ test.describe('移动端适配', () => {
     expect(messageCount).toBeGreaterThan(0)
   })
 
-  test('横屏模式下应正常工作', async ({
-    page,
-    chatPage,
-    mockInsightApi,
-  }) => {
+  test('横屏模式下应正常工作', async ({ page, chatPage, mockInsightApi }) => {
     // 设置横屏视口
     await page.setViewportSize({ width: 667, height: 375 })
 
