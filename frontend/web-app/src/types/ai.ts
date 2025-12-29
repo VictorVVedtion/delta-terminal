@@ -151,6 +151,48 @@ export const AI_MODELS: Record<string, AIModel> = {
     description: '超高性价比，中文优化',
     icon: 'Coins'
   },
+  'deepseek/deepseek-chat-v3-0324': {
+    id: 'deepseek/deepseek-chat-v3-0324',
+    name: 'DeepSeek V3.2',
+    provider: 'deepseek',
+    tier: 'tier1',
+    capabilities: ['reasoning', 'coding', 'cheap', 'chinese'],
+    contextLength: 164000,
+    inputPrice: 0.224,
+    outputPrice: 0.32,
+    supportsStreaming: true,
+    supportsThinking: true,
+    description: '最新版本，策略生成首选',
+    icon: 'Brain'
+  },
+  'openai/gpt-4o-mini': {
+    id: 'openai/gpt-4o-mini',
+    name: 'GPT-4o Mini',
+    provider: 'openai',
+    tier: 'tier2',
+    capabilities: ['fast', 'cheap'],
+    contextLength: 128000,
+    inputPrice: 0.15,
+    outputPrice: 0.60,
+    supportsStreaming: true,
+    supportsThinking: false,
+    description: '极速经济型，意图识别首选',
+    icon: 'Zap'
+  },
+  'google/gemini-2.0-flash-001': {
+    id: 'google/gemini-2.0-flash-001',
+    name: 'Gemini 2.0 Flash',
+    provider: 'google',
+    tier: 'tier2',
+    capabilities: ['fast', 'cheap', 'multimodal'],
+    contextLength: 1000000,
+    inputPrice: 0.10,
+    outputPrice: 0.40,
+    supportsStreaming: true,
+    supportsThinking: false,
+    description: '超长上下文，快速响应',
+    icon: 'Wind'
+  },
   'google/gemini-3-pro-preview': {
     id: 'google/gemini-3-pro-preview',
     name: 'Gemini 3 Pro',
@@ -369,25 +411,25 @@ export const SIMPLE_PRESETS: Record<SimplePreset, SimplePresetConfig> = {
   economy: {
     preset: 'economy',
     name: '经济型',
-    description: '成本最低，适合高频调用',
-    defaultModel: 'anthropic/claude-sonnet-4.5',
-    estimatedCostPerCall: 0.003,
+    description: '成本最低，意图识别极速',
+    defaultModel: 'openai/gpt-4o-mini',
+    estimatedCostPerCall: 0.0003,
     icon: 'Coins'
   },
   balanced: {
     preset: 'balanced',
     name: '平衡型',
-    description: '性能与成本平衡，大多数场景推荐',
-    defaultModel: 'anthropic/claude-sonnet-4.5',
-    estimatedCostPerCall: 0.003,
+    description: '性价比之王，策略生成首选',
+    defaultModel: 'deepseek/deepseek-chat-v3-0324',
+    estimatedCostPerCall: 0.0005,
     icon: 'Scale'
   },
   performance: {
     preset: 'performance',
     name: '性能型',
     description: '最强智能，复杂任务首选',
-    defaultModel: 'anthropic/claude-opus-4.5',
-    estimatedCostPerCall: 0.10,
+    defaultModel: 'anthropic/claude-sonnet-4.5',
+    estimatedCostPerCall: 0.015,
     icon: 'Rocket'
   },
   chinese: {

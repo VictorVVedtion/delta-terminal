@@ -89,7 +89,7 @@ export class OpenRouterClient {
    * 发送聊天请求（非流式）
    */
   async chat(request: AIRequest): Promise<AIResponse> {
-    const model = request.model || 'anthropic/claude-sonnet-4.5'
+    const model = request.model || 'deepseek/deepseek-chat-v3-0324'
     const startTime = Date.now()
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -117,7 +117,7 @@ export class OpenRouterClient {
    * 发送聊天请求（流式）
    */
   async *chatStream(request: AIRequest): AsyncGenerator<AIStreamChunk> {
-    const model = request.model || 'anthropic/claude-sonnet-4.5'
+    const model = request.model || 'deepseek/deepseek-chat-v3-0324'
     const modelInfo = AI_MODELS[model]
     const supportsThinking = modelInfo.supportsThinking ?? false
 
