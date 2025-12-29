@@ -12,6 +12,12 @@
 import type { NextRequest } from 'next/server'
 
 // =============================================================================
+// Next.js Route Config (SSE requires Node.js runtime)
+// =============================================================================
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -88,9 +94,13 @@ async function fetchWithTimeout(
 // =============================================================================
 
 export async function POST(request: NextRequest): Promise<Response> {
+  console.log('[A2UI Insight API] POST request received')
+  console.log('[A2UI Insight API] NLP_PROCESSOR_URL:', NLP_PROCESSOR_URL)
+
   try {
     // 解析请求
     const body: InsightRequest = await request.json()
+    console.log('[A2UI Insight API] Request body:', JSON.stringify(body).slice(0, 200))
 
     if (!body.message.trim()) {
       return Response.json({ success: false, error: '消息内容不能为空' }, { status: 400 })
@@ -216,15 +226,93 @@ export async function POST(request: NextRequest): Promise<Response> {
 }
 
 // =============================================================================
-// GET Handler (Health Check)
+// GET Handler (SSE Stream)
 // =============================================================================
 
-export async function GET(): Promise<Response> {
-  const nlpUrl = NLP_PROCESSOR_URL
+/**
+ * SSE 流式推理链端点
+ *
+ * 接收 ?message=xxx 参数，返回 SSE 流
+ */
+export async function GET(request: NextRequest): Promise<Response> {
+  const searchParams = request.nextUrl.searchParams
+  const message = searchParams.get('message')
+  const userId = searchParams.get('userId') || 'anonymous'
+  const conversationId = searchParams.get('conversationId')
 
-  return Response.json({
-    service: 'A2UI Insight API',
-    status: nlpUrl ? 'configured' : 'not_configured',
-    backend: nlpUrl ? `${nlpUrl}/api/v1/chat/message` : null,
-  })
+  if (!message) {
+    return Response.json({ error: '缺少 message 参数' }, { status: 400 })
+  }
+
+  if (!NLP_PROCESSOR_URL) {
+    return Response.json({ error: '后端服务未配置' }, { status: 503 })
+  }
+
+  try {
+    // 调用后端 SSE 端点
+    const backendRequest = {
+      message,
+      user_id: userId,
+      conversation_id: conversationId,
+      context: {},
+    }
+
+    console.log('[SSE Route] Calling backend:', `${NLP_PROCESSOR_URL}/api/v1/chat/reasoning/stream`)
+
+    const response = await fetch(`${NLP_PROCESSOR_URL}/api/v1/chat/reasoning/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(backendRequest),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '')
+      console.error('[SSE Route] Backend error:', response.status, errorText)
+      throw new Error(`后端错误: ${response.status}`)
+    }
+
+    // 转发 SSE 流 (使用 ReadableStream 确保正确流式传输)
+    if (!response.body) {
+      throw new Error('后端未返回流式响应')
+    }
+
+    // 创建 TransformStream 来确保 SSE 事件正确转发
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const reader = response.body.getReader()
+
+    // 异步转发流
+    void (async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            await writer.close()
+            break
+          }
+          await writer.write(value)
+        }
+      } catch (error) {
+        console.error('[SSE Route] Stream error:', error)
+        await writer.abort(error as Error)
+      }
+    })()
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no', // Disable nginx buffering
+      },
+    })
+  } catch (error) {
+    console.error('[SSE Stream Error]:', error)
+    return Response.json(
+      { error: error instanceof Error ? error.message : '流式请求失败' },
+      { status: 500 }
+    )
+  }
 }

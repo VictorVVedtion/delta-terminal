@@ -9,6 +9,11 @@ export { InsightCard, default as InsightCardDefault } from './InsightCard'
 export { InsightMessage, MultiInsightMessage } from './InsightMessage'
 export { ReasoningChainView, ReasoningNodeView } from './ReasoningChainView'
 
+// EPIC-008 分析类卡片
+export { SensitivityInsightCard } from './SensitivityInsightCard'
+export { AttributionInsightCard } from './AttributionInsightCard'
+export { ComparisonInsightCard } from './ComparisonInsightCard'
+
 // Re-export types
 export type {
   ClarificationAnswer,
@@ -30,7 +35,12 @@ export type {
 } from '@/types/insight'
 
 // Re-export type guards
-export { isClarificationInsight } from '@/types/insight'
+export {
+  isClarificationInsight,
+  isSensitivityInsight,
+  isAttributionInsight,
+  isComparisonInsight,
+} from '@/types/insight'
 
 // Re-export reasoning chain types (A2UI 2.0)
 export type {

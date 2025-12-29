@@ -3,12 +3,14 @@
 A2UI Enhancement: 返回结构化的 InsightData 而非纯文本
 """
 
+import json
 import logging
 import uuid
 from datetime import datetime
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from ...chains.strategy_chain import StrategyChain, get_strategy_chain
 from ...models.schemas import (
@@ -24,6 +26,7 @@ from ...services.insight_service import InsightGeneratorService, get_insight_ser
 from ...services.intent_service import IntentService, get_intent_service
 from ...services.conversation_store import ConversationStore, get_conversation_store
 from ...services.prompt_guard import PromptGuard, get_prompt_guard, RiskLevel
+from ...services.reasoning_service import ReasoningChainService, get_reasoning_service
 from .insight import store_insight
 
 logger = logging.getLogger(__name__)
@@ -567,3 +570,75 @@ async def _generate_suggested_actions(intent, entities: Dict) -> list[str]:
         ])
 
     return suggestions
+
+
+@router.post("/reasoning/stream")
+async def stream_reasoning_chain(
+    request: ChatRequest,
+    reasoning_service: ReasoningChainService = Depends(get_reasoning_service),
+    intent_service: IntentService = Depends(get_intent_service),
+) -> StreamingResponse:
+    """
+    流式推理链生成 (SSE)
+
+    逐个节点流式返回推理链，用于前端实时渲染
+
+    Args:
+        request: 聊天请求
+        reasoning_service: 推理链服务
+        intent_service: 意图服务
+
+    Returns:
+        SSE 流式响应
+    """
+    try:
+        logger.info(f"Stream reasoning chain request: {request.message}")
+
+        # 识别意图
+        from ...models.schemas import IntentRecognitionRequest
+
+        intent_request = IntentRecognitionRequest(
+            text=request.message, context=request.context or {}
+        )
+        intent_response = await intent_service.recognize_intent(
+            intent_request, user_id=request.user_id
+        )
+
+        # 生成器函数 - 流式输出推理节点
+        async def generate():
+            try:
+                # 发送开始事件
+                yield f"event: start\ndata: {json.dumps({'message': '开始思考...'})}\n\n"
+
+                # 流式生成推理节点
+                async for node_data in reasoning_service.generate_reasoning_chain_stream(
+                    user_input=request.message,
+                    intent=intent_response.intent,
+                    context=request.context or {},
+                ):
+                    # 发送节点数据
+                    yield f"event: node\ndata: {json.dumps(node_data)}\n\n"
+
+                # 发送完成事件
+                yield f"event: done\ndata: {json.dumps({'message': '思考完成'})}\n\n"
+
+            except Exception as e:
+                logger.error(f"Error streaming reasoning chain: {e}", exc_info=True)
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",  # 禁用 nginx 缓冲
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"Error in stream reasoning chain: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"推理链生成失败: {str(e)}",
+        )

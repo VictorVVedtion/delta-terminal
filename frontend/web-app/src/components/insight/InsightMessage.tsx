@@ -14,12 +14,18 @@ import type {
 } from '@/types/insight';
 import {
   isClarificationInsight,
+  isSensitivityInsight,
+  isAttributionInsight,
+  isComparisonInsight,
 } from '@/types/insight'
 import type { NodeAction } from '@/types/reasoning'
 
 import { ClarificationCard } from './ClarificationCard'
 import { InsightCard } from './InsightCard'
 import { ReasoningChainView } from './ReasoningChainView'
+import { SensitivityInsightCard } from './SensitivityInsightCard'
+import { AttributionInsightCard } from './AttributionInsightCard'
+import { ComparisonInsightCard } from './ComparisonInsightCard'
 
 // =============================================================================
 // Types
@@ -132,6 +138,7 @@ export function InsightMessage({
 
   // Render appropriate card based on insight type
   const renderCard = () => {
+    // EPIC-010: Clarification questions
     if (isClarificationInsight(insight)) {
       return (
         <ClarificationCard
@@ -143,6 +150,40 @@ export function InsightMessage({
       )
     }
 
+    // EPIC-008: Sensitivity analysis
+    if (isSensitivityInsight(insight)) {
+      return (
+        <SensitivityInsightCard
+          data={insight}
+          onExpand={handleExpand}
+          compact={compact}
+        />
+      )
+    }
+
+    // EPIC-008: Attribution analysis
+    if (isAttributionInsight(insight)) {
+      return (
+        <AttributionInsightCard
+          data={insight}
+          onExpand={handleExpand}
+          compact={compact}
+        />
+      )
+    }
+
+    // EPIC-008: Comparison analysis
+    if (isComparisonInsight(insight)) {
+      return (
+        <ComparisonInsightCard
+          data={insight}
+          onExpand={handleExpand}
+          compact={compact}
+        />
+      )
+    }
+
+    // Default: Standard InsightCard for other types
     return (
       <InsightCard
         insight={insight}

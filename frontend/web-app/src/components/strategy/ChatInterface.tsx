@@ -41,7 +41,7 @@ import type { StrategyStatus } from '@/components/canvas/MonitorCanvas'
 import { MonitorCanvas } from '@/components/canvas/MonitorCanvas'
 import { SensitivityCanvas } from '@/components/canvas/SensitivityCanvas'
 import { VersionHistoryCanvas } from '@/components/canvas/VersionHistoryCanvas'
-import { InsightMessage } from '@/components/insight'
+import { InsightMessage, ReasoningChainView } from '@/components/insight'
 import { EmergencyActions } from '@/components/intervention/EmergencyActions'
 import { SpiritBeam } from '@/components/spirit/SpiritBeam'
 import { SpiritOrb } from '@/components/spirit/SpiritOrb'
@@ -54,6 +54,7 @@ import { MAX_MESSAGE_LENGTH, useA2UIInsight } from '@/hooks/useA2UIInsight'
 import { useBacktest } from '@/hooks/useBacktest'
 import { useDeployment } from '@/hooks/useDeployment'
 import { useMonitor } from '@/hooks/useMonitor'
+import { useReasoningStream } from '@/hooks/useReasoningStream'
 import { useSpiritController } from '@/hooks/useSpiritController'
 import type { StrategyTemplate } from '@/lib/templates/strategies'
 import { cn } from '@/lib/utils'
@@ -78,9 +79,9 @@ import type {
   InsightParam,
   SensitivityInsightData,
 } from '@/types/insight'
-import type { NodeAction } from '@/types/reasoning'
 import { isClarificationInsight } from '@/types/insight'
 import type { EmergencyAction } from '@/types/intervention'
+import type { NodeAction } from '@/types/reasoning'
 import type { ResearchReport } from '@/types/research'
 
 import { TemplateSelector } from './TemplateSelector'
@@ -472,6 +473,29 @@ export function ChatInterface({
     isThinking || isLoading,
     undefined // 使用自动进度模式
   )
+
+  // ==========================================================================
+  // A2UI 2.0: SSE 流式推理链
+  // ==========================================================================
+  const {
+    nodes: streamingNodes,
+    isStreaming,
+    startStream,
+    stopStream,
+    reset: resetStream,
+    error: _streamError,
+  } = useReasoningStream({
+    onComplete: (nodes) => {
+      console.log('[ChatInterface] Reasoning stream completed with', nodes.length, 'nodes')
+    },
+    onError: (error) => {
+      console.error('[ChatInterface] Reasoning stream error:', error)
+      notifyWarning('推理链生成失败', { description: error })
+    },
+    onNodeAdded: (node) => {
+      console.log('[ChatInterface] Reasoning node added:', node.type, node.id)
+    },
+  })
 
   // A2UI: Canvas state
   const [canvasOpen, setCanvasOpen] = React.useState(false)
@@ -1106,7 +1130,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
       // Find the branch label for display
       const node = insight.reasoning_chain?.nodes.find((n) => n.id === nodeId)
-      const branch = node?.branches?.find((b) => b.id === branchId)
+      const branch = node?.branches.find((b) => b.id === branchId)
       const branchLabel = branch?.label || branchId
 
       notify('info', '探索新分支', { description: `正在探索「${branchLabel}」策略角度...` })
@@ -1453,7 +1477,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
 
     // Auto-detect actions from insights
     const lastMessage = messages[messages.length - 1]
-    if (lastMessage?.insight?.actions) {
+    if (lastMessage.insight?.actions) {
       // Check for deploy actions
       const deployAction = lastMessage.insight.actions.find(
         (a): a is 'deploy_paper' | 'deploy_live' => a === 'deploy_paper' || a === 'deploy_live'
@@ -1482,7 +1506,7 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     }
 
     // EPIC-008: Auto-trigger analysis canvas based on insight type
-    if (lastMessage?.insight) {
+    if (lastMessage.insight) {
       const insight = lastMessage.insight
 
       // Sensitivity analysis
@@ -1535,6 +1559,13 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
     const userInput = input
     setInput('')
     setIsLoading(true)
+
+    // ==========================================================================
+    // A2UI 2.0: 启动 SSE 流式推理链 (与 NLP 请求并行)
+    // ==========================================================================
+    resetStream() // 重置之前的流式状态
+    void startStream(userInput) // 启动 SSE 流接收推理节点
+    console.log('[ChatInterface] SSE reasoning stream started')
 
     try {
       // =======================================================================
@@ -1655,6 +1686,9 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
       setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
+      // 停止 SSE 流
+      stopStream()
+      console.log('[ChatInterface] SSE reasoning stream stopped')
     }
   }
 
@@ -1819,8 +1853,8 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
               <ChatMessage key={message.id} message={message} />
             )
           )}
-          {/* S71: 流式渲染 - 3 阶段加载 */}
-          {(isLoading || isThinking) && (
+          {/* S71: 流式渲染 - 3 阶段加载 + A2UI 2.0 SSE 推理链 */}
+          {(isLoading || isThinking || isStreaming) && (
             <div className="flex gap-3">
               {/* AI Avatar */}
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
@@ -1831,8 +1865,27 @@ ${passed ? '✅ 策略通过回测验证，可以进行 Paper 部署。' : '⚠�
                   secondaryColor="#fbbf24"
                 />
               </div>
-              {/* InsightCard 3 阶段加载: skeleton → thinking → filling */}
-              <div className="max-w-xl flex-1">
+              {/* A2UI 2.0: SSE 流式推理链 + InsightCard 加载 */}
+              <div className="max-w-xl flex-1 space-y-3">
+                {/* 流式推理链展示 - 当有节点时显示 */}
+                {streamingNodes.length > 0 && (
+                  <ReasoningChainView
+                    chain={{
+                      id: `stream_${Date.now()}`,
+                      user_input: input || '',
+                      nodes: streamingNodes,
+                      status: isStreaming ? 'in_progress' : 'completed',
+                      overall_confidence: 0.85,
+                      confirmed_count: 0,
+                      total_count: streamingNodes.length,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                    }}
+                    displayMode="expanded"
+                    className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+                  />
+                )}
+                {/* InsightCard 3 阶段加载: skeleton → thinking → filling */}
                 <InsightCardLoading state={loadingState} />
               </div>
             </div>

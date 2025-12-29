@@ -4,6 +4,7 @@ Reasoning Chain Generation Service
 生成 AI 推理链，让用户看到思考过程。
 """
 
+import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -166,6 +167,145 @@ class ReasoningChainService:
                 return f"{symbol}/USDT"
 
         return None
+
+    async def generate_reasoning_chain_stream(
+        self,
+        user_input: str,
+        intent: IntentType,
+        context: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        生成推理链 (流式)
+
+        逐个 yield 推理节点，用于 SSE 流式响应
+
+        Args:
+            user_input: 用户原始输入
+            intent: 识别的意图
+            context: 上下文信息
+
+        Yields:
+            Dict: 单个推理节点的 JSON 数据
+        """
+        context = context or {}
+
+        # Step 1: 理解用户意图
+        concept = self.detect_trading_concept(user_input)
+        symbol = self.extract_symbol(user_input) or context.get("symbol")
+
+        if concept:
+            understanding_content = f"您想进行**{concept['label']}**操作"
+            if symbol:
+                understanding_content += f"，交易对为 **{symbol}**"
+            understanding_content += f"。\n\n{concept['description']}"
+
+            understanding_node = create_reasoning_node(
+                node_type=ReasoningNodeType.UNDERSTANDING,
+                title="理解您的意图",
+                content=understanding_content,
+                confidence=0.92,
+                evidence=[
+                    ReasoningEvidence(
+                        type=EvidenceType.PATTERN,
+                        label="识别到的关键词",
+                        value=concept["label"],
+                        significance="high",
+                    )
+                ],
+                branches=[
+                    ReasoningBranch(
+                        id="alt_intent",
+                        label="不是这个意思？",
+                        description="如果我理解错了，请告诉我您真正想做的",
+                        probability=0.08,
+                        trade_offs=["需要重新描述您的需求"],
+                    )
+                ],
+            )
+            yield understanding_node.model_dump()
+            await asyncio.sleep(0.5)  # 模拟思考延迟
+
+            # Step 2: 分析市场状态
+            market_analysis = await self._generate_market_analysis(symbol or "BTC/USDT", concept)
+            analysis_node = create_reasoning_node(
+                node_type=ReasoningNodeType.ANALYSIS,
+                title="当前市场分析",
+                content=market_analysis["content"],
+                confidence=market_analysis["confidence"],
+                evidence=market_analysis["evidence"],
+            )
+            yield analysis_node.model_dump()
+            await asyncio.sleep(0.5)
+
+            # Step 3: 推荐策略角度
+            perspectives = concept["perspectives"]
+            perspective_branches = []
+
+            for i, p_id in enumerate(perspectives[:4]):
+                p = STRATEGY_PERSPECTIVES.get(p_id, {})
+                perspective_branches.append(
+                    ReasoningBranch(
+                        id=p_id,
+                        label=p.get("label", p_id),
+                        description=p.get("description", ""),
+                        probability=0.25 if i == 0 else 0.25 - (i * 0.05),
+                        trade_offs=[
+                            f"使用 {', '.join(p.get('indicators', []))} 指标",
+                            f"基础置信度: {p.get('confidence_base', 0.7):.0%}",
+                        ],
+                    )
+                )
+
+            perspectives_content = f"基于您的{concept['label']}意图，我推荐以下策略角度：\n\n"
+            for i, branch in enumerate(perspective_branches, 1):
+                icon = "⭐" if i == 1 else "•"
+                perspectives_content += f"{icon} **{branch.label}**\n   {branch.description}\n\n"
+
+            decision_node = create_reasoning_node(
+                node_type=ReasoningNodeType.DECISION,
+                title="策略角度推荐",
+                content=perspectives_content,
+                confidence=0.85,
+                branches=perspective_branches,
+            )
+            yield decision_node.model_dump()
+            await asyncio.sleep(0.5)
+
+            # Step 4: 风险提示
+            warning_node = create_reasoning_node(
+                node_type=ReasoningNodeType.WARNING,
+                title="风险提示",
+                content=self._generate_risk_warning(concept["id"]),
+                confidence=0.95,
+                evidence=[
+                    ReasoningEvidence(
+                        type=EvidenceType.HISTORY,
+                        label="历史回测",
+                        value="基于近 180 天数据",
+                        significance="medium",
+                    )
+                ],
+            )
+            yield warning_node.model_dump()
+
+        else:
+            # 没有检测到明确的交易概念
+            understanding_node = create_reasoning_node(
+                node_type=ReasoningNodeType.UNDERSTANDING,
+                title="理解您的需求",
+                content=f"您说：「{user_input}」\n\n我需要更多信息来帮助您创建策略。",
+                confidence=0.6,
+                branches=[
+                    ReasoningBranch(
+                        id="clarify",
+                        label="让我帮您梳理",
+                        description="我可以引导您一步步明确交易需求",
+                        probability=0.9,
+                        trade_offs=["需要回答几个简单问题"],
+                    )
+                ],
+            )
+            yield understanding_node.model_dump()
 
     async def generate_reasoning_chain(
         self,

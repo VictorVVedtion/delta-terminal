@@ -16,6 +16,7 @@ import {
   Sparkles,
   Target,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import React from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -339,16 +340,23 @@ export function ReasoningNodeView({
   const statusConfig = STATUS_CONFIG[node.status]
 
   return (
-    <Card
-      className={cn(
-        'relative overflow-hidden transition-all duration-200',
-        'border-l-4',
-        typeConfig.borderColor,
-        isActive && 'ring-2 ring-primary/30 shadow-md',
-        node.highlight && 'bg-primary/[0.02]',
-        className
-      )}
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      layout
     >
+      <Card
+        className={cn(
+          'relative overflow-hidden transition-all duration-200',
+          'border-l-4',
+          typeConfig.borderColor,
+          isActive && 'ring-2 ring-primary/30 shadow-md',
+          node.highlight && 'bg-primary/[0.02]',
+          className
+        )}
+      >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CardHeader className="pb-2">
           <CollapsibleTrigger asChild>
@@ -448,6 +456,7 @@ export function ReasoningNodeView({
         </CollapsibleContent>
       </Collapsible>
     </Card>
+    </motion.div>
   )
 }
 
@@ -543,20 +552,22 @@ export function ReasoningChainView({
 
           {/* Nodes */}
           <div className="mt-3 space-y-3">
-            {visibleNodes.map((node, index) => (
-              <div key={node.id} className="relative">
-                {/* Connector Line */}
-                {index > 0 && (
-                  <div className="absolute left-6 -top-3 w-px h-3 bg-border" />
-                )}
-                <ReasoningNodeView
-                  node={node}
-                  isActive={node.id === chain.active_node_id}
-                  onAction={(action, input) => onNodeAction?.(node.id, action, input)}
-                  onBranchSelect={(branchId) => onBranchSelect?.(node.id, branchId)}
-                />
-              </div>
-            ))}
+            <AnimatePresence mode="popLayout">
+              {visibleNodes.map((node, index) => (
+                <div key={node.id} className="relative">
+                  {/* Connector Line */}
+                  {index > 0 && (
+                    <div className="absolute left-6 -top-3 w-px h-3 bg-border" />
+                  )}
+                  <ReasoningNodeView
+                    node={node}
+                    isActive={node.id === chain.active_node_id}
+                    onAction={(action, input) => onNodeAction?.(node.id, action, input)}
+                    onBranchSelect={(branchId) => onBranchSelect?.(node.id, branchId)}
+                  />
+                </div>
+              ))}
+            </AnimatePresence>
           </div>
 
           {/* Footer: Overall Confidence */}
