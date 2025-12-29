@@ -55,8 +55,8 @@ class ParserService:
             for msg in prompt_value:
                 if msg.type == "system":
                     continue
-                # LangChain 使用 "human"，OpenAI API 需要 "user"
-                role = "user" if msg.type == "human" else msg.type
+                # LangChain 使用 "human"/"ai"，OpenAI API 需要 "user"/"assistant"
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
             # 提取系统消息

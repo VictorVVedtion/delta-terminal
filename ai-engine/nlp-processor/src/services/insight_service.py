@@ -797,7 +797,7 @@ class InsightGeneratorService:
                 system_msg = str(msg.content)
             else:
                 # LangChain 使用 "human"，OpenAI API 需要 "user"
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         # Call LLM for JSON response (使用任务路由选择模型)
@@ -835,7 +835,7 @@ class InsightGeneratorService:
                 system_msg = str(msg.content)
             else:
                 # LangChain 使用 "human"，OpenAI API 需要 "user"
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         response = await self._generate_json(
@@ -927,7 +927,7 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         response = await self._generate_json(
@@ -980,7 +980,7 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         response = await self._generate_json(
@@ -1040,7 +1040,7 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         response = await self._generate_json(
@@ -1073,7 +1073,7 @@ class InsightGeneratorService:
                 system_msg = str(msg.content)
             else:
                 # LangChain 使用 "human"，OpenAI API 需要 "user"
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         # For general chat, we may get plain text response (使用简单对话模型)
@@ -1269,7 +1269,7 @@ class InsightGeneratorService:
             if msg.type == "system":
                 system_msg = str(msg.content)
             else:
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         # Call LLM to generate clarification (使用澄清任务模型)
@@ -1419,7 +1419,7 @@ class InsightGeneratorService:
                 system_msg = str(msg.content)
             else:
                 # LangChain 使用 "human"，OpenAI API 需要 "user"
-                role = "user" if msg.type == "human" else msg.type
+                role = "user" if msg.type == "human" else ("assistant" if msg.type == "ai" else msg.type)
                 messages.append({"role": role, "content": str(msg.content)})
 
         response = await self._generate_json(
