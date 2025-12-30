@@ -1,36 +1,29 @@
-import { motion } from 'framer-motion'
-import {
-  AlertTriangle,
-  BarChart3,
-  Edit,
-  GitCompare,
-  History,
-  MoreVertical,
-  Pause,
-  Play,
-  Plus,
-  Trash2,
-  TrendingUp
-} from 'lucide-react'
+import { AlertTriangle, Archive, ArchiveRestore, BarChart3, Clock, GitCompare, History, MoreVertical, Plus, RefreshCcw, Trash2, TrendingUp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import React from 'react'
+import React, { useState } from 'react'
 import { toast } from 'sonner'
 
-import { RISK_PRESETS, useRiskWarning } from '@/components/common/RiskWarningDialog'
-import { SpiritCreationWizard } from '@/components/spirit/SpiritCreationWizard'
+import { DeleteConfirmDialog, PermanentDeleteDialog } from '@/components/strategy/DeleteConfirmDialog'
 import { ThinkingIndicator } from '@/components/thinking/ThinkingIndicator'
-import { Sparkline } from '@/components/ui/sparkline'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Agent, AgentStatus } from '@/store/agent';
 import { useAgentStore } from '@/store/agent'
 import { useAnalysisStore } from '@/store/analysis'
+import { useStrategyLifecycleStore, useStrategyLifecycleHydration } from '@/store/strategyLifecycle'
 import type { AttributionInsightData, ComparisonInsightData, SensitivityInsightData } from '@/types/insight'
+import type { StrategyWithLifecycle } from '@/types/strategy-lifecycle'
 import type { ThinkingProcess } from '@/types/thinking'
 
 /**
  * Agent 列表组件
  * 基于 PRD S77 Sidebar 规格 - ③ Agent 列表 (自适应高度，最多 5 个可见)
+ *
+ * S12a: 集成策略生命周期管理（活跃/归档/回收站）
  */
+
+// 侧边栏标签页类型
+type SidebarTab = 'active' | 'archived' | 'deleted'
 
 // 状态配置
 const STATUS_CONFIG: Record<AgentStatus, { color: string; label: string; dotClass: string }> = {
@@ -49,15 +42,10 @@ interface AgentItemProps {
 }
 
 function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps) {
-  const router = useRouter()
-  const { updateAgent, removeAgent } = useAgentStore()
   const statusConfig = STATUS_CONFIG[agent.status]
   const isPositive = agent.pnl >= 0
   const isShadow = agent.status === 'shadow'
   const [menuOpen, setMenuOpen] = React.useState(false)
-
-  // Risk warning hook for dangerous operations
-  const { showWarning, RiskWarning } = useRiskWarning()
 
   const {
     openSensitivityAnalysis,
@@ -68,42 +56,12 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
   } = useAnalysisStore()
 
   // 处理菜单项点击
-  const handleMenuClick = async (e: React.MouseEvent, action: string) => {
+  const handleMenuClick = (e: React.MouseEvent, action: string) => {
     e.stopPropagation() // 阻止冒泡，避免触发卡片点击
     setMenuOpen(false)
 
     // 根据不同的操作类型创建对应的数据
     switch (action) {
-      case 'edit':
-        router.push(`/chat?agent=${agent.id}`)
-        break
-
-      case 'toggle_status': {
-        const isRunning = agent.status === 'live' || agent.status === 'paper'
-        if (isRunning) {
-          // 暂停策略需要确认
-          const confirmed = await showWarning(RISK_PRESETS.stopStrategy(agent.name))
-          if (confirmed) {
-            updateAgent(agent.id, { status: 'paused' })
-            toast.success('策略已暂停')
-          }
-        } else {
-          // 启动策略直接执行
-          updateAgent(agent.id, { status: 'paper' })
-          toast.success('策略已启动（模拟模式）')
-        }
-        break
-      }
-
-      case 'delete': {
-        const confirmed = await showWarning(RISK_PRESETS.deleteStrategy(agent.name))
-        if (confirmed) {
-          removeAgent(agent.id)
-          toast.success('策略已删除')
-        }
-        break
-      }
-
       case 'sensitivity':
         // 创建敏感度分析数据
         const sensitivityData: SensitivityInsightData = {
@@ -239,199 +197,130 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
     }
   }
 
-  const isRunning = agent.status === 'live' || agent.status === 'paper'
-
   return (
     <div className="relative group">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onClick}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onClick()
-          }
-        }}
-        className={cn(
-          'w-full text-left rounded-md p-2.5 mb-1.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
-          'bg-muted/50 hover:bg-muted transition-colors',
-          'border-l-[3px]',
-          statusConfig.color,
-          isShadow && 'opacity-70',
-          isActive && 'ring-1 ring-primary'
-        )}
-      >
-        {/* 选中状态动画背景/指示条 (Shared Layout) */}
-        {isActive && (
-          <motion.div
-            layoutId="active-agent-highlight"
-            className="absolute inset-0 bg-primary/5 rounded-md -z-10"
-            initial={false}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className={cn(
+        'w-full text-left rounded-md p-2.5 mb-1.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
+        'bg-muted/50 hover:bg-muted transition-colors',
+        'border-l-[3px]',
+        statusConfig.color,
+        isShadow && 'opacity-70',
+        isActive && 'ring-1 ring-primary'
+      )}
+    >
+      {/* 头部：名称 + 盈亏 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span
+            className={cn(
+              'w-1.5 h-1.5 rounded-full flex-shrink-0',
+              statusConfig.dotClass
+            )}
           />
-        )}
-
-        {/* Sparkline Background (Subtle activity indicator) */}
-        <div className="absolute bottom-0 left-0 right-0 h-10 opacity-10 pointer-events-none overflow-hidden rounded-b-md">
-          <Sparkline
-            data={[// Mock data generation based on PnL sign - deterministic for demo
-              agent.pnl >= 0 ? 10 : 40,
-              agent.pnl >= 0 ? 15 : 35,
-              agent.pnl >= 0 ? 12 : 38,
-              agent.pnl >= 0 ? 25 : 25,
-              agent.pnl >= 0 ? 20 : 30,
-              agent.pnl >= 0 ? 35 : 15,
-              agent.pnl >= 0 ? 30 : 20,
-              Math.abs(agent.pnl) > 0 ? (agent.pnl >= 0 ? 40 : 10) : 25,
-            ]}
-            color={agent.pnl >= 0 ? '#10b981' : '#ef4444'}
-            height={40}
-            showGradient={true}
-          />
+          <span className="text-[11px] font-semibold truncate">
+            {agent.name}
+          </span>
         </div>
-
-        {/* 头部：名称 + 盈亏 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <span
-              className={cn(
-                'w-1.5 h-1.5 rounded-full flex-shrink-0',
-                statusConfig.dotClass
-              )}
-            />
-            <span className="text-xs font-semibold truncate">
-              {agent.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span
-              className={cn(
-                'text-xs font-mono font-medium',
-                isShadow
-                  ? 'text-muted-foreground'
-                  : isPositive
-                    ? 'text-green-500'
-                    : 'text-red-500'
-              )}
-            >
-              {isShadow ? (
-                `虚拟 ${isPositive ? '+' : ''}$${agent.pnl}`
-              ) : (
-                <span className={isPositive ? 'text-glow-green' : 'text-glow-red'}>
-                  {isPositive ? '+' : ''}${agent.pnl}
-                </span>
-              )}
-            </span>
-            {/* 更多菜单按钮 */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setMenuOpen(!menuOpen)
-              }}
-              className={cn(
-                'h-5 w-5 rounded flex items-center justify-center',
-                'opacity-0 group-hover:opacity-100 hover:bg-background/80 transition-opacity',
-                menuOpen && 'opacity-100'
-              )}
-            >
-              <MoreVertical className="h-3 w-3" />
-            </button>
-          </div>
+        <div className="flex items-center gap-1">
+          <span
+            className={cn(
+              'text-[11px] font-mono font-medium',
+              isShadow
+                ? 'text-muted-foreground'
+                : isPositive
+                  ? 'text-green-500'
+                  : 'text-red-500'
+            )}
+          >
+            {isShadow ? (
+              `虚拟 ${isPositive ? '+' : ''}$${agent.pnl}`
+            ) : (
+              `${isPositive ? '+' : ''}$${agent.pnl}`
+            )}
+          </span>
+          {/* 更多菜单按钮 */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpen(!menuOpen)
+            }}
+            className={cn(
+              'h-5 w-5 rounded flex items-center justify-center',
+              'opacity-0 group-hover:opacity-100 hover:bg-background/80 transition-opacity',
+              menuOpen && 'opacity-100'
+            )}
+          >
+            <MoreVertical className="h-3 w-3" />
+          </button>
         </div>
-
-        {/* 底部：状态 + 交易对 */}
-        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-          <span>{statusConfig.label}</span>
-          <span>·</span>
-          <span>{agent.symbol}</span>
-        </div>
-
-        {/* Glass Box: Thinking Indicator (Visible when active and has process) */}
-        {isActive && thinkingProcess && (
-          <div className="mt-2 pt-2 border-t border-border/50">
-            <ThinkingIndicator process={thinkingProcess} compact defaultExpanded={false} />
-          </div>
-        )}
       </div>
+
+      {/* 底部：状态 + 交易对 */}
+      <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground">
+        <span>{statusConfig.label}</span>
+        <span>·</span>
+        <span>{agent.symbol}</span>
+      </div>
+
+      {/* Glass Box: Thinking Indicator (Visible when active and has process) */}
+      {isActive && thinkingProcess && (
+        <div className="mt-2 pt-2 border-t border-border/50">
+          <ThinkingIndicator process={thinkingProcess} compact defaultExpanded={false} />
+        </div>
+      )}
+    </div>
 
       {/* 下拉菜单 */}
       {menuOpen && (
         <>
-          {/* 背景遮罩 - 提高 z-index 确保覆盖侧边栏 */}
+          {/* 背景遮罩 */}
           <div
-            className="fixed inset-0 z-[100]"
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
-            onKeyDown={(e) => { if (e.key === 'Escape') setMenuOpen(false); }}
-            role="button"
-            tabIndex={-1}
-            aria-label="关闭菜单"
+            className="fixed inset-0 z-40"
+            onClick={() => { setMenuOpen(false); }}
           />
           {/* 菜单内容 */}
-          <div className="absolute right-0 top-full mt-1 z-[101] w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
-            <div className="px-2 py-1 text-xs text-muted-foreground font-semibold uppercase">
-              基本操作
-            </div>
+          <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
             <button
-              onClick={(e) => { void handleMenuClick(e, 'edit'); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
-            >
-              <Edit className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs">编辑策略</span>
-            </button>
-            <button
-              onClick={(e) => { void handleMenuClick(e, 'toggle_status'); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
-            >
-              {isRunning ? <Pause className="h-3.5 w-3.5 text-orange-500" /> : <Play className="h-3.5 w-3.5 text-green-500" />}
-              <span className="text-xs">{isRunning ? '暂停运行' : '启动运行'}</span>
-            </button>
-            <button
-              onClick={(e) => { void handleMenuClick(e, 'delete'); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-red-500"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span className="text-xs">删除策略</span>
-            </button>
-
-            <div className="border-t border-border my-1" />
-            <div className="px-2 py-1 text-xs text-muted-foreground font-semibold uppercase">
-              高级分析
-            </div>
-
-            <button
-              onClick={(e) => { void handleMenuClick(e, 'sensitivity'); }}
+              onClick={(e) => { handleMenuClick(e, 'sensitivity'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">敏感度分析</span>
             </button>
             <button
-              onClick={(e) => { void handleMenuClick(e, 'attribution'); }}
+              onClick={(e) => { handleMenuClick(e, 'attribution'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">归因分析</span>
             </button>
             <button
-              onClick={(e) => { void handleMenuClick(e, 'comparison'); }}
+              onClick={(e) => { handleMenuClick(e, 'comparison'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <GitCompare className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">对比分析</span>
             </button>
-
             <div className="border-t border-border my-1" />
-
             <button
-              onClick={(e) => { void handleMenuClick(e, 'version'); }}
+              onClick={(e) => { handleMenuClick(e, 'version'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
             >
               <History className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs">版本历史</span>
             </button>
             <button
-              onClick={(e) => { void handleMenuClick(e, 'emergency'); }}
+              onClick={(e) => { handleMenuClick(e, 'emergency'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors text-orange-600"
             >
               <AlertTriangle className="h-3.5 w-3.5" />
@@ -440,75 +329,363 @@ function AgentItem({ agent, isActive, onClick, thinkingProcess }: AgentItemProps
           </div>
         </>
       )}
-
-      {/* Risk Warning Dialog Portal */}
-      {RiskWarning}
     </div>
   )
 }
 
+// =============================================================================
+// 归档策略项组件（紧凑版）
+// =============================================================================
+
+interface ArchivedStrategyItemProps {
+  strategy: StrategyWithLifecycle
+  onRestore: () => void
+  onDelete: () => void
+}
+
+function ArchivedStrategyItem({ strategy, onRestore, onDelete }: ArchivedStrategyItemProps) {
+  const isPositive = strategy.performance.pnl >= 0
+
+  return (
+    <div className="relative group rounded-md p-2.5 mb-1.5 bg-muted/30 hover:bg-muted/50 transition-colors border-l-[3px] border-l-muted opacity-70 hover:opacity-100">
+      {/* 头部：名称 + 归档标签 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <ArchiveRestore className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          <span className="text-[11px] font-semibold truncate text-muted-foreground">
+            {strategy.name}
+          </span>
+        </div>
+        <span
+          className={cn(
+            'text-[11px] font-mono font-medium',
+            isPositive ? 'text-green-500/70' : 'text-red-500/70'
+          )}
+        >
+          {isPositive ? '+' : ''}${strategy.performance.pnl.toFixed(0)}
+        </span>
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={onRestore}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+        >
+          <RefreshCcw className="h-2.5 w-2.5" />
+          恢复
+        </button>
+        <button
+          onClick={onDelete}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+        >
+          <Trash2 className="h-2.5 w-2.5" />
+          删除
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// 回收站策略项组件（紧凑版）
+// =============================================================================
+
+interface DeletedStrategyItemProps {
+  strategy: StrategyWithLifecycle
+  remainingDays: number
+  onRestore: () => void
+  onPermanentDelete: () => void
+}
+
+function DeletedStrategyItem({ strategy, remainingDays, onRestore, onPermanentDelete }: DeletedStrategyItemProps) {
+  const isUrgent = remainingDays <= 7
+
+  return (
+    <div className="relative group rounded-md p-2.5 mb-1.5 bg-destructive/5 hover:bg-destructive/10 transition-colors border-l-[3px] border-l-destructive/50">
+      {/* 头部：名称 + 倒计时 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <Trash2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          <span className="text-[11px] font-semibold truncate">
+            {strategy.name}
+          </span>
+        </div>
+        <Badge
+          variant={isUrgent ? 'destructive' : 'secondary'}
+          className="text-[8px] px-1 py-0 h-4"
+        >
+          <Clock className="h-2 w-2 mr-0.5" />
+          {remainingDays}天
+        </Badge>
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={onRestore}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+        >
+          <RefreshCcw className="h-2.5 w-2.5" />
+          恢复
+        </button>
+        <button
+          onClick={onPermanentDelete}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+        >
+          <Trash2 className="h-2.5 w-2.5" />
+          永久删除
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// 主组件
+// =============================================================================
+
 export function AgentList() {
+  const router = useRouter()
   const { agents, activeAgentId, setActiveAgent } = useAgentStore()
-  const [wizardOpen, setWizardOpen] = React.useState(false)
+
+  // S12a: 策略生命周期 store
+  const hydrated = useStrategyLifecycleHydration()
+  const {
+    getArchivedStrategies,
+    getDeletedStrategies,
+    restoreStrategy,
+    softDeleteStrategy,
+    permanentDeleteStrategy,
+    getRemainingDays,
+  } = useStrategyLifecycleStore()
+
+  // 当前选中的标签页
+  const [currentTab, setCurrentTab] = useState<SidebarTab>('active')
+
+  // 对话框状态
+  const [selectedStrategy, setSelectedStrategy] = useState<StrategyWithLifecycle | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showPermanentDeleteDialog, setShowPermanentDeleteDialog] = useState(false)
+
+  // 获取归档和回收站策略（仅在 hydrated 后）
+  const archivedStrategies = hydrated ? getArchivedStrategies() : []
+  const deletedStrategies = hydrated ? getDeletedStrategies() : []
 
   const handleNewAgent = () => {
-    setWizardOpen(true)
+    // 跳转到 /chat 页面开始新策略对话
+    router.push('/chat')
   }
 
-  // TODO: 连接到真实的 ThinkingStore 获取 Agent 的思考过程
-  // 当前暂不显示 Mock 思考过程，等待后端 API 实现
-  // const thinkingProcess = useThinkingStore((state) => state.getProcessForAgent(activeAgentId))
+  // 恢复策略
+  const handleRestore = (strategy: StrategyWithLifecycle) => {
+    const result = restoreStrategy(strategy.id)
+    if (result.success) {
+      toast.success(`策略 "${strategy.name}" 已恢复`)
+      // 如果恢复成功，切换到活跃标签
+      setCurrentTab('active')
+    } else {
+      toast.error(result.error || '恢复失败')
+    }
+  }
+
+  // 软删除策略（移入回收站）
+  const handleSoftDelete = (strategyId: string) => {
+    softDeleteStrategy(strategyId)
+    setSelectedStrategy(null)
+    toast.success('策略已移入回收站')
+  }
+
+  // 永久删除策略
+  const handlePermanentDelete = (strategyId: string) => {
+    permanentDeleteStrategy(strategyId)
+    setSelectedStrategy(null)
+    toast.success('策略已永久删除')
+  }
+
+  // MOCK: Generate a fake thinking process for the active agent to demonstrate "Glass Box"
+  // In a real app, this would come from a useThinkingStore or agent.thinkingState
+  const mockThinkingProcess: ThinkingProcess | undefined = React.useMemo(() => {
+    return {
+      process_id: 'mock-process-1',
+      user_message: 'Analyze BTC/USDT market conditions',
+      status: 'thinking',
+      todos: [
+        { id: '1', description: 'Analyzing market depth', status: 'completed' },
+        { id: '2', description: 'Calculating RSI divergence', status: 'in_progress' },
+        { id: '3', description: 'Checking risk limits', status: 'pending' },
+      ],
+      tool_history: [],
+      progress: {
+        percentage: 33,
+        current_step: 'Calculating RSI divergence'
+      },
+      started_at: Date.now() - 5000, // Started 5 seconds ago
+    }
+  }, [])
 
   return (
     <div className="agent-list flex-1 overflow-y-auto p-3">
-      {/* 标题 */}
+      {/* 标题 + 标签页切换 */}
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-glow-cyan">
-          Agents ({agents.length})
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Agents
         </div>
-        <button
-          onClick={handleNewAgent}
-          className="text-primary hover:bg-primary/10 p-1 rounded transition-colors"
-          title="新建"
-        >
-          <Plus className="h-3 w-3" />
-        </button>
+
+        {/* 标签页切换按钮 */}
+        <div className="flex items-center gap-0.5 bg-muted/50 rounded-md p-0.5">
+          <button
+            onClick={() => setCurrentTab('active')}
+            className={cn(
+              'px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors',
+              currentTab === 'active'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            title="活跃策略"
+          >
+            活跃 ({agents.length})
+          </button>
+          <button
+            onClick={() => setCurrentTab('archived')}
+            className={cn(
+              'px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors',
+              currentTab === 'archived'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            title="已归档"
+          >
+            <Archive className="h-2.5 w-2.5 inline mr-0.5" />
+            {archivedStrategies.length}
+          </button>
+          <button
+            onClick={() => setCurrentTab('deleted')}
+            className={cn(
+              'px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors',
+              currentTab === 'deleted'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            title="回收站"
+          >
+            <Trash2 className="h-2.5 w-2.5 inline mr-0.5" />
+            {deletedStrategies.length}
+          </button>
+        </div>
       </div>
 
-      {/* Agent 列表 */}
+      {/* 内容区域 */}
       <div className="space-y-0">
-        {agents.map((agent) => (
-          <AgentItem
-            key={agent.id}
-            agent={agent}
-            isActive={agent.id === activeAgentId}
-            onClick={() => { setActiveAgent(agent.id); }}
-          // TODO: 传入真实的 thinkingProcess 当后端 API 可用时
-          // thinkingProcess={thinkingProcess}
-          />
-        ))}
+        {/* 活跃策略 */}
+        {currentTab === 'active' && (
+          <>
+            {agents.map((agent) => {
+              const showThinking = agent.id === activeAgentId && mockThinkingProcess
+              return (
+                <AgentItem
+                  key={agent.id}
+                  agent={agent}
+                  isActive={agent.id === activeAgentId}
+                  onClick={() => { setActiveAgent(agent.id); }}
+                  // Only show thinking process for the active agent for demo purposes or if they are 'live'
+                  {...(showThinking && { thinkingProcess: mockThinkingProcess })}
+                />
+              )
+            })}
+
+            {agents.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">
+                <div className="text-[11px]">暂无活跃策略</div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 归档策略 */}
+        {currentTab === 'archived' && (
+          <>
+            {archivedStrategies.map((strategy) => (
+              <ArchivedStrategyItem
+                key={strategy.id}
+                strategy={strategy}
+                onRestore={() => handleRestore(strategy)}
+                onDelete={() => {
+                  setSelectedStrategy(strategy)
+                  setShowDeleteDialog(true)
+                }}
+              />
+            ))}
+
+            {archivedStrategies.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">
+                <Archive className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                <div className="text-[11px]">暂无归档策略</div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 回收站 */}
+        {currentTab === 'deleted' && (
+          <>
+            {deletedStrategies.map((strategy) => (
+              <DeletedStrategyItem
+                key={strategy.id}
+                strategy={strategy}
+                remainingDays={getRemainingDays(strategy.id)}
+                onRestore={() => handleRestore(strategy)}
+                onPermanentDelete={() => {
+                  setSelectedStrategy(strategy)
+                  setShowPermanentDeleteDialog(true)
+                }}
+              />
+            ))}
+
+            {deletedStrategies.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">
+                <Trash2 className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                <div className="text-[11px]">回收站为空</div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {/* 底部新建按钮 (如果列表为空，或者作为额外入口) */}
-      {agents.length === 0 && (
+      {/* 新建按钮（仅在活跃标签显示） */}
+      {currentTab === 'active' && (
         <button
           onClick={handleNewAgent}
           className={cn(
             'w-full mt-2 p-2.5 rounded-md',
             'border border-dashed border-primary/50',
             'bg-primary/5 hover:bg-primary/10',
-            'text-primary text-xs font-semibold',
+            'text-primary text-[11px] font-semibold',
             'flex items-center justify-center gap-1.5',
             'transition-colors'
           )}
         >
           <Plus className="h-3.5 w-3.5" />
-          创建第一个策略
+          新策略
         </button>
       )}
 
-      {/* Spirit Creation Wizard */}
-      <SpiritCreationWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      {/* 删除确认对话框（软删除，移入回收站） */}
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        strategy={selectedStrategy}
+        onConfirmDelete={handleSoftDelete}
+      />
+
+      {/* 永久删除确认对话框 */}
+      <PermanentDeleteDialog
+        open={showPermanentDeleteDialog}
+        onOpenChange={setShowPermanentDeleteDialog}
+        strategy={selectedStrategy}
+        remainingDays={selectedStrategy ? getRemainingDays(selectedStrategy.id) : 0}
+        onConfirmPermanentDelete={handlePermanentDelete}
+      />
     </div>
   )
 }
