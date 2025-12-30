@@ -83,7 +83,9 @@ export function InsightCard({
 
   // 检查 params 是否为空（某些 insight 类型需要参数）
   const hasParams = insight.params && insight.params.length > 0
-  if (!hasParams && ['strategy_create', 'strategy_modify', 'batch_adjust'].includes(insight.type)) {
+  // paper_trading 类型需要参数，但允许空参数的 query/close 操作
+  const requiresParams = ['strategy_create', 'strategy_modify', 'batch_adjust'].includes(insight.type)
+  if (!hasParams && requiresParams) {
     return (
       <InsightEmptyState
         reason="no-params"
@@ -486,6 +488,12 @@ function getInsightTypeInfo(type: InsightType) {
       icon: <GitCompare className="h-5 w-5 text-orange-500" />,
       bgColor: 'bg-orange-500/10',
       borderColor: 'border-l-orange-500',
+    },
+    paper_trading: {
+      title: '模拟交易',
+      icon: <Activity className="h-5 w-5 text-teal-500" />,
+      bgColor: 'bg-teal-500/10',
+      borderColor: 'border-l-teal-500',
     },
   }
 

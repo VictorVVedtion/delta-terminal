@@ -509,6 +509,11 @@ class InsightGeneratorService:
                 insight = await self._generate_analysis_insight(
                     user_input, chat_history, context or {}
                 )
+            elif intent == IntentType.PAPER_TRADING:
+                # 模拟交易
+                insight = await self._generate_paper_trading_insight(
+                    user_input, chat_history, context or {}, entities
+                )
             elif intent == IntentType.GENERAL_CHAT:
                 # For general chat, return a minimal insight with just explanation
                 insight = await self._generate_general_insight(
@@ -1090,6 +1095,406 @@ class InsightGeneratorService:
             type=InsightType.STRATEGY_CREATE,  # Default type
             params=[],
             explanation=response_text,
+            created_at=datetime.now().isoformat(),
+        )
+
+    # =========================================================================
+    # Paper Trading (模拟交易) Insight 生成
+    # =========================================================================
+
+    async def _generate_paper_trading_insight(
+        self,
+        user_input: str,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+        entities: Dict[str, Any],
+    ) -> InsightData:
+        """
+        Generate InsightData for Paper Trading order confirmation
+
+        This method generates an interactive Paper Trading form that allows users
+        to confirm and adjust order parameters before execution.
+
+        Args:
+            user_input: User's natural language input
+            chat_history: Conversation history
+            context: Additional context
+            entities: Extracted entities (coin, side, size, leverage, etc.)
+
+        Returns:
+            InsightData with Paper Trading parameters for user confirmation
+        """
+        logger.info(f"Generating paper trading insight. Entities: {entities}")
+
+        # Helper function to parse numeric values from various formats
+        def parse_amount(value: Any) -> Optional[float]:
+            """Parse amount from various formats (e.g., '1000U', '1000 USDT', 1000)"""
+            if value is None:
+                return None
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, str):
+                import re
+                # Remove currency suffixes and whitespace
+                cleaned = re.sub(r'[Uu](?:SDT)?|刀|美金|美元|\s', '', value)
+                try:
+                    return float(cleaned)
+                except ValueError:
+                    return None
+            return None
+
+        # Extract entities from the paper trading request
+        action = entities.get("action", "open")  # open / close / query
+        # Normalize side: convert Chinese terms to English
+        raw_side = entities.get("side", "long")
+        if raw_side in ("多", "做多", "long", "买", "买入"):
+            side = "long"
+        elif raw_side in ("空", "做空", "short", "卖", "卖出"):
+            side = "short"
+        else:
+            side = "long"  # default
+        coin = entities.get("coin") or entities.get("symbol", "BTC")
+        size = parse_amount(entities.get("size"))  # Position size (in contracts or coins)
+        margin = parse_amount(entities.get("margin"))  # Margin in USDT
+        leverage = parse_amount(entities.get("leverage")) or 10  # Default 10x
+
+        # If margin not in entities, try to extract from user_input directly
+        # (LLM may confuse margin with size for inputs like "1000U")
+        if not margin:
+            import re
+            margin_match = re.search(
+                r'(\d+(?:\.\d+)?)\s*[Uu](?:SDT)?|(\d+(?:\.\d+)?)\s*(?:刀|美金|美元)',
+                user_input
+            )
+            if margin_match:
+                margin = float(margin_match.group(1) or margin_match.group(2))
+                # If size was mistakenly set to the same value, clear it
+                if size and abs(size - margin) < 0.01:
+                    size = None
+        stop_loss_percent = parse_amount(entities.get("stop_loss_percent"))
+        take_profit_percent = parse_amount(entities.get("take_profit_percent"))
+
+        # Normalize coin symbol
+        if coin and not coin.endswith("-PERP"):
+            coin = f"{coin.upper()}-PERP"
+
+        # Handle different actions
+        if action == "query":
+            return await self._generate_paper_trading_query_insight(user_input, context)
+        elif action == "close":
+            return await self._generate_paper_trading_close_insight(user_input, context, entities)
+
+        # For "open" action, check required parameters
+        missing_params = []
+        if not coin:
+            missing_params.append("coin")
+        if not margin and not size:
+            missing_params.append("margin_or_size")
+
+        # If critical params missing, generate clarification
+        if missing_params:
+            return await self._generate_paper_trading_clarification(
+                user_input, chat_history, context, missing_params
+            )
+
+        # Get current price for the coin
+        symbol = coin.replace("-PERP", "/USDT") if coin else "BTC/USDT"
+        market_data = await self._get_real_market_data(symbol, context)
+        current_price = market_data.get("price", {}).get("current", 0)
+
+        if not current_price:
+            # Fallback if no market data
+            current_price = 100000 if "BTC" in symbol else 3500
+
+        # Calculate position size if only margin provided
+        if margin and not size:
+            size = round((float(margin) * float(leverage)) / current_price, 4)
+
+        # Calculate estimated margin if only size provided
+        if size and not margin:
+            margin = round((float(size) * current_price) / float(leverage), 2)
+
+        # Build insight parameters
+        params = [
+            # Trading pair selection
+            InsightParam(
+                key="symbol",
+                label="交易对",
+                type=ParamType.SELECT,
+                value=coin or "BTC-PERP",
+                level=1,
+                config=ParamConfig(
+                    options=[
+                        ParamOption(value="BTC-PERP", label="BTC-PERP", description="比特币永续"),
+                        ParamOption(value="ETH-PERP", label="ETH-PERP", description="以太坊永续"),
+                        ParamOption(value="SOL-PERP", label="SOL-PERP", description="Solana永续"),
+                        ParamOption(value="DOGE-PERP", label="DOGE-PERP", description="狗狗币永续"),
+                    ]
+                ),
+                description="选择要交易的永续合约",
+            ),
+            # Direction selection
+            InsightParam(
+                key="side",
+                label="方向",
+                type=ParamType.BUTTON_GROUP,
+                value=side,
+                level=1,
+                config=ParamConfig(
+                    options=[
+                        ParamOption(value="long", label="做多 📈", description="看涨"),
+                        ParamOption(value="short", label="做空 📉", description="看跌"),
+                    ]
+                ),
+                description="选择做多还是做空",
+            ),
+            # Margin input
+            InsightParam(
+                key="margin",
+                label="保证金",
+                type=ParamType.NUMBER,
+                value=float(margin) if margin else 100,
+                level=1,
+                config=ParamConfig(
+                    min=10,
+                    max=100000,
+                    step=10,
+                    unit="USDT",
+                ),
+                description="投入的保证金金额（USDT）",
+            ),
+            # Leverage slider
+            InsightParam(
+                key="leverage",
+                label="杠杆倍数",
+                type=ParamType.SLIDER,
+                value=int(leverage) if leverage else 10,
+                level=1,
+                config=ParamConfig(
+                    min=1,
+                    max=50,
+                    step=1,
+                    unit="x",
+                ),
+                description="杠杆倍数（1-50倍）",
+            ),
+            # Stop loss (optional, level 2)
+            InsightParam(
+                key="stop_loss_percent",
+                label="止损比例",
+                type=ParamType.SLIDER,
+                value=float(stop_loss_percent) if stop_loss_percent else 10,
+                level=2,
+                config=ParamConfig(
+                    min=1,
+                    max=50,
+                    step=0.5,
+                    unit="%",
+                ),
+                description="亏损达到此比例时自动平仓",
+            ),
+            # Take profit (optional, level 2)
+            InsightParam(
+                key="take_profit_percent",
+                label="止盈比例",
+                type=ParamType.SLIDER,
+                value=float(take_profit_percent) if take_profit_percent else 20,
+                level=2,
+                config=ParamConfig(
+                    min=5,
+                    max=200,
+                    step=1,
+                    unit="%",
+                ),
+                description="盈利达到此比例时自动平仓",
+            ),
+        ]
+
+        # Build explanation text
+        side_text = "做多 📈" if side == "long" else "做空 📉"
+        estimated_size = round((float(margin or 100) * float(leverage or 10)) / current_price, 4)
+
+        explanation = (
+            f"好的，我已为您准备好模拟交易订单：\n\n"
+            f"**{coin or 'BTC-PERP'}** {side_text}\n"
+            f"- 当前价格: ${current_price:,.2f}\n"
+            f"- 保证金: {margin or 100} USDT\n"
+            f"- 杠杆: {leverage or 10}x\n"
+            f"- 预计仓位: {estimated_size} {(coin or 'BTC-PERP').replace('-PERP', '')}\n"
+            f"- 预计总价值: ${float(margin or 100) * float(leverage or 10):,.2f}\n\n"
+            f"请确认或调整以上参数，然后点击「确认下单」执行模拟交易。"
+        )
+
+        return InsightData(
+            id=create_insight_id(),
+            type=InsightType.PAPER_TRADING,
+            params=params,
+            explanation=explanation,
+            created_at=datetime.now().isoformat(),
+            # Store additional context for frontend
+            target=InsightTarget(
+                strategy_id="paper_trading",
+                name="模拟交易",
+                symbol=coin or "BTC-PERP",
+            ),
+        )
+
+    async def _generate_paper_trading_query_insight(
+        self,
+        user_input: str,
+        context: Dict[str, Any],
+    ) -> InsightData:
+        """Generate insight for querying paper trading positions"""
+        explanation = (
+            "您想查看模拟交易的持仓情况。\n\n"
+            "请点击下方按钮查看您的：\n"
+            "- 当前持仓列表\n"
+            "- 历史交易记录\n"
+            "- 账户总览\n\n"
+            "或者您可以直接在模拟交易面板中查看。"
+        )
+
+        return InsightData(
+            id=create_insight_id(),
+            type=InsightType.PAPER_TRADING,
+            params=[
+                InsightParam(
+                    key="action",
+                    label="查询类型",
+                    type=ParamType.BUTTON_GROUP,
+                    value="positions",
+                    level=1,
+                    config=ParamConfig(
+                        options=[
+                            ParamOption(value="positions", label="当前持仓", description="查看所有未平仓位"),
+                            ParamOption(value="history", label="交易历史", description="查看已完成的交易"),
+                            ParamOption(value="account", label="账户总览", description="查看账户资金状态"),
+                        ]
+                    ),
+                ),
+            ],
+            explanation=explanation,
+            created_at=datetime.now().isoformat(),
+            target=InsightTarget(
+                strategy_id="paper_trading_query",
+                name="查询持仓",
+                symbol="",
+            ),
+        )
+
+    async def _generate_paper_trading_close_insight(
+        self,
+        user_input: str,
+        context: Dict[str, Any],
+        entities: Dict[str, Any],
+    ) -> InsightData:
+        """Generate insight for closing paper trading position"""
+        coin = entities.get("coin") or entities.get("symbol", "")
+
+        explanation = (
+            f"您想要平仓{coin or ''}的模拟交易持仓。\n\n"
+            "请在下方选择要平仓的仓位，或选择「全部平仓」。"
+        )
+
+        return InsightData(
+            id=create_insight_id(),
+            type=InsightType.PAPER_TRADING,
+            params=[
+                InsightParam(
+                    key="close_action",
+                    label="平仓操作",
+                    type=ParamType.BUTTON_GROUP,
+                    value="select",
+                    level=1,
+                    config=ParamConfig(
+                        options=[
+                            ParamOption(value="select", label="选择平仓", description="选择要平仓的持仓"),
+                            ParamOption(value="all", label="全部平仓", description="平掉所有持仓"),
+                        ]
+                    ),
+                ),
+            ],
+            explanation=explanation,
+            created_at=datetime.now().isoformat(),
+            target=InsightTarget(
+                strategy_id="paper_trading_close",
+                name="平仓操作",
+                symbol=coin or "",
+            ),
+        )
+
+    async def _generate_paper_trading_clarification(
+        self,
+        user_input: str,
+        chat_history: List[Message],
+        context: Dict[str, Any],
+        missing_params: List[str],
+    ) -> ClarificationInsight:
+        """Generate clarification when paper trading params are missing"""
+        # Determine what to ask based on missing params
+        if "coin" in missing_params:
+            question = "您想交易哪个币种？"
+            options = [
+                ClarificationOption(
+                    id="btc",
+                    label="BTC-PERP",
+                    description="比特币永续合约",
+                    recommended=True,
+                ),
+                ClarificationOption(
+                    id="eth",
+                    label="ETH-PERP",
+                    description="以太坊永续合约",
+                    recommended=False,
+                ),
+                ClarificationOption(
+                    id="sol",
+                    label="SOL-PERP",
+                    description="Solana永续合约",
+                    recommended=False,
+                ),
+            ]
+            placeholder = "或输入其他币种（如 DOGE）..."
+            category = ClarificationCategory.TRADING_PAIR
+        else:
+            question = "您想投入多少保证金？"
+            options = [
+                ClarificationOption(
+                    id="100",
+                    label="100 USDT",
+                    description="小额测试",
+                    recommended=True,
+                ),
+                ClarificationOption(
+                    id="500",
+                    label="500 USDT",
+                    description="中等仓位",
+                    recommended=False,
+                ),
+                ClarificationOption(
+                    id="1000",
+                    label="1000 USDT",
+                    description="较大仓位",
+                    recommended=False,
+                ),
+            ]
+            placeholder = "或输入其他金额..."
+            category = ClarificationCategory.AMOUNT
+
+        return ClarificationInsight(
+            id=create_insight_id(),
+            type=InsightType.CLARIFICATION,
+            params=[],
+            question=question,
+            category=category,
+            option_type=ClarificationOptionType.SINGLE,
+            options=options,
+            allow_custom_input=True,
+            custom_input_placeholder=placeholder,
+            context_hint="选择后我会帮您配置模拟交易订单",
+            collected_params=context.get("collected_params", {}),
+            remaining_questions=len(missing_params),
+            explanation=f"为了帮您执行模拟交易，我需要知道一些细节。",
             created_at=datetime.now().isoformat(),
         )
 

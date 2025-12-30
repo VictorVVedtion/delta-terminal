@@ -13,6 +13,7 @@ export { ReasoningChainView, ReasoningNodeView } from './ReasoningChainView'
 export { SensitivityInsightCard } from './SensitivityInsightCard'
 export { AttributionInsightCard } from './AttributionInsightCard'
 export { ComparisonInsightCard } from './ComparisonInsightCard'
+export { PaperTradingInsightCard, isPaperTradingInsight } from './PaperTradingInsightCard'
 
 // Re-export types
 export type {

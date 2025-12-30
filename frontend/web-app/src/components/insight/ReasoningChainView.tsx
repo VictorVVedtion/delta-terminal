@@ -215,7 +215,7 @@ function BranchCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <GitBranch className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0" />
-            <span className="font-medium text-sm truncate">{branch.label}</span>
+            <span className="font-medium text-sm truncate">{branch.label || branch.id || '分支'}</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
             {branch.description}

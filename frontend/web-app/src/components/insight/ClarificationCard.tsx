@@ -363,7 +363,7 @@ function OptionButton({
         <div className="flex items-center gap-2">
           {option.icon && <span className="text-base">{option.icon}</span>}
           <span className={cn('font-medium', compact ? 'text-sm' : 'text-base')}>
-            {option.label}
+            {option.label || option.id || '选项'}
           </span>
           {option.recommended && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/20 text-primary">

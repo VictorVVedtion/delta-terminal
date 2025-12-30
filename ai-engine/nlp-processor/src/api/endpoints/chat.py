@@ -42,6 +42,7 @@ INSIGHT_INTENTS = {
     IntentType.OPTIMIZE_STRATEGY,
     IntentType.BACKTEST_SUGGEST,
     IntentType.RISK_ANALYSIS,
+    IntentType.PAPER_TRADING,  # 模拟交易
 }
 
 

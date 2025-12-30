@@ -24,7 +24,8 @@ export type InsightType =
   | 'clarification'    // AI clarification question (EPIC-010)
   | 'sensitivity'      // Parameter sensitivity analysis (EPIC-008)
   | 'attribution'      // PnL attribution analysis (EPIC-008)
-  | 'comparison';      // Strategy comparison (EPIC-008)
+  | 'comparison'       // Strategy comparison (EPIC-008)
+  | 'paper_trading';   // Paper trading order confirmation (EPIC-008)
 
 // =============================================================================
 // Parameter Types

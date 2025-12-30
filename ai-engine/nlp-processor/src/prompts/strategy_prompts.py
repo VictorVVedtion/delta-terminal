@@ -59,10 +59,19 @@ INTENT_RECOGNITION_SYSTEM_PROMPT = """你是 Delta Terminal 交易平台的智�
 9. risk_analysis - 用户想要风险分析
    关键词：风险分析、风险评估、风险检查、投资组合风险、仓位风险、VaR、最大回撤等
 
-10. general_chat - 一般对话（问候、感谢、闲聊）
+10. paper_trading - 用户想要进行模拟交易（不涉及真实资金）
+    关键词：模拟交易、纸面交易、paper trading、虚拟交易、模拟买入、模拟卖出、模拟开仓、模拟平仓、模拟账户、做多、做空、开多、开空、帮我买、帮我卖、开仓、平仓、模拟做多、模拟做空
+    **实体提取**：需要提取 symbol(交易对)、side(多/空)、size(数量)、leverage(杠杆)
+    示例：
+    - "帮我用 1000U 做多 BTC，10 倍杠杆" → paper_trading
+    - "模拟买入 0.1 个 ETH" → paper_trading
+    - "平掉 BTC 的多单" → paper_trading
+    - "查看模拟账户持仓" → paper_trading
+
+11. general_chat - 一般对话（问候、感谢、闲聊）
     **注意**：如果有明确的上一个意图，"你觉得呢"不应该是 general_chat
 
-11. unknown - 无法识别的意图
+12. unknown - 无法识别的意图
 
 ## 分析步骤：
 1. 先查看 context 中的 previous_intent 或 chatHistory

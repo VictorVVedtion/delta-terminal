@@ -32,6 +32,7 @@ class InsightType(str, Enum):
     RISK_ANALYSIS = "risk_analysis"  # Portfolio risk analysis
     CLARIFICATION = "clarification"  # Request clarification from user (A2UI core)
     GENERAL_CHAT = "general_chat"  # General chat response (A2UI 2.0)
+    PAPER_TRADING = "paper_trading"  # Paper trading order confirmation (A2UI)
 
 
 # =============================================================================
@@ -514,6 +515,7 @@ class ClarificationCategory(str, Enum):
     EXIT_CONDITION = "exit_condition"  # Exit logic clarification
     POSITION_SIZE = "position_size"  # Position sizing preference
     MARKET_CONTEXT = "market_context"  # Market conditions preference
+    AMOUNT = "amount"  # Amount/margin clarification (for paper trading)
     GENERAL = "general"  # General clarification
 
 

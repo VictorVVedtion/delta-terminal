@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     """应用配置"""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.local"),  # 支持 .env 和 .env.local (后者优先)
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

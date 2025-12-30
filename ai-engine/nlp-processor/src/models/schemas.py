@@ -27,6 +27,8 @@ class IntentType(str, Enum):
     OPTIMIZE_STRATEGY = "optimize_strategy"  # 策略优化
     BACKTEST_SUGGEST = "backtest_suggest"  # 回测建议
     RISK_ANALYSIS = "risk_analysis"  # 风险分析
+    # Paper Trading 模拟交易
+    PAPER_TRADING = "paper_trading"  # 模拟交易（开仓、平仓、查询持仓）
 
 
 class MessageRole(str, Enum):

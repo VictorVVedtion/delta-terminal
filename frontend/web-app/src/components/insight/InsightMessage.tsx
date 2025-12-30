@@ -26,6 +26,7 @@ import { ReasoningChainView } from './ReasoningChainView'
 import { SensitivityInsightCard } from './SensitivityInsightCard'
 import { AttributionInsightCard } from './AttributionInsightCard'
 import { ComparisonInsightCard } from './ComparisonInsightCard'
+import { PaperTradingInsightCard, isPaperTradingInsight } from './PaperTradingInsightCard'
 
 // =============================================================================
 // Types
@@ -179,6 +180,24 @@ export function InsightMessage({
           data={insight}
           onExpand={handleExpand}
           compact={compact}
+        />
+      )
+    }
+
+    // EPIC-008: Paper Trading
+    if (isPaperTradingInsight(insight)) {
+      return (
+        <PaperTradingInsightCard
+          insight={insight}
+          onExecuted={(result) => {
+            // Mark as approved/rejected based on result
+            if (result.success) {
+              handleApprove(insight.params)
+            } else {
+              handleReject()
+            }
+          }}
+          onCancel={handleReject}
         />
       )
     }

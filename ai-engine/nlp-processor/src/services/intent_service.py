@@ -284,6 +284,8 @@ class IntentService:
                 return await self._extract_market_entities(text)
             elif intent == IntentType.QUERY_STRATEGY:
                 return await self._extract_query_entities(text)
+            elif intent == IntentType.PAPER_TRADING:
+                return await self._extract_paper_trading_entities(text)
             else:
                 return {}
 
@@ -371,6 +373,107 @@ class IntentService:
             entities["query_type"] = "history"
         elif "所有" in text or "全部" in text:
             entities["query_type"] = "all"
+
+        return entities
+
+    async def _extract_paper_trading_entities(self, text: str) -> Dict[str, Any]:
+        """提取模拟交易相关实体"""
+        import re
+        entities: Dict[str, Any] = {}
+
+        text_upper = text.upper()
+        text_lower = text.lower()
+
+        # =====================================================================
+        # 1. 提取操作类型 (action)
+        # =====================================================================
+        if any(kw in text for kw in ["平仓", "平掉", "关闭", "止盈", "止损", "全部平"]):
+            entities["action"] = "close"
+        elif any(kw in text for kw in ["查看", "持仓", "账户", "余额", "仓位"]):
+            entities["action"] = "query"
+        else:
+            entities["action"] = "open"  # 默认是开仓
+
+        # =====================================================================
+        # 2. 提取方向 (side): long/short
+        # =====================================================================
+        if any(kw in text for kw in ["做多", "多单", "买入", "买", "开多", "long"]):
+            entities["side"] = "long"
+        elif any(kw in text for kw in ["做空", "空单", "卖出", "卖", "开空", "short"]):
+            entities["side"] = "short"
+
+        # =====================================================================
+        # 3. 提取交易对 (coin/symbol)
+        # =====================================================================
+        coins = ["BTC", "ETH", "SOL", "DOGE", "BNB", "XRP", "ADA", "AVAX", "LINK"]
+        for coin in coins:
+            if coin in text_upper:
+                entities["coin"] = coin
+                entities["symbol"] = f"{coin}-PERP"
+                break
+
+        # =====================================================================
+        # 4. 提取数量 (size) - 支持多种格式
+        # =====================================================================
+        # 格式1: "0.1 个 BTC" 或 "0.1BTC"
+        size_patterns = [
+            r"(\d+(?:\.\d+)?)\s*个",  # 0.1个
+            r"(\d+(?:\.\d+)?)\s*(?:BTC|ETH|SOL|DOGE)",  # 0.1BTC
+            r"买入?\s*(\d+(?:\.\d+)?)",  # 买入 0.1
+            r"卖出?\s*(\d+(?:\.\d+)?)",  # 卖出 0.1
+        ]
+        for pattern in size_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                entities["size"] = float(match.group(1))
+                break
+
+        # =====================================================================
+        # 5. 提取金额/保证金 (margin) - 用于计算仓位大小
+        # =====================================================================
+        # 格式: "1000U" 或 "1000 USDT" 或 "1000刀"
+        margin_patterns = [
+            r"(\d+(?:\.\d+)?)\s*[Uu](?:SDT)?",  # 1000U, 1000USDT
+            r"(\d+(?:\.\d+)?)\s*(?:刀|美金|美元)",  # 1000刀
+            r"用\s*(\d+(?:\.\d+)?)",  # 用 1000
+        ]
+        for pattern in margin_patterns:
+            match = re.search(pattern, text)
+            if match:
+                entities["margin"] = float(match.group(1))
+                break
+
+        # =====================================================================
+        # 6. 提取杠杆 (leverage)
+        # =====================================================================
+        # 格式: "10倍" 或 "10x" 或 "杠杆10"
+        leverage_patterns = [
+            r"(\d+)\s*[倍xX]",  # 10倍, 10x
+            r"杠杆\s*(\d+)",  # 杠杆10
+            r"(\d+)\s*倍杠杆",  # 10倍杠杆
+        ]
+        for pattern in leverage_patterns:
+            match = re.search(pattern, text)
+            if match:
+                entities["leverage"] = int(match.group(1))
+                break
+
+        # 默认杠杆
+        if "leverage" not in entities and entities.get("action") == "open":
+            entities["leverage"] = 1  # 无杠杆
+
+        # =====================================================================
+        # 7. 提取止损/止盈 (optional)
+        # =====================================================================
+        # 止损: "止损5%" 或 "SL 5%"
+        sl_match = re.search(r"(?:止损|SL)\s*(\d+(?:\.\d+)?)\s*%?", text, re.IGNORECASE)
+        if sl_match:
+            entities["stop_loss_percent"] = float(sl_match.group(1))
+
+        # 止盈: "止盈10%" 或 "TP 10%"
+        tp_match = re.search(r"(?:止盈|TP)\s*(\d+(?:\.\d+)?)\s*%?", text, re.IGNORECASE)
+        if tp_match:
+            entities["take_profit_percent"] = float(tp_match.group(1))
 
         return entities
 
