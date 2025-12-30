@@ -79,6 +79,17 @@ export function PaperTradingInsightCard({
     return initial
   })
 
+  // Sync form values when insight changes (e.g., parent passes a different insight)
+  React.useEffect(() => {
+    const updated: Record<string, unknown> = {}
+    for (const param of insight.params || []) {
+      updated[param.key] = param.value
+    }
+    setFormValues(updated)
+    setOrderStatus('idle')
+    setErrorMessage('')
+  }, [insight.id])
+
   const [orderStatus, setOrderStatus] = React.useState<OrderStatus>('idle')
   const [errorMessage, setErrorMessage] = React.useState<string>('')
 

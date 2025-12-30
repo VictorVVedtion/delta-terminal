@@ -10,6 +10,7 @@ P1 优化: 并行化 LLM 调用和市场数据预加载
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import datetime
@@ -1134,7 +1135,6 @@ class InsightGeneratorService:
             if isinstance(value, (int, float)):
                 return float(value)
             if isinstance(value, str):
-                import re
                 # Remove currency suffixes and whitespace
                 cleaned = re.sub(r'[Uu](?:SDT)?|刀|美金|美元|\s', '', value)
                 try:
@@ -1161,16 +1161,18 @@ class InsightGeneratorService:
         # If margin not in entities, try to extract from user_input directly
         # (LLM may confuse margin with size for inputs like "1000U")
         if not margin:
-            import re
             margin_match = re.search(
                 r'(\d+(?:\.\d+)?)\s*[Uu](?:SDT)?|(\d+(?:\.\d+)?)\s*(?:刀|美金|美元)',
                 user_input
             )
             if margin_match:
-                margin = float(margin_match.group(1) or margin_match.group(2))
-                # If size was mistakenly set to the same value, clear it
-                if size and abs(size - margin) < 0.01:
-                    size = None
+                # Safety check: ensure at least one group captured a value
+                captured = margin_match.group(1) or margin_match.group(2)
+                if captured:
+                    margin = float(captured)
+                    # If size was mistakenly set to the same value, clear it
+                    if size and abs(size - margin) < 0.01:
+                        size = None
         stop_loss_percent = parse_amount(entities.get("stop_loss_percent"))
         take_profit_percent = parse_amount(entities.get("take_profit_percent"))
 
